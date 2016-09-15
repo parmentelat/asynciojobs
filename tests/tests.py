@@ -49,7 +49,7 @@ def sl(n): return _sl(n, middle=False, emergency=False)
 def slm(n): return _sl(n, middle=True, emergency=False)
 
 ##############################
-from job import AbstractJob
+from asynciojobs.job import AbstractJob
 
 class SleepJob(AbstractJob):
     def __init__(self, timeout, middle=False):
@@ -80,8 +80,8 @@ async def co_exception(n):
     raise ValueError(10**6*n)
     
 ####################            
-from job import Job as J
-from engine import Engine
+from asynciojobs.job import Job as J
+from asynciojobs.engine import Engine
 
 # shortcuts
 SLJ = SleepJob
