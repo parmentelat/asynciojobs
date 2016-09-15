@@ -42,7 +42,7 @@ setup(
     url              = "https://github.com/parmentelat/fitsophia/tree/master/asynciojobs",
     platforms        = "Linux",
     packages         = [ 'asynciojobs' ],
-    scripts          = [ 'bin/asynciojobs'],
+#    scripts          = [ 'bin/asynciojobs'],
     install_requires = required_modules,
 )
 
