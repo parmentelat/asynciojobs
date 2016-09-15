@@ -2,8 +2,8 @@ import os.path
 
 from asynciojobs.engine import Engine
 from asynciojobs.job import Job
-from asynciojobs.sshjobs import SshProxy, SshJob, SshJobScript
 
+from apssh.jobs.sshjobs import SshProxy, SshJob, SshJobScript
 from apssh.formatters import ColonFormatter
 
 async def aprint(*args, **kwds):
