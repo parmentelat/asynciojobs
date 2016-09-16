@@ -27,6 +27,9 @@ class Engine:
         if critical is None:
             critical = self.default_critical
         self.critical = critical
+        # why does it fail ?
+        self._critical_stop = False
+        self._timed_out = False
         self.debug = debug
 
     def update(self, jobs):
@@ -35,22 +38,20 @@ class Engine:
     def add(self, job):
         self.jobs.add(job)
 
-    def list(self):
-        """
-        print internal jobs as sorted in self.jobs
-        mostly useful after .rain_check()
-        """
-        for i, job in enumerate(self.jobs):
-            print(i, job)
-        
-    def orchestrate(self, loop=None, *args, **kwds):
-        if loop is None:
-            loop = asyncio.get_event_loop()
-        return loop.run_until_complete(self.co_orchestrate(loop=loop, *args, **kwds))
-
     def is_critical(self):
         return self.critical
 
+    def why(self):
+        """
+        a string message explaining why orchestrate has failed
+        """
+        if self._timed_out:
+            return "TIMED OUT"
+        elif self._critical_stop:
+            return "at least one CRITICAL job has raised an exception"
+        else:
+            return "FINE"
+        
     def _reset_marks(self):
         """
         reset Job._mark on all jobs
@@ -75,6 +76,12 @@ class Engine:
         for job in self.jobs:
             for req in job.required:
                 req._successors.add(job)
+
+    ####################
+    def orchestrate(self, loop=None, *args, **kwds):
+        if loop is None:
+            loop = asyncio.get_event_loop()
+        return loop.run_until_complete(self.co_orchestrate(loop=loop, *args, **kwds))
 
     ####################
     def sanitize(self, verbose=True):
@@ -239,8 +246,11 @@ class Engine:
         self._backlinks()
         # clear any Task instance
         self._reset_tasks()
-
+        # for computing global timeout
         self.mark_beginning(timeout)
+        # reset status
+        self._critical_stop = False
+        self._timed_out = False
 
         # how many jobs do we expect to complete: the ones that don't run forever
         nb_jobs_finite = len([j for j in self.jobs if not j.forever])
@@ -277,6 +287,7 @@ class Engine:
                 # clean up
                 await self._tidy_tasks(pending)
                 await self.co_shutdown()
+                self._timed_out = True
                 return False
             # surprisingly I can see cases where done has more than one entry
             # typically when 2 jobs have very similar durations
@@ -308,6 +319,7 @@ class Engine:
                 if critical:
                     await self._tidy_tasks(pending)
                     await self.co_shutdown()
+                    self._critical_stop = True
                     return False
 
             # go on : find out the jobs that can be added to the mix
@@ -337,3 +349,40 @@ class Engine:
                     pending.add(self.ensure_future(candidate_next, loop=loop))
                     added += 1
 
+    ####################
+    def list(self):
+        """
+        print internal jobs as sorted in self.jobs
+        mostly useful after .rain_check()
+        """
+        for i, job in enumerate(self.jobs):
+            print(i, job)
+        
+    def debrief(self, verbose=False):
+        """
+        Uses an object that has gone through orchestration
+        and displays a listing of what has gone wrong
+        Mostly useful if orchestrate() returned False
+        """
+        nb_total =   len(self.jobs)
+        done =       { j for j in self.jobs if j.is_done() }
+        nb_done =    len(done)
+        exceptions = { j for j in self.jobs if j.raised_exception()}
+        criticals =  { j for j in exceptions if j.is_critical(self)}
+
+        print("========== {} jobs done / {} total -- {}".format(nb_done, nb_total, self.why()))
+        if not verbose:
+            return
+        if exceptions:
+            nb_exceptions  = len(exceptions)
+            nb_criticals = len(criticals)
+            print("===== {} jobs with exception, including {} critical"
+                  .format(nb_exceptions, nb_criticals))
+            for j in criticals:
+                print("CRITICAL: {}: exception {}".format(j.label, j.raised_exception()))
+            for j in exceptions - criticals:
+                print("non-critical: {}: exception {}".format(j.label, j.raised_exception()))
+        if nb_done != nb_total:
+            print("===== {} unfinished jobs".format(nb_total - nb_done))
+            for j in self.jobs - done:
+                  print("UNFINISHED {}".format(j))
