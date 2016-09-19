@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 A simple tool to define ad-hoc 'jobs' 
 """
