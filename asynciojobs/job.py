@@ -53,14 +53,14 @@ class AbstractJob:
         # the reverse of required
         self._successors = set()
 
-    def __repr__(self):
+    def __repr__(self, show_successors=False):
         info = "<Job `{}'".format(self.label)
         ### outline forever jobs
         if self.forever:
             info += "[∞]"
         ### show info - IDLE means not started at all
         if not self._task:
-            info += " UNSCHED"
+            info += " unscheduled"
         else:
             info += " {}".format(self._task._state.lower())
             ### if it has returned, show result
@@ -72,7 +72,7 @@ class AbstractJob:
         ### show dependencies in both directions
         if self.required:
             info += " - requires:{" + " ".join(["[{}]".format(a.label) for a in self.required]) + "}"
-        if self._successors:
+        if show_successors and self._successors:
             info += " - allows: {" + " ".join(["[{}]".format(a.label) for a in self._successors]) + "}"
         info += ">"
         return info

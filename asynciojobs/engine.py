@@ -3,6 +3,8 @@
 import time
 import asyncio
 
+from .job import AbstractJob
+
 class Engine:
     """
     An Engine instance works on a set of Job objects
@@ -22,7 +24,7 @@ class Engine:
 
     default_critical = False
 
-    def __init__(self,  *jobs, critical=None, debug=False):
+    def __init__(self,  *jobs, critical=None, verbose=False, debug=False):
         self.jobs = set(jobs)
         if critical is None:
             critical = self.default_critical
@@ -30,6 +32,7 @@ class Engine:
         # why does it fail ?
         self._critical_stop = False
         self._timed_out = False
+        self.verbose = verbose
         self.debug = debug
 
     def update(self, jobs):
@@ -228,13 +231,31 @@ class Engine:
         that connection to be kept alive across an engine, but there is a need to tear these 
         connections down eventually
         """
-        if self.debug:
-            print("engine is shutting down...")
+        await self.feedback(None, "engine is shutting down...")
         tasks = [ asyncio.ensure_future(job.co_shutdown()) for job in self.jobs ]
         done, pending = await asyncio.wait(tasks, timeout = self.remaining_timeout())
         if len(pending) != 0:
             print("WARNING: {}/{} co_shutdown() methods have not returned within timeout"
                   .format(len(pending), len(self.jobs)))
+
+    async def feedback(self, jobs, state):
+        """
+        When self.verbose is set, provide feedback about the mentioned
+        jobs having reached this state 
+        if jobs is None, then state is a message to be shown as-is
+        jobs may be a collection or an individual Job or Task object
+        """
+        if jobs is None:
+            print("ENGINE: {}".format(state))
+            return
+        if not isinstance(jobs, (list, set, tuple)):
+            jobs = jobs,
+        if not self.verbose:
+            return
+        for job in jobs:
+            if not isinstance(job, AbstractJob):
+                job = job._job
+            print("{}: {}".format(state, job))
 
     async def co_orchestrate(self, loop=None, timeout=None):
         """
@@ -265,26 +286,25 @@ class Engine:
         if not entry_jobs:
             raise ValueError("No entry points found - cannot orchestrate")
         
+        await self.feedback(entry_jobs, "STARTING")
+        
         pending = [ self.ensure_future(job, loop=loop)
                     for job in entry_jobs ]
-        
+
         while True:
             done, pending \
                 = await asyncio.wait(pending,
                                      timeout = self.remaining_timeout(),
                                      return_when = asyncio.FIRST_COMPLETED)
 
-            if self.debug:
-                print("orchestrate: {} iteration {} / {} - {} done and {} pending"
-                      .format(4*'-', nb_jobs_done, nb_jobs_finite,
-                              len(done), len(pending)))
+            await self.feedback(done, "DONE")
             # nominally we have exactly one item in done
             # it looks like the only condition where we have nothing in done is
             # because a timeout occurred
             if not done or len(done) == 0:
-                if self.debug:
-                    print("orchestrate: TIMEOUT occurred")
+                await self.feedback(None, "orchestrate: TIMEOUT occurred")
                 # clean up
+                await self.feedback(pending, "ABORTING")
                 await self._tidy_tasks(pending)
                 await self.co_shutdown()
                 self._timed_out = True
@@ -301,6 +321,7 @@ class Engine:
                     print("orchestrate: {} CLEANING UP at iteration {} / {}"
                           .format(4*'-', nb_jobs_done, nb_jobs_finite))
                 assert len(pending) == nb_jobs_forever
+                await self.feedback(pending, "TIDYING forever")
                 await self._tidy_tasks(pending)
                 await self.co_shutdown()
                 return True
@@ -312,8 +333,7 @@ class Engine:
                 critical = False
                 if done_job.raised_exception():
                     critical = critical or done_job.is_critical(self)
-                    if self.debug:
-                        print("orchestrate: EXCEPTION occurred - critical = {}".format(critical))
+                    await self.feedback(done_job, "EXCEPTION occurred - critical = {}".format(critical))
                     # clear the exception
                     await self._tidy_task_exception(done_task)
                 if critical:
@@ -346,6 +366,7 @@ class Engine:
                     if not req.is_done():
                         requirements_ok = False
                 if requirements_ok:
+                    await self.feedback(candidate_next, "STARTING")
                     pending.add(self.ensure_future(candidate_next, loop=loop))
                     added += 1
 
