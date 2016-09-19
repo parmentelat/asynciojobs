@@ -215,14 +215,16 @@ class Engine:
             # since all tasks are canceled
             await asyncio.wait(pending)
         
-    async def _tidy_task_exception(self, task):
+    async def _tidy_tasks_exception(self, tasks):
         """
-        Similar but in order to clear the exception, we need to run gather() instead
+        Similar but in order to clear the exceptions, we need to run gather() instead
         """
-        task.cancel()
+        exception_tasks = [ task for task in tasks if task._job.raised_exception() ]
+        for task in exception_tasks:
+            task.cancel()
         # don't bother to set a timeout, as this is expected to be immediate
         # since all tasks are canceled
-        await asyncio.gather(task, return_exceptions=True)
+        await asyncio.gather(*exception_tasks, return_exceptions=True)
         
     async def co_shutdown(self):
         """
@@ -237,6 +239,7 @@ class Engine:
         if len(pending) != 0:
             print("WARNING: {}/{} co_shutdown() methods have not returned within timeout"
                   .format(len(pending), len(self.jobs)))
+            self._tidy_tasks(pending)
 
     async def feedback(self, jobs, state):
         """
@@ -314,8 +317,10 @@ class Engine:
             if self.debug:
                 print("JOBS DONE = {}".format(done))
 
-            # are we done ?
-            nb_jobs_done += len(done)
+            ### are we done ?
+            # only account for not forever jobs (that may still finish, one never knows)
+            done_jobs_not_forever = { j for j in done if not j._job.forever }
+            nb_jobs_done += len(done_jobs_not_forever)
             if nb_jobs_done == nb_jobs_finite:
                 if self.debug:
                     print("orchestrate: {} CLEANING UP at iteration {} / {}"
@@ -327,20 +332,21 @@ class Engine:
                 return True
 
             # exceptions need to be cleaned up 
+            # clear the exception
+            await self._tidy_tasks_exception(done)
+            # do we have at least one critical job with an exception ?
+            critical = False
             for done_task in done:
                 done_job = done_task._job
-                # do we have at least one critical job with an exception ?
-                critical = False
                 if done_job.raised_exception():
                     critical = critical or done_job.is_critical(self)
                     await self.feedback(done_job, "EXCEPTION occurred - critical = {}".format(critical))
-                    # clear the exception
-                    await self._tidy_task_exception(done_task)
-                if critical:
-                    await self._tidy_tasks(pending)
-                    await self.co_shutdown()
-                    self._critical_stop = True
-                    return False
+            if critical:
+                await self._tidy_tasks(pending)
+                await self.co_shutdown()
+                self._critical_stop = True
+                await self.feedback(None, "Emergency exit upon exception in critical job")
+                return False
 
             # go on : find out the jobs that can be added to the mix
             # only consider the ones that are right behind any of the the jobs that just finished

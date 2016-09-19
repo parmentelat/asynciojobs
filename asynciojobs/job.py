@@ -54,7 +54,7 @@ class AbstractJob:
         self._successors = set()
 
     def __repr__(self, show_successors=False):
-        info = "<Job `{}'".format(self.label)
+        info = "<{} `{}'".format(type(self).__name__, self.label)
         ### outline forever jobs
         if self.forever:
             info += "[∞]"
@@ -68,7 +68,8 @@ class AbstractJob:
             info += " -> {}".format(self.result())
         exception = self.raised_exception()
         if exception:
-            info += " !!{}:{}!!".format(type(exception).__name__, exception)
+            critical_msg = "CRITICAL " if self.critical else ""
+            info += " {}EXCEPTION:!!{}:{}!!".format(critical_msg, type(exception).__name__, exception)
         ### show dependencies in both directions
         if self.required:
             info += " - requires:{" + " ".join(["[{}]".format(a.label) for a in self.required]) + "}"
