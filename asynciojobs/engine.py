@@ -239,7 +239,7 @@ class Engine:
         if len(pending) != 0:
             print("WARNING: {}/{} co_shutdown() methods have not returned within timeout"
                   .format(len(pending), len(self.jobs)))
-            self._tidy_tasks(pending)
+            await self._tidy_tasks(pending)
 
     async def feedback(self, jobs, state):
         """
