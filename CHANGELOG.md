@@ -1,3 +1,8 @@
+# 0.0.4 - 2016 Sep 20
+
+* Engine.verbose
+* robustified some corner cases
+
 # 0.0.3 - 2016 Sep 19
 
 * Engine.why() and Engine.debrief()
