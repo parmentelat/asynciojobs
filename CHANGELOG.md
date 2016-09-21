@@ -1,3 +1,7 @@
+# 0.0.5 - 2016 Sep 21
+
+* bugfix - missing await
+
 # 0.0.4 - 2016 Sep 20
 
 * Engine.verbose
