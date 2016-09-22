@@ -1,3 +1,8 @@
+# 0.0.6 - 2016 Sep 21
+
+* in debug mode, show stack corresponding to caught exceptions
+* various cosmetic 
+
 # 0.0.5 - 2016 Sep 21
 
 * bugfix - missing await
