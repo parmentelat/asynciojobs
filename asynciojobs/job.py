@@ -53,31 +53,36 @@ class AbstractJob:
         # the reverse of required
         self._successors = set()
 
-    def __repr__(self, show_successors=False):
+    def __repr__(self, show_state=True, show_requires=True, show_successors=False):
         info = "<{} `{}'".format(type(self).__name__, self.label)
         ### outline forever jobs
         if self.forever:
             info += "[∞]"
         ### show info - IDLE means not started at all
-        if not self._task:
-            info += " unscheduled"
-        else:
-            info += " {}".format(self._task._state.lower())
+        if show_state:
+            if not self._task:
+                info += " unscheduled"
+            else:
+                info += " {}".format(self._task._state.lower())
             ### if it has returned, show result
-        if self.is_done():
-            info += " -> {}".format(self.result())
+            if self.is_done():
+                info += " -> {}".format(self.result())
         exception = self.raised_exception()
         if exception:
             critical_msg = "CRITICAL " if self.critical else ""
             info += " {}EXCEPTION:!!{}:{}!!".format(critical_msg, type(exception).__name__, exception)
         ### show dependencies in both directions
-        if self.required:
+        if show_requires and self.required:
             info += " - requires:{" + " ".join(["[{}]".format(a.label) for a in self.required]) + "}"
         if show_successors and self._successors:
             info += " - allows: {" + " ".join(["[{}]".format(a.label) for a in self._successors]) + "}"
         info += ">"
         return info
     
+    def nice(self, debug):
+        return self.__repr__(show_state=debug,
+                             show_requires=debug)
+
     def requires(self, *jobs):
         self.required.update(jobs)
 

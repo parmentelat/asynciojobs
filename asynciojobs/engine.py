@@ -222,6 +222,16 @@ class Engine:
         exception_tasks = [ task for task in tasks if task._job.raised_exception() ]
         for task in exception_tasks:
             task.cancel()
+            # if debug is turned on, provide details on the exceptions
+            if self.debug:
+                sep = 20 * '*'
+                print(sep)
+                print(sep, 'BEGIN STACK')
+                print(sep)
+                task.print_stack()
+                print(sep)
+                print(sep, 'BEGIN END')
+                print(sep)
         # don't bother to set a timeout, as this is expected to be immediate
         # since all tasks are canceled
         await asyncio.gather(*exception_tasks, return_exceptions=True)
@@ -248,17 +258,18 @@ class Engine:
         if jobs is None, then state is a message to be shown as-is
         jobs may be a collection or an individual Job or Task object
         """
+        if not self.verbose:
+            return
+        time_format = "%H-%M-%S"
         if jobs is None:
-            print("ENGINE: {}".format(state))
+            print("{}: ENGINE: {}".format(time.strftime(time_format), state))
             return
         if not isinstance(jobs, (list, set, tuple)):
             jobs = jobs,
-        if not self.verbose:
-            return
         for job in jobs:
             if not isinstance(job, AbstractJob):
                 job = job._job
-            print("{}: {}".format(state, job))
+            print("{}: {}: {}".format(time.strftime(time_format), state, job.nice(self.debug)))
 
     async def co_orchestrate(self, loop=None, timeout=None):
         """
