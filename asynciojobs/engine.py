@@ -4,6 +4,7 @@ import time
 import asyncio
 
 from .job import AbstractJob
+from .sequence import Sequence
 
 class Engine:
     """
@@ -24,8 +25,8 @@ class Engine:
 
     default_critical = False
 
-    def __init__(self,  *jobs, critical=None, verbose=False, debug=False):
-        self.jobs = set(jobs)
+    def __init__(self,  *jobs_or_sequences, critical=None, verbose=False, debug=False):
+        self.jobs = set(Sequence.flatten(jobs_or_sequences))
         if critical is None:
             critical = self.default_critical
         self.critical = critical
@@ -215,6 +216,16 @@ class Engine:
             # since all tasks are canceled
             await asyncio.wait(pending)
         
+    def show_task_stack(self, task):
+        sep = 20 * '*'
+        print(sep)
+        print(sep, 'STACK BEG')
+        print(sep)
+        task.print_stack()
+        print(sep)
+        print(sep, 'STACK END')
+        print(sep)
+
     async def _tidy_tasks_exception(self, tasks):
         """
         Similar but in order to clear the exceptions, we need to run gather() instead
@@ -224,14 +235,7 @@ class Engine:
             task.cancel()
             # if debug is turned on, provide details on the exceptions
             if self.debug:
-                sep = 20 * '*'
-                print(sep)
-                print(sep, 'BEGIN STACK')
-                print(sep)
-                task.print_stack()
-                print(sep)
-                print(sep, 'BEGIN END')
-                print(sep)
+                self.show_task_stack(task)
         # don't bother to set a timeout, as this is expected to be immediate
         # since all tasks are canceled
         await asyncio.gather(*exception_tasks, return_exceptions=True)
@@ -323,10 +327,9 @@ class Engine:
                 await self.co_shutdown()
                 self._timed_out = True
                 return False
-            # surprisingly I can see cases where done has more than one entry
+
+            # a little surprisingly, there might be cases where done has more than one entry
             # typically when 2 jobs have very similar durations
-            if self.debug:
-                print("JOBS DONE = {}".format(done))
 
             ### are we done ?
             # only account for not forever jobs (that may still finish, one never knows)
@@ -352,6 +355,9 @@ class Engine:
                 if done_job.raised_exception():
                     critical = critical or done_job.is_critical(self)
                     await self.feedback(done_job, "EXCEPTION occurred - critical = {}".format(critical))
+                    # make sure these ones show up even if not in debug mode
+                    if not self.debug:
+                        self.show_task_stack(done_task)                    
             if critical:
                 await self._tidy_tasks(pending)
                 await self.co_shutdown()
@@ -364,10 +370,6 @@ class Engine:
             possible_next_jobs = set()
             for done_task in done:
                 possible_next_jobs.update(done_task._job._successors)
-            if self.debug:
-                print("possible ->", len(possible_next_jobs))
-                for a in possible_next_jobs:
-                    print(a)
 
             # find out which ones really can be added
             added = 0

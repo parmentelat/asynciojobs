@@ -36,14 +36,15 @@ class AbstractJob:
     It's mostly a companion class to the Engine class, that does the heavy lifting
     """
 
-    def __init__(self, forever, label, critical=None):
+    def __init__(self, forever, label, critical=None, required=None):
         if label is None:
             label = "NOLABEL"
         self.label = label
         self.forever = forever
         self.critical = critical
-        # list of Job objects that need to be completed before we can start this one
+        # for convenience, one can mention only one AbstractJob
         self.required = set()
+        self.requires(required)
         # once submitted in the asyncio loop/scheduler, the `co_run()` gets embedded in a 
         # Task object, that is our handle when talking to asyncio.wait
         self._task = None
@@ -73,9 +74,9 @@ class AbstractJob:
             info += " {}EXCEPTION:!!{}:{}!!".format(critical_msg, type(exception).__name__, exception)
         ### show dependencies in both directions
         if show_requires and self.required:
-            info += " - requires:{" + " ".join(["[{}]".format(a.label) for a in self.required]) + "}"
+            info += " - requires:{" + ", ".join(a.label for a in self.required) + "}"
         if show_successors and self._successors:
-            info += " - allows: {" + " ".join(["[{}]".format(a.label) for a in self._successors]) + "}"
+            info += " - allows: {" + ", ".join(a.label for a in self._successors) + "}"
         info += ">"
         return info
     
@@ -83,8 +84,18 @@ class AbstractJob:
         return self.__repr__(show_state=debug,
                              show_requires=debug)
 
-    def requires(self, *jobs):
-        self.required.update(jobs)
+    def requires(self, *requirements):
+        from .sequence import Sequence
+        for requirement in requirements:
+            if requirement is None:
+                continue
+            if isinstance(requirement, AbstractJob):
+                self.required = set([requirement])
+            elif isinstance(requirement, Sequence):
+                if requirement.jobs:
+                    self.required.add(requirement.jobs[-1])
+            else:
+                self.required.add(requirement)
 
     def is_started(self):
         return self._task is not None
