@@ -1,3 +1,10 @@
+# 0.1.0 - 2016 Sep 27
+
+* the Sequence class for modeling simple sequences without
+  having to worry about the requires deps
+* a critical job that raises an exception always gets its
+  stack traced
+
 # 0.0.6 - 2016 Sep 21
 
 * in debug mode, show stack corresponding to caught exceptions
