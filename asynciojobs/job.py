@@ -39,7 +39,7 @@ class AbstractJob:
     def __init__(self, forever, label, critical=None, required=None):
         if label is None:
             label = "NOLABEL"
-        self.label = label
+        self.label = str(label)
         self.forever = forever
         self.critical = critical
         # for convenience, one can mention only one AbstractJob
