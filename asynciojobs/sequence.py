@@ -2,10 +2,12 @@ from .job import AbstractJob
 
 class Sequence:
 
-    def __init__(self, *sequences_or_jobs):
+    def __init__(self, *sequences_or_jobs, required=None):
         self.jobs = self.flatten(sequences_or_jobs)
         for previous, next in zip(self.jobs, self.jobs[1:]):
             next.requires(previous)
+        if self.jobs:
+            self.jobs[0].requires(required)
 
     @staticmethod
     def flatten(sequences_or_jobs):

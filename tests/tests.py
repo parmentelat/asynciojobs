@@ -62,6 +62,9 @@ class SleepJob(AbstractJob):
     async def co_run(self):
         result = await _sl(self.timeout, middle=self.middle, emergency=False)
         return result
+
+    async def co_shutdown(self):
+        pass
         
 
 class TickJob(AbstractJob):
@@ -76,14 +79,18 @@ class TickJob(AbstractJob):
             counter += 1
             await asyncio.sleep(self.cycle)
 
+    async def co_shutdown(self):
+        pass
+
 
 async def co_exception(n):
     await asyncio.sleep(n)
     raise ValueError(10**6*n)
     
 ####################            
-from asynciojobs.job import Job as J
-from asynciojobs.engine import Engine
+from asynciojobs import Job as J
+from asynciojobs import Sequence as Seq
+from asynciojobs import Engine
 
 # shortcuts
 SLJ = SleepJob
@@ -102,6 +109,7 @@ class Tests(unittest.TestCase):
         a3.requires(a1)
 
         e = Engine(a1, a2, a3)
+
         # these lines seem to trigger a nasty message about a coro not being waited
         self.assertFalse(e.rain_check())
 
@@ -121,8 +129,14 @@ class Tests(unittest.TestCase):
         a7.requires(a6)
         
         e = Engine(*jobs)
+        e.list(40*'*' + "LIST BEFORE")
+        self.assertTrue(e.rain_check())
         self.assertTrue(e.orchestrate(loop=asyncio.get_event_loop()))
-        e.list()
+        for j in jobs:
+            self.assertFalse(j.raised_exception())
+        e.list(40*'*' + "LIST AFTER")
+        print(40*'*', "DEBRIEF")
+        e.debrief()
         
     ####################
     def test_forever(self):
@@ -158,6 +172,66 @@ class Tests(unittest.TestCase):
         e = Engine(a1, a2)
         self.assertFalse(e.orchestrate())
         e.list()
+
+    ####################
+    def test_sequence1(self):
+        "a simple sequence"
+        a1 = J(sl(0.1), label=1)
+        a2 = J(sl(0.1), label=2)
+        a3 = J(sl(0.1), label=3)
+        s = Seq(a1, a2, a3)
+        e = Engine(s)
+        e.list(40*'*' + "sequence1")
+        self.assertEqual(len(a1.required), 0)
+        self.assertEqual(len(a2.required), 1)
+        self.assertEqual(len(a3.required), 1)
+        self.assertTrue(e.orchestrate())
+
+    ####################
+    def test_sequence2(self):
+        "a job and a sequence"
+        a1 = J(sl(0.1), label=1)
+        a2 = J(sl(0.1), label=2)
+        a3 = J(sl(0.1), label=3)
+        s = Seq(a2, a3, required=a1)
+        e = Engine(a1, s)
+        e.list(40*'*' + "sequence2")
+        self.assertEqual(len(a1.required), 0)
+        self.assertEqual(len(a2.required), 1)
+        self.assertEqual(len(a3.required), 1)
+        self.assertTrue(e.orchestrate())
+
+    ####################
+    def test_sequence3(self):
+        "a sequence and a job"
+        a1 = J(sl(0.1), label=1)
+        a2 = J(sl(0.1), label=2)
+        s = Seq(a1, a2)
+        a3 = J(sl(0.1), label=3, required=s)
+        e = Engine(s, a3)
+        e.list(40*'*' + "sequence3")
+        self.assertEqual(len(a1.required), 0)
+        self.assertEqual(len(a2.required), 1)
+        self.assertEqual(len(a3.required), 1)
+        self.assertTrue(e.orchestrate())
+
+    ####################
+    def test_sequence4(self):
+        "a sequence of 2 sequences"
+        a1 = J(sl(0.1), label=1)
+        a2 = J(sl(0.1), label=2)
+        a3 = J(sl(0.1), label=3)
+        a4 = J(sl(0.1), label=4)
+        s1 = Seq(a1, a2)
+        s2 = Seq(a3, a4)
+        e = Engine(Seq(s1, s2))
+        e.list(40*'*' + "sequence4")
+        self.assertEqual(len(a1.required), 0)
+        self.assertEqual(len(a2.required), 1)
+        self.assertEqual(len(a3.required), 1)
+        self.assertEqual(len(a4.required), 1)
+        self.assertTrue(e.orchestrate())
+    
 
 if __name__ == '__main__':
     import sys
