@@ -1,3 +1,8 @@
+# 0.1.1 - 2016 Sep 28
+
+* hardened and tested Sequence - can be nested and have required=
+* jobs are listed in a more natural order by list() and debrief()
+
 # 0.1.0 - 2016 Sep 27
 
 * the Sequence class for modeling simple sequences without
