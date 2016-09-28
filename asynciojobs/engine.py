@@ -162,9 +162,9 @@ class Engine:
                     job._mark = True
                     nb_marked += 1
                     changed = True
-                    if self.debug:
-                        print("rain_check: {}/{}, new={}"
-                              .format(nb_marked, target_marked, job))
+#                    if self.debug:
+#                        print("rain_check: {}/{}, new={}"
+#                              .format(nb_marked, target_marked, job))
                     yield job
             # >= is for extra safety but it should be an exact match
             if nb_marked >= target_marked:
@@ -186,8 +186,6 @@ class Engine:
         backlink pointer to its correponding job
         """
         task = asyncio.ensure_future(job.co_run(), loop=loop)
-        if self.debug:
-            print("scheduling job {}".format(job.label))
         # create references back and forth between Job and asyncio.Task
         task._job = job
         job._task = task
@@ -227,23 +225,13 @@ class Engine:
             # since all tasks are canceled
             await asyncio.wait(pending)
         
-    def show_task_stack(self, task, msg='STACK'):
-        if isinstance(task, AbstractJob):
-            task = task._task
-        sep = 20 * '*'
-        print(sep)
-        print(sep, 'BEG ' + msg)
-        print(sep)
-        task.print_stack()
-        print(sep)
-        print(sep, 'END' + msg)
-        print(sep)
-
     async def _tidy_tasks_exception(self, tasks):
         """
         Similar but in order to clear the exceptions, we need to run gather() instead
         """
-        exception_tasks = [ task for task in tasks if task._job.raised_exception() ]
+        # do not use task._job.raised_exception() so we can use this with co_shutdown()
+        # tasks as well (these are not attached to a job)
+        exception_tasks = [ task for task in tasks if task._exception ]
         for task in exception_tasks:
             task.cancel()
             # if debug is turned on, provide details on the exceptions
@@ -253,6 +241,18 @@ class Engine:
         # since all tasks are canceled
         await asyncio.gather(*exception_tasks, return_exceptions=True)
         
+    def show_task_stack(self, task, msg='STACK'):
+        if isinstance(task, AbstractJob):
+            task = task._task
+        sep = 20 * '*'
+        print(sep)
+        print(sep, 'BEG ' + msg)
+        print(sep)
+        task.print_stack()
+        print(sep)
+        print(sep, 'END ' + msg)
+        print(sep)
+
     async def co_shutdown(self):
         """
         The idea here is to send a message to all the jobs once the orchestration is over
@@ -267,6 +267,8 @@ class Engine:
             print("WARNING: {}/{} co_shutdown() methods have not returned within timeout"
                   .format(len(pending), len(self.jobs)))
             await self._tidy_tasks(pending)
+        # xxx should consume any exception as well ?
+        # self._tidy_tasks_exception(done)
 
     async def feedback(self, jobs, state):
         """
@@ -426,7 +428,7 @@ class Engine:
         if sep:
             print(sep)
         
-    def debrief(self, verbose=False):
+    def debrief(self, verbose=False, sep=None):
         """
         Uses an object that has gone through orchestration
         and displays a listing of what has gone wrong
@@ -438,6 +440,8 @@ class Engine:
         exceptions = { j for j in self.jobs if j.raised_exception()}
         criticals =  { j for j in exceptions if j.is_critical(self)}
 
+        if sep:
+            print(sep)
         print("========== {} jobs done / {} total -- {}".format(nb_done, nb_total, self.why()))
         if exceptions:
             nb_exceptions  = len(exceptions)
@@ -463,3 +467,5 @@ class Engine:
             print("===== {} unfinished jobs".format(nb_total - nb_done))
             for j in self.jobs - done:
                   print("UNFINISHED {}".format(j))
+        if sep:
+            print(sep)
