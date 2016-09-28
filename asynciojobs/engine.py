@@ -105,7 +105,8 @@ class Engine:
                 print(20*'*', "WARNING: job {} has had {} requirements removed"
                       .format(job, before - after))
 
-    def rain_check(self, allow_garbage=True):
+    ####################
+    def rain_check(self):
         """
         performs minimum sanity check
 
@@ -120,12 +121,28 @@ class Engine:
         RETURN:
         a boolean that is True if the topology looks clear 
         """
-        # since nothing is running yet, we cannot rely on the underlying Task objs
-        # we use job marks for that purpose, that thus need to be cleared
+        try:
+            for job in self.scan_in_order():
+                pass
+            return True
+        except Exception as e:
+            if self.debug:
+                print("rain_check failed", e)
+            return False
+
+    ####################
+    def scan_in_order(self):
+        """
+        a generator function that scans the graph in the "right" order,
+        i.e. starting from jobs that hav no dependencies and moving forward
+
+        beware that this is not a separate iterator, so it can't be nested
+        which in practice hould not be a problem
+        """
         self._reset_marks()
         nb_marked = 0
         target_marked = len(self.jobs)
-        
+
         while True:
             # detect a fixed point 
             changed = False
@@ -148,25 +165,19 @@ class Engine:
                     if self.debug:
                         print("rain_check: {}/{}, new={}"
                               .format(nb_marked, target_marked, job))
+                    yield job
             # >= is for extra safety but it should be an exact match
             if nb_marked >= target_marked:
                 # we're done
                 break
             if not changed:
-                if self.debug:
-                    print("rain_check: loop makes no progress - we have a problem")
                 # this is wrong
-                return False
+                raise Exception("engine could not be scanned - most likely because of cycles") 
         # if we still have jobs here it's not good either, although it should not happen
         # on a sanitized engine
         if nb_marked != target_marked:
-            if self.debug:
-                print("rain_check: we have browsed {} jobs out of {}.\n"
-                      "            looks like {} jobs are not reachable from free jobs"
-                      .format(nb_marked, target_marked, target_marked - nb_marked))
-            return False
-        else:
-            return True
+            raise Exception("engine could not be scanned, {} jobs are not reachable from free jobs"
+                            .format(target_marked - nb_marked))
 
     ####################
     def ensure_future(self, job, loop):
@@ -390,15 +401,30 @@ class Engine:
                     added += 1
 
     ####################
-    def list(self):
+    def list(self, sep=None):
         """
-        print internal jobs as sorted in self.jobs
-        mostly useful after .rain_check()
+        print jobs in some natural order
+        beware that this might raise an exception if rain_check() has returned False
         """
+        if sep:
+            print(sep)
+        for i, job in enumerate(self.scan_in_order()):
+            print(i, job)
+        if sep:
+            print(sep)
+        
+    def list_safe(self, sep=None):
+        """
+        print jobs as sorted in self.jobs
+        """
+        if sep:
+            print(sep)
         for i, job in enumerate(self.jobs):
             print(i, job)
+        if sep:
+            print(sep)
         
-    def debrief(self, verbose=False):
+    def debrief(self, verbose=True):
         """
         Uses an object that has gone through orchestration
         and displays a listing of what has gone wrong
@@ -416,12 +442,17 @@ class Engine:
         if exceptions:
             nb_exceptions  = len(exceptions)
             nb_criticals = len(criticals)
-            print("===== {} jobs with exception, including {} critical"
+            print("===== {} jobs with an exception, including {} critical"
                   .format(nb_exceptions, nb_criticals))
-            for j in criticals:
-                print("CRITICAL: {}: exception {}".format(j.label, j.raised_exception()))
-            for j in exceptions - criticals:
-                print("non-critical: {}: exception {}".format(j.label, j.raised_exception()))
+            # show critical exceptions first
+            for j in self.scan_in_order():
+                if j in criticals:
+                    print("CRITICAL: {}: exception {}".format(j.label, j.raised_exception()))
+            # then exceptions that were not critical
+            non_critical_exceptions = exceptions - criticals
+            for j in self.scan_in_order():
+                if j in non_critical_exceptions:
+                    print("non-critical: {}: exception {}".format(j.label, j.raised_exception()))
         if nb_done != nb_total:
             print("===== {} unfinished jobs".format(nb_total - nb_done))
             for j in self.jobs - done:
