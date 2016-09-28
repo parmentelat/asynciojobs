@@ -96,6 +96,8 @@ from asynciojobs import Engine
 SLJ = SleepJob
 TJ  = TickJob
 
+sep = 40 * '*' + ' '
+
 import unittest
 
 class Tests(unittest.TestCase):
@@ -129,13 +131,13 @@ class Tests(unittest.TestCase):
         a7.requires(a6)
         
         e = Engine(*jobs)
-        e.list(40*'*' + "LIST BEFORE")
+        e.list(sep + "LIST BEFORE")
         self.assertTrue(e.rain_check())
         self.assertTrue(e.orchestrate(loop=asyncio.get_event_loop()))
         for j in jobs:
             self.assertFalse(j.raised_exception())
-        e.list(40*'*' + "LIST AFTER")
-        print(40*'*', "DEBRIEF")
+        e.list(sep + "LIST AFTER")
+        print(sep + "DEBRIEF")
         e.debrief()
         
     ####################
@@ -171,7 +173,11 @@ class Tests(unittest.TestCase):
         a1, a2 = SLJ(1), J(co_exception(0.5), label='critical boom', critical=True)
         e = Engine(a1, a2)
         self.assertFalse(e.orchestrate())
-        e.list()
+        e.list(sep + 'critical')
+        print(sep + 'debrief(verbose=False)')
+        e.debrief(verbose=False)
+        print(sep + 'debrief(verbose=True)')
+        e.debrief(verbose=True)
 
     ####################
     def test_sequence1(self):
@@ -181,7 +187,7 @@ class Tests(unittest.TestCase):
         a3 = J(sl(0.1), label=3)
         s = Seq(a1, a2, a3)
         e = Engine(s)
-        e.list(40*'*' + "sequence1")
+        e.list(sep + "sequence1")
         self.assertEqual(len(a1.required), 0)
         self.assertEqual(len(a2.required), 1)
         self.assertEqual(len(a3.required), 1)
@@ -195,7 +201,7 @@ class Tests(unittest.TestCase):
         a3 = J(sl(0.1), label=3)
         s = Seq(a2, a3, required=a1)
         e = Engine(a1, s)
-        e.list(40*'*' + "sequence2")
+        e.list(sep + "sequence2")
         self.assertEqual(len(a1.required), 0)
         self.assertEqual(len(a2.required), 1)
         self.assertEqual(len(a3.required), 1)
@@ -209,7 +215,7 @@ class Tests(unittest.TestCase):
         s = Seq(a1, a2)
         a3 = J(sl(0.1), label=3, required=s)
         e = Engine(s, a3)
-        e.list(40*'*' + "sequence3")
+        e.list(sep + "sequence3")
         self.assertEqual(len(a1.required), 0)
         self.assertEqual(len(a2.required), 1)
         self.assertEqual(len(a3.required), 1)
@@ -225,7 +231,7 @@ class Tests(unittest.TestCase):
         s1 = Seq(a1, a2)
         s2 = Seq(a3, a4)
         e = Engine(Seq(s1, s2))
-        e.list(40*'*' + "sequence4")
+        e.list(sep + "sequence4")
         self.assertEqual(len(a1.required), 0)
         self.assertEqual(len(a2.required), 1)
         self.assertEqual(len(a3.required), 1)

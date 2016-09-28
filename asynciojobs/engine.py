@@ -227,14 +227,16 @@ class Engine:
             # since all tasks are canceled
             await asyncio.wait(pending)
         
-    def show_task_stack(self, task):
+    def show_task_stack(self, task, msg='STACK'):
+        if isinstance(task, AbstractJob):
+            task = task._task
         sep = 20 * '*'
         print(sep)
-        print(sep, 'STACK BEG')
+        print(sep, 'BEG ' + msg)
         print(sep)
         task.print_stack()
         print(sep)
-        print(sep, 'STACK END')
+        print(sep, 'END' + msg)
         print(sep)
 
     async def _tidy_tasks_exception(self, tasks):
@@ -424,7 +426,7 @@ class Engine:
         if sep:
             print(sep)
         
-    def debrief(self, verbose=True):
+    def debrief(self, verbose=False):
         """
         Uses an object that has gone through orchestration
         and displays a listing of what has gone wrong
@@ -437,8 +439,6 @@ class Engine:
         criticals =  { j for j in exceptions if j.is_critical(self)}
 
         print("========== {} jobs done / {} total -- {}".format(nb_done, nb_total, self.why()))
-        if not verbose:
-            return
         if exceptions:
             nb_exceptions  = len(exceptions)
             nb_criticals = len(criticals)
@@ -447,12 +447,18 @@ class Engine:
             # show critical exceptions first
             for j in self.scan_in_order():
                 if j in criticals:
-                    print("CRITICAL: {}: exception {}".format(j.label, j.raised_exception()))
+                    if not verbose:
+                        print("CRITICAL: {}: exception {}".format(j.label, j.raised_exception()))
+                    else:
+                        self.show_task_stack(j, "CRITICAL job exception stack")
             # then exceptions that were not critical
             non_critical_exceptions = exceptions - criticals
             for j in self.scan_in_order():
                 if j in non_critical_exceptions:
-                    print("non-critical: {}: exception {}".format(j.label, j.raised_exception()))
+                    if not verbose:
+                        print("non-critical: {}: exception {}".format(j.label, j.raised_exception()))
+                    if verbose:
+                        self.show_task_stack(j, "non-critical job exception stack")
         if nb_done != nb_total:
             print("===== {} unfinished jobs".format(nb_total - nb_done))
             for j in self.jobs - done:
