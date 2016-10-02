@@ -29,8 +29,6 @@ class Sequence:
         if not sequences_or_jobs:
             return
         new_jobs = self.flatten(sequences_or_jobs)
-        print("self.jobs->", type(self.jobs))
-        print("new_jobs->", type(new_jobs))
         if self.jobs:
             new_jobs[0].requires(self.jobs[-1])
         self.jobs += new_jobs
