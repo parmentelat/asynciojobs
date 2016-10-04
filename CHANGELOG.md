@@ -1,3 +1,7 @@
+# 0.1.2 - 2016 Oct 2
+
+* only cosmetic
+
 # 0.1.1 - 2016 Sep 28
 
 * hardened and tested Sequence - can be nested and have required=
