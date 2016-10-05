@@ -4,8 +4,11 @@ class Sequence:
 
     def __init__(self, *sequences_or_jobs, required=None):
         self.jobs = self.flatten(sequences_or_jobs)
+        # create the chain of requirements in the sequence
         for previous, next in zip(self.jobs, self.jobs[1:]):
             next.requires(previous)
+        # any requirements specified in the constructor
+        # actually apply to the first item
         if self.jobs:
             self.jobs[0].requires(required)
 
@@ -33,4 +36,8 @@ class Sequence:
             new_jobs[0].requires(self.jobs[-1])
         self.jobs += new_jobs
 
-        
+    def requires(self, *requirements):
+        if not self.jobs:
+            # warning ?
+            return
+        self.jobs[0].requires(*requirements)

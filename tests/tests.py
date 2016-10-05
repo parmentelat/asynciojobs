@@ -239,6 +239,65 @@ class Tests(unittest.TestCase):
         self.assertTrue(e.orchestrate())
     
 
+    ##########
+    def test_requires_job(self):
+
+        a1 = J(sl(0.1), label="a1")
+        a2 = J(sl(0.1), label="a2")
+        a3 = J(sl(0.1), label="a3")
+        a4 = J(sl(0.1), label="a4")
+        a5 = J(sl(0.1), label="a5")
+
+        # several forms to create
+        b = J(sl(0.2), required = None)
+        self.assertEqual(len(b.required), 0)
+        b = J(sl(0.2), required = (None,))
+        self.assertEqual(len(b.required), 0)
+        b = J(sl(0.2), required = [None])
+        self.assertEqual(len(b.required), 0)
+        b = J(sl(0.2), required = a1)
+        self.assertEqual(len(b.required), 1)
+        b = J(sl(0.2), required = (a1,))
+        self.assertEqual(len(b.required), 1)
+        b = J(sl(0.2), required = [a1])
+        self.assertEqual(len(b.required), 1)
+        b = J(sl(0.2), label='BROKEN', required = (a1, a2))
+        self.assertEqual(len(b.required), 2)
+        b = J(sl(0.2), required = [a1, a2])
+        self.assertEqual(len(b.required), 2)
+        b = J(sl(0.2), required = [a1, (a2,), set([a3, a4]), [[[[[[a5]]]]]]])
+        self.assertEqual(len(b.required), 5)
+
+    ##########
+    def test_requires_sequence(self):
+
+        # we leave these untouched (no req. added)
+        a1 = J(sl(0.1), label="a1")
+        a2 = J(sl(0.1), label="a2")
+        a3 = J(sl(0.1), label="a3")
+        a4 = J(sl(0.1), label="a4")
+        a5 = J(sl(0.1), label="a5")
+        
+        # re-create these each time to have fresh data
+        def bs():
+            b1 = J(sl(0.1), label="b1")
+            b2 = J(sl(0.1), label="b2")
+            b3 = J(sl(0.1), label="b3")
+            return b1, b2, b3
+
+        b1, b2, b3, *_ = bs()
+        s1 = Seq(b1, b2, b3, required = [a1, a2])
+        self.assertEqual(len(b1.required), 2)
+        self.assertEqual(len(b2.required), 1)
+        
+        b1, b2, b3, *_ = bs()
+        s1 = Seq(b1, b2, b3)
+        s1.requires([a1, a2])
+        self.assertEqual(len(b1.required), 2)
+        self.assertEqual(len(b2.required), 1)
+        
+
+        
 if __name__ == '__main__':
     import sys
     if '-v' in sys.argv:

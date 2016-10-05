@@ -36,6 +36,7 @@ class Engine:
         self.verbose = verbose
         self.debug = debug
 
+    # think of an engine as a set of jobs
     def update(self, jobs):
         self.jobs.update(jobs)
 

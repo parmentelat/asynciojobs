@@ -85,17 +85,35 @@ class AbstractJob:
                              show_requires=debug)
 
     def requires(self, *requirements):
+        """
+        add requirements to a given job
+
+        with j* being jobs or sequences, one can call:
+        j1.requires(None)
+        j1.requires([None])
+        j1.requires((None,))
+        j1.requires(j2)
+        j1.requires(j2, j3)
+        j1.requires([j2, j3])
+        j1.requires((j2, j3))
+        j1.requires(([j2], [[[j3]]]))
+        """
         from .sequence import Sequence
         for requirement in requirements:
             if requirement is None:
                 continue
             if isinstance(requirement, AbstractJob):
-                self.required = set([requirement])
+                self.required.add(requirement)
             elif isinstance(requirement, Sequence):
                 if requirement.jobs:
                     self.required.add(requirement.jobs[-1])
+            elif isinstance(requirement, (tuple, list)):
+                for r in requirement:
+                    self.requires(r)
+            # not quite sure about what do to here in fact
             else:
-                self.required.add(requirement)
+                print("WARNING: fishy requirement in AbstractJob.requires")
+                self.requires(list(requirement))
 
     def is_started(self):
         return self._task is not None

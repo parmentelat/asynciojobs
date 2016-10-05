@@ -33,3 +33,8 @@ tags:
 	git ls-files | xargs etags
 
 .PHONY: tags
+
+##########
+tests:
+	python3 tests/tests.py
+.PHONY: tests
