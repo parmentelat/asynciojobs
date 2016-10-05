@@ -1,3 +1,7 @@
+# 0.2.0 - 2016 Oct 4
+
+* robust and tested management of requirements throughout
+
 # 0.1.2 - 2016 Oct 2
 
 * only cosmetic
