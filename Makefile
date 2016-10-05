@@ -38,3 +38,12 @@ tags:
 tests:
 	python3 tests/tests.py
 .PHONY: tests
+
+
+########## actually install
+infra:
+	apssh -t r2lab.infra pip3 install --upgrade asynciojobs
+check:
+	apssh -t r2lab.infra python3 -c '"import asynciojobs.version as version; print(version.version)"'
+
+.PHONY: infra check
