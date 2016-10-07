@@ -297,7 +297,35 @@ class Tests(unittest.TestCase):
         self.assertEqual(len(b2.required), 1)
         
 
+    ##########
+    def test_timeout(self):
+        a1 = J(sl(1), label="a1")
+        a2 = J(sl(2), label="a2")
+        a3 = J(sl(10), label="a3")
+        result = Engine(a1, a2, a3).orchestrate(timeout=3)
+        self.assertEqual(result, False)
+        self.assertEqual(a1.is_done(), True)
+        self.assertEqual(a1.result(), 1)
+        self.assertEqual(a2.is_done(), True)
+        self.assertEqual(a2.result(), 2)
+        self.assertEqual(a3.is_done(), False)
         
+        
+    ##########
+    def test_forever(self):
+        async def tick(n):
+            while True:
+                print('tick {}'.format(n))
+                await asyncio.sleep(n)
+
+        a1 = J(sl(0.5), label="finite")
+        a2 = J(tick(0.1), forever = True, label = "forever")
+        e = Engine(a1, a2)
+        result = e.orchestrate()
+        self.assertEqual(result, True)
+        self.assertEqual(a1.is_done(), True)
+        self.assertEqual(a2.is_done(), False)
+
 if __name__ == '__main__':
     import sys
     if '-v' in sys.argv:

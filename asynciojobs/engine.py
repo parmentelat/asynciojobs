@@ -30,58 +30,56 @@ class Engine:
         if critical is None:
             critical = self.default_critical
         self.critical = critical
-        # why does it fail ?
-        self._critical_stop = False
-        self._timed_out = False
+        ### why does it fail ?
+        # bool
+        self._failed_critical = False
+        # False, or the intial timeout
+        self._failed_timeout = False
         self.verbose = verbose
         self.debug = debug
 
     # think of an engine as a set of jobs
     def update(self, jobs):
+        """
+        add a collection of jobs (like set.update())
+        """
         self.jobs.update(jobs)
 
     def add(self, job):
+        """
+        add a single job (like set.add())
+        """
         self.jobs.add(job)
 
     def is_critical(self):
+        """
+        the default setting for jobs, unless they specify their own critical-ity
+        """
         return self.critical
+
+    def failed_time_out(self):
+        """
+        if orchestrate has failed because of a time out
+        """
+        return self._failed_timeout
+
+    def failed_critical(self):
+        """
+        if orchestrate has failed because of a critical job had an exception
+        """
+        return self._failed_critical
 
     def why(self):
         """
         a string message explaining why orchestrate has failed
         """
-        if self._timed_out:
-            return "TIMED OUT"
-        elif self._critical_stop:
+        if self._failed_timeout:
+            return "TIMED OUT after {}s".format(self._failed_timeout)
+        elif self._failed_critical:
             return "at least one CRITICAL job has raised an exception"
         else:
             return "FINE"
         
-    def _reset_marks(self):
-        """
-        reset Job._mark on all jobs
-        """
-        for job in self.jobs:
-            job._mark = None
-
-    def _reset_tasks(self):
-        """
-        In case one tries to run the same engine twice
-        """
-        for job in self.jobs:
-            job._task = None
-
-    def _backlinks(self):
-        """
-        initialize Job._successors on all jobs
-        as the reverse of Job.required
-        """
-        for job in self.jobs:
-            job._successors = set()
-        for job in self.jobs:
-            for req in job.required:
-                req._successors.add(job)
-
     ####################
     def orchestrate(self, loop=None, *args, **kwds):
         if loop is None:
@@ -181,7 +179,32 @@ class Engine:
                             .format(target_marked - nb_marked))
 
     ####################
-    def ensure_future(self, job, loop):
+    def _reset_marks(self):
+        """
+        reset Job._mark on all jobs
+        """
+        for job in self.jobs:
+            job._mark = None
+
+    def _reset_tasks(self):
+        """
+        In case one tries to run the same engine twice
+        """
+        for job in self.jobs:
+            job._task = None
+
+    def _backlinks(self):
+        """
+        initialize Job._successors on all jobs
+        as the reverse of Job.required
+        """
+        for job in self.jobs:
+            job._successors = set()
+        for job in self.jobs:
+            for req in job.required:
+                req._successors.add(job)
+
+    def _ensure_future(self, job, loop):
         """
         this is the hook that lets us make sure the created Task object have a 
         backlink pointer to its correponding job
@@ -192,7 +215,7 @@ class Engine:
         job._task = task
         return task
 
-    def mark_beginning(self, timeout):
+    def record_beginning(self, timeout):
         """
         Called once at the beginning of orchestrate, this method computes the absolute
         expiration date when a timeout is defined. 
@@ -237,12 +260,12 @@ class Engine:
             task.cancel()
             # if debug is turned on, provide details on the exceptions
             if self.debug:
-                self.show_task_stack(task)
+                self._show_task_stack(task)
         # don't bother to set a timeout, as this is expected to be immediate
         # since all tasks are canceled
         await asyncio.gather(*exception_tasks, return_exceptions=True)
         
-    def show_task_stack(self, task, msg='STACK'):
+    def _show_task_stack(self, task, msg='STACK'):
         if isinstance(task, AbstractJob):
             task = task._task
         sep = 20 * '*'
@@ -302,10 +325,10 @@ class Engine:
         # clear any Task instance
         self._reset_tasks()
         # for computing global timeout
-        self.mark_beginning(timeout)
+        self.record_beginning(timeout)
         # reset status
-        self._critical_stop = False
-        self._timed_out = False
+        self._failed_critical = False
+        self._failed_timeout = False
 
         # how many jobs do we expect to complete: the ones that don't run forever
         nb_jobs_finite = len([j for j in self.jobs if not j.forever])
@@ -322,7 +345,7 @@ class Engine:
         
         await self.feedback(entry_jobs, "STARTING")
         
-        pending = [ self.ensure_future(job, loop=loop)
+        pending = [ self._ensure_future(job, loop=loop)
                     for job in entry_jobs ]
 
         while True:
@@ -341,7 +364,7 @@ class Engine:
                 await self.feedback(pending, "ABORTING")
                 await self._tidy_tasks(pending)
                 await self.co_shutdown()
-                self._timed_out = True
+                self._failed_timeout = timeout
                 return False
 
             # a little surprisingly, there might be cases where done has more than one entry
@@ -373,11 +396,11 @@ class Engine:
                     await self.feedback(done_job, "EXCEPTION occurred - critical = {}".format(critical))
                     # make sure these ones show up even if not in debug mode
                     if not self.debug:
-                        self.show_task_stack(done_task)                    
+                        self._show_task_stack(done_task)                    
             if critical:
                 await self._tidy_tasks(pending)
                 await self.co_shutdown()
-                self._critical_stop = True
+                self._failed_critical = True
                 await self.feedback(None, "Emergency exit upon exception in critical job")
                 return False
 
@@ -402,7 +425,7 @@ class Engine:
                         requirements_ok = False
                 if requirements_ok:
                     await self.feedback(candidate_next, "STARTING")
-                    pending.add(self.ensure_future(candidate_next, loop=loop))
+                    pending.add(self._ensure_future(candidate_next, loop=loop))
                     added += 1
 
     ####################
@@ -455,7 +478,7 @@ class Engine:
                     if not verbose:
                         print("CRITICAL: {}: exception {}".format(j.label, j.raised_exception()))
                     else:
-                        self.show_task_stack(j, "CRITICAL job exception stack")
+                        self._show_task_stack(j, "CRITICAL job exception stack")
             # then exceptions that were not critical
             non_critical_exceptions = exceptions - criticals
             for j in self.scan_in_order():
@@ -463,7 +486,7 @@ class Engine:
                     if not verbose:
                         print("non-critical: {}: exception {}".format(j.label, j.raised_exception()))
                     if verbose:
-                        self.show_task_stack(j, "non-critical job exception stack")
+                        self._show_task_stack(j, "non-critical job exception stack")
         if nb_done != nb_total:
             print("===== {} unfinished jobs".format(nb_total - nb_done))
             for j in self.jobs - done:
