@@ -1,3 +1,7 @@
+# 0.2.1 - 2016 Oct 7
+
+* cleanup
+
 # 0.2.0 - 2016 Oct 4
 
 * robust and tested management of requirements throughout
