@@ -1,3 +1,7 @@
+# 0.2.2 - 2016 Oct 20
+
+* bugfix for when using Engine.update/Engine.add with a Sequence
+
 # 0.2.1 - 2016 Oct 7
 
 * cleanup
