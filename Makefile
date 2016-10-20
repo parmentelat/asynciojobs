@@ -1,3 +1,12 @@
+CONVERT = jupyter nbconvert --ExecutePreprocessor.enabled=True --ExecutePreprocessor.allow_errors=True
+
+all: readme
+readme: README.md
+README.md: README.ipynb
+	$(CONVERT) --to markdown README.ipynb --stdout > $@ || rm $@
+
+.PHONY: all readme
+
 ########## for uploading onto pypi
 # this assumes you have an entry 'pypi' in your .pypirc
 # see pypi documentation on how to create .pypirc
