@@ -43,13 +43,14 @@ class Engine:
         """
         add a collection of jobs (like set.update())
         """
+        jobs = set(Sequence.flatten(jobs))
         self.jobs.update(jobs)
 
     def add(self, job):
         """
         add a single job (like set.add())
         """
-        self.jobs.add(job)
+        self.update([job])
 
     def is_critical(self):
         """

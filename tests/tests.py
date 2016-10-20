@@ -100,6 +100,14 @@ sep = 40 * '*' + ' '
 
 import unittest
 
+def check_required_types(engine, message):
+    wrong = [j for j in engine.jobs if not isinstance(j, AbstractJob) or not hasattr(j, 'required')]
+    if len(wrong) != 0:
+        print("Engine {} has {}/{} ill-typed jobs"
+              .format(len(len(wrong), engine.jobs)))
+        return False
+    return True
+
 class Tests(unittest.TestCase):
 
     ####################
@@ -191,6 +199,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(len(a1.required), 0)
         self.assertEqual(len(a2.required), 1)
         self.assertEqual(len(a3.required), 1)
+        self.assertTrue(check_required_types(e, "test_sequence1"))
         self.assertTrue(e.orchestrate())
 
     ####################
@@ -205,6 +214,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(len(a1.required), 0)
         self.assertEqual(len(a2.required), 1)
         self.assertEqual(len(a3.required), 1)
+        self.assertTrue(check_required_types(e, "test_sequence2"))
         self.assertTrue(e.orchestrate())
 
     ####################
@@ -214,11 +224,14 @@ class Tests(unittest.TestCase):
         a2 = J(sl(0.1), label=2)
         s = Seq(a1, a2)
         a3 = J(sl(0.1), label=3, required=s)
-        e = Engine(s, a3)
+        #e = Engine(s, a3)
+        e = Engine()
+        e.update((s, a3))
         e.list(sep + "sequence3")
         self.assertEqual(len(a1.required), 0)
         self.assertEqual(len(a2.required), 1)
         self.assertEqual(len(a3.required), 1)
+        self.assertTrue(check_required_types(e, "test_sequence3"))
         self.assertTrue(e.orchestrate())
 
     ####################
@@ -236,8 +249,33 @@ class Tests(unittest.TestCase):
         self.assertEqual(len(a2.required), 1)
         self.assertEqual(len(a3.required), 1)
         self.assertEqual(len(a4.required), 1)
+        self.assertTrue(check_required_types(e, "test_sequence4"))
         self.assertTrue(e.orchestrate())
     
+        
+    ####################
+    def test_sequence5(self):
+        "sequences with required"
+        a1 = J(sl(0.1), label=1)
+        a2 = J(sl(0.1), label=2)
+        a3 = J(sl(0.1), label=3)
+        a4 = J(sl(0.1), label=4)
+        a5 = J(sl(0.1), label=5)
+        a6 = J(sl(0.1), label=6)
+        s1 = Seq(a1, a2)
+        s2 = Seq(a3, a4, required = s1)
+        s3 = Seq(a5, a6, required = s2)
+        e = Engine(s1, s2, s3)
+        e.list(sep + "sequence5")
+        self.assertEqual(len(a1.required), 0)
+        self.assertEqual(len(a2.required), 1)
+        self.assertEqual(len(a3.required), 1)
+        self.assertEqual(len(a4.required), 1)
+        self.assertEqual(len(a5.required), 1)
+        self.assertEqual(len(a6.required), 1)
+        self.assertTrue(check_required_types(e, "test_sequence5"))
+        self.assertTrue(e.orchestrate())
+
 
     ##########
     def test_requires_job(self):
