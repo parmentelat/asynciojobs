@@ -64,9 +64,9 @@ ea = Engine(a1, a2, a3)
 ea.orchestrate()
 ```
 
+    -> mycoro(0.25)
     -> mycoro(0.1)
     -> mycoro(0.2)
-    -> mycoro(0.25)
     <- mycoro(0.1)
     <- mycoro(0.2)
     <- mycoro(0.25)
@@ -267,9 +267,9 @@ e = Engine(j)
 e.orchestrate(timeout=0.25)
 ```
 
-    08:01:50: forever 0
-    08:01:50: forever 1
-    08:01:51: forever 2
+    17:57:45: forever 0
+    17:57:46: forever 1
+    17:57:46: forever 2
 
 
 
@@ -419,6 +419,14 @@ In some cases like esp. test scenarios, it can be helpful to add requirements to
 ### `co_shutdown`
 
 Before returning, `orchestrate` sends the `co_shutdown()` method on all jobs. The default behaviour - in the `Job` class - is to do nothing, but this can be redefined when relevant. Typically, an implementation of an `SshJob` will allow for a given SSH connection to be shared amongs several `SshJob` instances, and so `co_shutdown()` may be used to  close the underlying SSH connections at the end of the scenario.
+
+### `save_as_dotfile`
+
+An engine can be exported as a dotfile for feeding `graphviz` and producing visual diagrams. Provided that you have the `dot` program (which is part of `graphviz`) installed, you could do something like
+
+    e.save_as_dotfile('foo.dot')
+    os.system("dot -Tpng foo.dot -o foo.png")
+
 
 ### the `Sequence` class
 

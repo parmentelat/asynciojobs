@@ -2,8 +2,12 @@ CONVERT = jupyter nbconvert --ExecutePreprocessor.enabled=True --ExecutePreproce
 
 all: readme
 readme: README.md
-README.md: README.ipynb
-	$(CONVERT) --to markdown README.ipynb --stdout > $@ || rm $@
+README.md: README-eval.ipynb
+	$(CONVERT) --to markdown README-eval.ipynb --stdout > $@ || rm $@
+
+README-eval.ipynb: README.ipynb
+	jupyter nbconvert --ExecutePreprocessor.timeout=600 --to notebook --execute README.ipynb
+	mv -f README.nbconvert.ipynb README-eval.ipynb
 
 .PHONY: all readme
 
