@@ -494,3 +494,16 @@ class Engine:
                   print("UNFINISHED {}".format(j))
         if sep:
             print(sep)
+
+    def store_as_dotfile(self, filename):
+        def label_to_id(job):
+            return job.label.replace(' ', '_')
+        with open(filename, 'w') as output:
+            output.write("digraph G {\n")
+            for job in self.scan_in_order():
+                for r in job.required:
+                    output.write("{} -> {};\n"
+                                 .format(label_to_id(r),
+                                         label_to_id(job)))                                 
+            output.write("}\n")
+        print("(Over)wrote {}".format(filename))
