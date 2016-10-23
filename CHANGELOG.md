@@ -1,3 +1,7 @@
+# 0.2.3 - 2016 Oct 23
+
+* Engine.store_as_dotfile() can export job requirements graph to graphviz 
+
 # 0.2.2 - 2016 Oct 20
 
 * bugfix for when using Engine.update/Engine.add with a Sequence
