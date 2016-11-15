@@ -1,3 +1,10 @@
+# 0.3.1 - 2016 Nov 15
+
+* no semantic change, just simpler and nicer
+* cosmetic : nicer list() that shows all jobs with a 4-characters pictogram
+  that shows critical / forever / done/running/idle and if an exception occured
+* verbosity reviewed : only one verbose flag for the engine obj
+
 # 0.2.3 - 2016 Oct 23
 
 * Engine.store_as_dotfile() can export job requirements graph to graphviz 

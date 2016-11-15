@@ -403,17 +403,19 @@ class Tests(unittest.TestCase):
                     job._task._exception = True
             return job
 
+        class J(AbstractJob): pass
+
         e = Engine()
         previous = None
         for c in True, False:
             for boom in True, False:
                 for f in True, False:
                     for state in "done", "ongoing", "idle":
-                        j = AbstractJob(critical = c,
-                                        forever = f,
-                                        label = "forever={} critical={} status={} has_raised={}"
-                                        .format(f, c, state, boom),
-                                        required = previous
+                        j = J(critical = c,
+                              forever = f,
+                              label = "forever={} crit.={} status={} boom={}"
+                              .format(f, c, state, boom),
+                              required = previous
                         )
                         if annotate_job_with_fake_task(j, state, boom):
                             e.add(j)
