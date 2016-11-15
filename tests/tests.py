@@ -411,7 +411,7 @@ class Tests(unittest.TestCase):
                     for state in "done", "ongoing", "idle":
                         j = AbstractJob(critical = c,
                                         forever = f,
-                                        label = "forever={} crit={} s={} b={}"
+                                        label = "forever={} critical={} status={} has_raised={}"
                                         .format(f, c, state, boom),
                                         required = previous
                         )

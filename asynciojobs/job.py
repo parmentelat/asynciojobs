@@ -50,11 +50,13 @@ class AbstractJob:
         # once submitted in the asyncio loop/scheduler, the `co_run()` gets embedded in a 
         # Task object, that is our handle when talking to asyncio.wait
         self._task = None
-        # ==== fields for our friend Engine 
+        # ==== fields for our friend Engine all start with _e_
         # this is for graph browsing algos
-        self._mark = None
+        self._e_mark = None
         # the reverse of required
-        self._successors = set()
+        self._e_successors = set()
+        # if this is set by the engine, we use it for listing relationships
+        self._e_label = None
 
     ##########
     _has_support_for_unicode = None
@@ -131,7 +133,11 @@ class AbstractJob:
         else:
             return self.short_ascii()
     
-    def __repr__(self, show_requires=True, show_successors=False):
+    def e_label(self, use_e_label):
+        # use the label set from engine if present, otherwise our own verbose one
+        return self.label if not use_e_label else ( self._e_label or self.label )
+
+    def repr(self, show_requires=True, show_successors=False, use_e_label = False):
         info = self.short()
         info += " <{} `{}`".format(type(self).__name__, self.label)
 
@@ -145,14 +151,14 @@ class AbstractJob:
         info += ">"
         ### show dependencies in both directions
         if show_requires and self.required:
-            info += " - requires:{" + ", ".join(a.label for a in self.required) + "}"
+            info += " - requires:{" + ", ".join(a.e_label(use_e_label) for a in self.required) + "}"
         # this is almost always turned off anyways
-        if show_successors and self._successors:
-            info += " - allows: {" + ", ".join(a.label for a in self._successors) + "}"
+        if show_successors and self._e_successors:
+            info += " - allows: {" + ", ".join(a.e_label(use_e_label) for a in self._e_successors) + "}"
         return info
     
-    def repr(self, verbose):
-        return self.__repr__(show_requires=verbose)
+    def __repr__(self):
+        return self.__repr__(show_requires=False, use_e_label = False)
 
     def requires(self, *requirements):
         """

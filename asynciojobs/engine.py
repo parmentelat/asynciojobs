@@ -93,7 +93,7 @@ class Engine:
         for job in self.jobs:
             before = len(job.required)
             job.required &= self.jobs
-            job._successors &= self.jobs
+            job._e_successors &= self.jobs
             after = len(job.required)
             if self.verbose and before != after:
                 print(20*'*', "WARNING: job {} has had {} requirements removed"
@@ -143,17 +143,17 @@ class Engine:
             # loop on unfinished business
             for job in self.jobs:
                 # ignore jobs already marked
-                if job._mark:
+                if job._e_mark:
                     continue
                 # if there's no requirement (first pass),
                 # or later on if all requirements have already been marked,
                 # then we can mark this one
                 has_unmarked_requirements = False
                 for required_job in job.required:
-                    if required_job._mark is None:
+                    if required_job._e_mark is None:
                         has_unmarked_requirements = True
                 if not has_unmarked_requirements:
-                    job._mark = True
+                    job._e_mark = True
                     nb_marked += 1
                     changed = True
                     yield job
@@ -173,10 +173,10 @@ class Engine:
     ####################
     def _reset_marks(self):
         """
-        reset Job._mark on all jobs
+        reset Job._e_mark on all jobs
         """
         for job in self.jobs:
-            job._mark = None
+            job._e_mark = None
 
     def _reset_tasks(self):
         """
@@ -187,14 +187,14 @@ class Engine:
 
     def _backlinks(self):
         """
-        initialize Job._successors on all jobs
+        initialize Job._e_successors on all jobs
         as the reverse of Job.required
         """
         for job in self.jobs:
-            job._successors = set()
+            job._e_successors = set()
         for job in self.jobs:
             for req in job.required:
-                req._successors.add(job)
+                req._e_successors.add(job)
 
     def _ensure_future(self, job, loop):
         """
@@ -318,7 +318,7 @@ class Engine:
         """
         if loop is None:
             loop = asyncio.get_event_loop()
-        # initialize backlinks - i.e. _successors is the reverse of required
+        # initialize backlinks - i.e. _e_successors is the reverse of required
         self._backlinks()
         # clear any Task instance
         self._reset_tasks()
@@ -410,7 +410,7 @@ class Engine:
             # only consider the ones that are right behind any of the the jobs that just finished
             possible_next_jobs = set()
             for done_task in done:
-                possible_next_jobs.update(done_task._job._successors)
+                possible_next_jobs.update(done_task._job._e_successors)
 
             # find out which ones really can be added
             added = 0
@@ -439,7 +439,9 @@ class Engine:
         l = len(self.jobs)
         format = "{:02}" if l < 100 else "{:04}"
         for i, job in enumerate(self.scan_in_order()):
-            print(format.format(i), job)
+            job._e_label = format.format(i)
+        for i, job in enumerate(self.scan_in_order()):
+            print(format.format(i), job.repr(show_requires=True, use_e_label=True))
         
     def list_safe(self):
         """
