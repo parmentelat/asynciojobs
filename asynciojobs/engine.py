@@ -2,9 +2,15 @@
 
 import time
 import asyncio
+import traceback
+import io
 
 from .job import AbstractJob
 from .sequence import Sequence
+
+# will hopefully go away some day
+debug = False
+#debug = True
 
 class Engine:
     """
@@ -23,20 +29,14 @@ class Engine:
 
     """
 
-    default_critical = False
-
-    def __init__(self,  *jobs_or_sequences, critical=None, verbose=False, debug=False):
+    def __init__(self,  *jobs_or_sequences, verbose=False):
         self.jobs = set(Sequence.flatten(jobs_or_sequences))
-        if critical is None:
-            critical = self.default_critical
-        self.critical = critical
         ### why does it fail ?
         # bool
         self._failed_critical = False
         # False, or the intial timeout
         self._failed_timeout = False
         self.verbose = verbose
-        self.debug = debug
 
     # think of an engine as a set of jobs
     def update(self, jobs):
@@ -51,12 +51,6 @@ class Engine:
         add a single job (like set.add())
         """
         self.update([job])
-
-    def is_critical(self):
-        """
-        the default setting for jobs, unless they specify their own critical-ity
-        """
-        return self.critical
 
     def failed_time_out(self):
         """
@@ -88,7 +82,7 @@ class Engine:
         return loop.run_until_complete(self.co_orchestrate(loop=loop, *args, **kwds))
 
     ####################
-    def sanitize(self, verbose=True):
+    def sanitize(self):
         """
         Removes requirements that are not part of the engine
         This is mostly convenient in many test scenarios
@@ -101,7 +95,7 @@ class Engine:
             job.required &= self.jobs
             job._successors &= self.jobs
             after = len(job.required)
-            if verbose and before != after:
+            if self.verbose and before != after:
                 print(20*'*', "WARNING: job {} has had {} requirements removed"
                       .format(job, before - after))
 
@@ -126,7 +120,7 @@ class Engine:
                 pass
             return True
         except Exception as e:
-            if self.debug:
+            if self.verbose:
                 print("rain_check failed", e)
             return False
 
@@ -162,9 +156,6 @@ class Engine:
                     job._mark = True
                     nb_marked += 1
                     changed = True
-#                    if self.debug:
-#                        print("rain_check: {}/{}, new={}"
-#                              .format(nb_marked, target_marked, job))
                     yield job
             # >= is for extra safety but it should be an exact match
             if nb_marked >= target_marked:
@@ -260,20 +251,26 @@ class Engine:
         for task in exception_tasks:
             task.cancel()
             # if debug is turned on, provide details on the exceptions
-            if self.debug:
-                self._show_task_stack(task)
+            if debug:
+                self._show_task_stack(task, "TIDYING")
         # don't bother to set a timeout, as this is expected to be immediate
         # since all tasks are canceled
         await asyncio.gather(*exception_tasks, return_exceptions=True)
         
-    def _show_task_stack(self, task, msg='STACK'):
+    def _show_task_stack(self, task, msg='STACK', margin=4, limit=None):
         if isinstance(task, AbstractJob):
             task = task._task
-        sep = 20 * '*'
+        sep = margin * ' ' + 20 * '*'
         print(sep)
         print(sep, 'BEG ' + msg)
         print(sep)
-        task.print_stack()
+        # naive approach would be like this, but does not support margin:
+        #task.print_stack()
+        stio = io.StringIO()
+        task.print_stack(file=stio, limit=limit)
+        stio.seek(0)
+        for line in stio:
+            print(margin * ' ' + line, end="")
         print(sep)
         print(sep, 'END ' + msg)
         print(sep)
@@ -313,7 +310,7 @@ class Engine:
         for job in jobs:
             if not isinstance(job, AbstractJob):
                 job = job._job
-            print("{}: {}: {}".format(time.strftime(time_format), state, job.nice(self.debug)))
+            print("{}: {}: {}".format(time.strftime(time_format), state, job.repr(self.verbose)))
 
     async def co_orchestrate(self, loop=None, timeout=None):
         """
@@ -344,6 +341,9 @@ class Engine:
         if not entry_jobs:
             raise ValueError("No entry points found - cannot orchestrate")
         
+        if self.verbose:
+            await self.feedback(None, "entering orchestrate with {} jobs".format(len(self.jobs)))
+
         await self.feedback(entry_jobs, "STARTING")
         
         pending = [ self._ensure_future(job, loop=loop)
@@ -376,7 +376,7 @@ class Engine:
             done_jobs_not_forever = { j for j in done if not j._job.forever }
             nb_jobs_done += len(done_jobs_not_forever)
             if nb_jobs_done == nb_jobs_finite:
-                if self.debug:
+                if debug:
                     print("orchestrate: {} CLEANING UP at iteration {} / {}"
                           .format(4*'-', nb_jobs_done, nb_jobs_finite))
                 assert len(pending) == nb_jobs_forever
@@ -389,16 +389,17 @@ class Engine:
             # clear the exception
             await self._tidy_tasks_exception(done)
             # do we have at least one critical job with an exception ?
-            critical = False
+            critical_failure = False
             for done_task in done:
                 done_job = done_task._job
                 if done_job.raised_exception():
-                    critical = critical or done_job.is_critical(self)
-                    await self.feedback(done_job, "EXCEPTION occurred - critical = {}".format(critical))
+                    critical_failure = critical_failure or done_job.is_critical()
+                    await self.feedback(done_job, "EXCEPTION occurred - on {}critical job"
+                                        .format("non-" if not done_job.is_critical() else ""))
                     # make sure these ones show up even if not in debug mode
-                    if not self.debug:
-                        self._show_task_stack(done_task)                    
-            if critical:
+                    if debug:
+                        self._show_task_stack(done_task, "DEBUG")
+            if critical_failure:
                 await self._tidy_tasks(pending)
                 await self.co_shutdown()
                 self._failed_critical = True
@@ -430,44 +431,54 @@ class Engine:
                     added += 1
 
     ####################
-    def list(self, sep=None):
+    def list(self):
         """
         print jobs in some natural order
         beware that this might raise an exception if rain_check() has returned False
         """
-        if sep:
-            print(sep)
+        l = len(self.jobs)
+        format = "{:02}" if l < 100 else "{:04}"
         for i, job in enumerate(self.scan_in_order()):
-            print(i, job)
-        if sep:
-            print(sep)
+            print(format.format(i), job)
         
-    def list_safe(self, sep=None):
+    def list_safe(self):
         """
         print jobs as sorted in self.jobs
         """
-        if sep:
-            print(sep)
         for i, job in enumerate(self.jobs):
             print(i, job)
-        if sep:
-            print(sep)
         
-    def debrief(self, verbose=False, sep=None):
+    def debrief(self):
         """
-        Uses an object that has gone through orchestration
-        and displays a listing of what has gone wrong
-        Mostly useful if orchestrate() returned False
+        On an object that has gone through orchestration:
+        displays a listing of what has gone fine or wrong
+        Mostly useful if orchestrate() returned False, but well
         """
         nb_total =   len(self.jobs)
         done =       { j for j in self.jobs if j.is_done() }
         nb_done =    len(done)
+        started =    { j for j in self.jobs if j.is_started() }
+        nb_started = len(started)
+        ongoing =    started - done
+        nb_ongoing = len(ongoing)
+        idle =       self.jobs - started
+        nb_idle =    len(idle)
+        
         exceptions = { j for j in self.jobs if j.raised_exception()}
-        criticals =  { j for j in exceptions if j.is_critical(self)}
+        criticals =  { j for j in exceptions if j.is_critical()}
 
-        if sep:
-            print(sep)
-        print("========== {} jobs done / {} total -- {}".format(nb_done, nb_total, self.why()))
+        message = "engine has a total of {} jobs".format(nb_total)
+        def legible_message(nb, adj):
+            if nb == 0: return " none is {}".format(adj)
+            elif nb == 1: return " 1 is {}".format(adj)
+            else : return " {} are {}".format(nb, adj)
+        message += ", " + legible_message(nb_done, "done") 
+        message += ", " + legible_message(nb_ongoing, "ongoing") 
+        message += ", " + legible_message(nb_idle, "idle") 
+
+        print(5 * '-', self.why())
+        self.list()
+        #####
         if exceptions:
             nb_exceptions  = len(exceptions)
             nb_criticals = len(criticals)
@@ -476,26 +487,17 @@ class Engine:
             # show critical exceptions first
             for j in self.scan_in_order():
                 if j in criticals:
-                    if not verbose:
-                        print("CRITICAL: {}: exception {}".format(j.label, j.raised_exception()))
-                    else:
-                        self._show_task_stack(j, "CRITICAL job exception stack")
+                    self._show_task_stack(j, "CRITICAL JOB exception stack")
             # then exceptions that were not critical
             non_critical_exceptions = exceptions - criticals
             for j in self.scan_in_order():
                 if j in non_critical_exceptions:
-                    if not verbose:
+                    if not self.verbose:
                         print("non-critical: {}: exception {}".format(j.label, j.raised_exception()))
-                    if verbose:
+                    if self.verbose:
                         self._show_task_stack(j, "non-critical job exception stack")
-        if nb_done != nb_total:
-            print("===== {} unfinished jobs".format(nb_total - nb_done))
-            for j in self.jobs - done:
-                  print("UNFINISHED {}".format(j))
-        if sep:
-            print(sep)
 
-    def store_as_dotfile(self, filename):
+    def export_as_dotfile(self, filename):
         def label_to_id(job):
             return job.label.replace(' ', '_')
         with open(filename, 'w') as output:

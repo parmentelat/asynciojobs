@@ -108,6 +108,12 @@ def check_required_types(engine, message):
         return False
     return True
 
+def list_sep(engine, sep):
+    print(sep)
+    engine.list()
+    print(sep)
+
+
 class Tests(unittest.TestCase):
 
     ####################
@@ -139,12 +145,12 @@ class Tests(unittest.TestCase):
         a7.requires(a6)
         
         e = Engine(*jobs)
-        e.list(sep + "LIST BEFORE")
+        list_sep(e, sep + "LIST BEFORE")
         self.assertTrue(e.rain_check())
         self.assertTrue(e.orchestrate(loop=asyncio.get_event_loop()))
         for j in jobs:
             self.assertFalse(j.raised_exception())
-        e.list(sep + "LIST AFTER")
+        list_sep(e, sep + "LIST AFTER")
         print(sep + "DEBRIEF")
         e.debrief()
         
@@ -168,25 +174,31 @@ class Tests(unittest.TestCase):
         e.list()
 
     ####################
-    def test_exc_non_critical(self):
+    def _test_exc_non_critical(self, verbose):
 
+        print("verbose = {}".format(verbose))
         a1, a2 = SLJ(1), J(co_exception(0.5), label='non critical boom')
-        e = Engine(a1, a2)
+        e = Engine(a1, a2, verbose=verbose)
         self.assertTrue(e.orchestrate())
-        e.list()
+        print(sep + 'debrief()')
+        e.debrief()
 
+    def test_exc_non_critical_f(self): return self._test_exc_non_critical(False)
+    def test_exc_non_critical_t(self): return self._test_exc_non_critical(True)
+        
     ####################
-    def test_exc_critical(self):
+    def _test_exc_critical(self, verbose):
 
+        print("verbose = {}".format(verbose))
         a1, a2 = SLJ(1), J(co_exception(0.5), label='critical boom', critical=True)
-        e = Engine(a1, a2)
+        e = Engine(a1, a2, verbose=verbose)
         self.assertFalse(e.orchestrate())
-        e.list(sep + 'critical')
-        print(sep + 'debrief(verbose=False)')
-        e.debrief(verbose=False)
-        print(sep + 'debrief(verbose=True)')
-        e.debrief(verbose=True)
+        print(sep + 'debrief()')
+        e.debrief()
 
+    def test_exc_critical_f(self): return self._test_exc_critical(False)
+    def test_exc_critical_t(self): return self._test_exc_critical(True)
+    
     ####################
     def test_sequence1(self):
         "a simple sequence"
@@ -195,7 +207,7 @@ class Tests(unittest.TestCase):
         a3 = J(sl(0.1), label=3)
         s = Seq(a1, a2, a3)
         e = Engine(s)
-        e.list(sep + "sequence1")
+        list_sep(e, sep + "sequence1")
         self.assertEqual(len(a1.required), 0)
         self.assertEqual(len(a2.required), 1)
         self.assertEqual(len(a3.required), 1)
@@ -210,7 +222,7 @@ class Tests(unittest.TestCase):
         a3 = J(sl(0.1), label=3)
         s = Seq(a2, a3, required=a1)
         e = Engine(a1, s)
-        e.list(sep + "sequence2")
+        list_sep(e, sep + "sequence2")
         self.assertEqual(len(a1.required), 0)
         self.assertEqual(len(a2.required), 1)
         self.assertEqual(len(a3.required), 1)
@@ -227,7 +239,7 @@ class Tests(unittest.TestCase):
         #e = Engine(s, a3)
         e = Engine()
         e.update((s, a3))
-        e.list(sep + "sequence3")
+        list_sep(e, sep + "sequence3")
         self.assertEqual(len(a1.required), 0)
         self.assertEqual(len(a2.required), 1)
         self.assertEqual(len(a3.required), 1)
@@ -244,7 +256,7 @@ class Tests(unittest.TestCase):
         s1 = Seq(a1, a2)
         s2 = Seq(a3, a4)
         e = Engine(Seq(s1, s2))
-        e.list(sep + "sequence4")
+        list_sep(e, sep + "sequence4")
         self.assertEqual(len(a1.required), 0)
         self.assertEqual(len(a2.required), 1)
         self.assertEqual(len(a3.required), 1)
@@ -266,7 +278,7 @@ class Tests(unittest.TestCase):
         s2 = Seq(a3, a4, required = s1)
         s3 = Seq(a5, a6, required = s2)
         e = Engine(s1, s2, s3)
-        e.list(sep + "sequence5")
+        list_sep(e, sep + "sequence5")
         self.assertEqual(len(a1.required), 0)
         self.assertEqual(len(a2.required), 1)
         self.assertEqual(len(a3.required), 1)
@@ -363,6 +375,52 @@ class Tests(unittest.TestCase):
         self.assertEqual(result, True)
         self.assertEqual(a1.is_done(), True)
         self.assertEqual(a2.is_done(), False)
+
+    ##########
+    def test_display(self):
+
+        class FakeTask:
+            def __init__(self):
+                self._result = 0
+                self._exception = None
+
+        def annotate_job_with_fake_task(job, state, boom):
+            task = FakeTask()
+            if state == "done":
+                task._state = asyncio.futures._FINISHED
+                job._task = task
+            elif state == "ongoing":
+                task._state = "NONE"
+                job._task = task
+            else:
+                pass
+
+            if boom:
+                if state == "idle":
+                    print("incompatible combination boom x idle - ignored")
+                    return
+                else:
+                    job._task._exception = True
+            return job
+
+        e = Engine()
+        previous = None
+        for c in True, False:
+            for boom in True, False:
+                for f in True, False:
+                    for state in "done", "ongoing", "idle":
+                        j = AbstractJob(critical = c,
+                                        forever = f,
+                                        label = "forever={} crit={} s={} b={}"
+                                        .format(f, c, state, boom),
+                                        required = previous
+                        )
+                        if annotate_job_with_fake_task(j, state, boom):
+                            e.add(j)
+                            previous = j
+        e.list()
+
+                
 
 if __name__ == '__main__':
     import sys

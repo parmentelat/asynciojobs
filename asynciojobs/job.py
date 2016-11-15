@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+import sys
 import asyncio
 
 debug = False
@@ -54,35 +56,103 @@ class AbstractJob:
         # the reverse of required
         self._successors = set()
 
-    def __repr__(self, show_state=True, show_requires=True, show_successors=False):
-        info = "<{} `{}'".format(type(self).__name__, self.label)
-        ### outline forever jobs
-        if self.forever:
-            info += "[∞]"
+    ##########
+    _has_support_for_unicode = None
+
+    @classmethod
+    def detect_support_for_unicode(klass):
+        if klass._has_support_for_unicode is None:
+            try:
+                klass._c_saltire.encode(sys.stdout.encoding)
+                klass._has_support_for_unicode = True
+            except UnicodeEncodeError as e:
+                klass._has_support_for_unicode = False
+        return klass._has_support_for_unicode
+            
+
+    ########## unicode version
+    _c_saltire       = "\u2613" # ☓
+    _c_circle_arrow  = "\u21ba" # ↺
+    _c_flag          = "\u2690" # ⚐
+    _c_warning       = "\u26a0" # ⚠
+    _c_frowning_face = "\u2639" # ☹
+    _c_smiling_face  = "\u263b" # ☻
+    #_c_sun           = "\u2609" # ☉
+    _c_infinity      = "\u221e" # ∞
+    
+
+    def short_unicode(self):
+        # is it done, or ongoing, or not yet started ?
+        c_running = self._c_saltire if self.is_done() else \
+                 self._c_circle_arrow if self.is_started() else \
+                 self._c_flag
+        # is it critical or not ?
+        c_crit = self._c_warning if self.is_critical() else " "
+        # has it raised an exception or not ?
+        # white frowning face or sun
+        c_boom = self._c_frowning_face if self.raised_exception() \
+                 else self._c_smiling_face if self.is_started() \
+                 else " "
+        # is it going forever or not
+        c_forever = self._c_infinity if self.forever else " "
+
+        # add extra white space as unicode chars in terminal tend to be wider than others
+        return "{} {} {} {}".format(c_crit, c_boom, c_running, c_forever)
+        
+    def short_ascii(self):
+        # is it done, or ongoing, or not yet started ?
+        c_running = "x" if self.is_done() else \
+                 "o" if self.is_started() else \
+                 ">"
+        # is it critical or not ?
+        c_crit = "!" if self.is_critical() else " "
+        # has it raised an exception or not ?
+        # white frowning face or sun
+        c_boom = ":(" if self.raised_exception() \
+                 else ":)" if self.is_started() \
+                 else "  "
+        # is it going forever or not
+        c_forever = "8" if self.forever else " "
+
+        # add extra white space as unicode chars in terminal tend to be wider than others
+        return "{} {} {} {}".format(c_crit, c_boom, c_running, c_forever)
+
+    def short(self):
+        """
+        return a 4 characters string (in fact possibly 7 with interspaces)
+        that illustrate the 4 dimensions of the job, that is
+        (*) is it done/started/idle
+        (*) is it declared as forever
+        (*) is it critical
+        (*) did it trigger an exception
+        """
+        if self.detect_support_for_unicode():
+            return self.short_unicode()
+        else:
+            return self.short_ascii()
+    
+    def __repr__(self, show_requires=True, show_successors=False):
+        info = self.short()
+        info += " <{} `{}`".format(type(self).__name__, self.label)
+
         ### show info - IDLE means not started at all
-        if show_state:
-            if not self._task:
-                info += " unscheduled"
-            else:
-                info += " {}".format(self._task._state.lower())
-            ### if it has returned, show result
-            if self.is_done():
-                info += " -> {}".format(self.result())
         exception = self.raised_exception()
         if exception:
-            critical_msg = "CRITICAL " if self.critical else ""
-            info += " {}EXCEPTION:!!{}:{}!!".format(critical_msg, type(exception).__name__, exception)
+            critical_msg = "CRITICAL EXCEPTION" if self.is_critical() else "exception"
+            info += " => {}:!!{}:{}!!".format(critical_msg, type(exception).__name__, exception)
+        elif self.is_done():
+            info += " -> {}".format(self.result())
+        info += ">"
         ### show dependencies in both directions
         if show_requires and self.required:
             info += " - requires:{" + ", ".join(a.label for a in self.required) + "}"
+        # this is almost always turned off anyways
         if show_successors and self._successors:
             info += " - allows: {" + ", ".join(a.label for a in self._successors) + "}"
-        info += ">"
         return info
     
-    def nice(self, debug):
-        return self.__repr__(show_state=debug,
-                             show_requires=debug)
+    def repr(self, verbose):
+        return self.__repr__(show_requires=verbose)
 
     def requires(self, *requirements):
         """
@@ -123,14 +193,8 @@ class AbstractJob:
         """returns an exception if applicable, or None"""
         return self._task is not None and self._task._exception
 
-    def is_critical(self, engine):
-        """
-        If critical is set locally, use that
-        otherwise the engine tells the default
-        """
-        if self.critical is not None:
-            return self.critical
-        return engine.is_critical()
+    def is_critical(self):
+        return self.critical
 
     def result(self):
         if not self.is_done():

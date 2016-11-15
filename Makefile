@@ -9,7 +9,10 @@ README-eval.ipynb: README.ipynb
 	jupyter nbconvert --ExecutePreprocessor.timeout=600 --to notebook --execute README.ipynb
 	mv -f README.nbconvert.ipynb README-eval.ipynb
 
-.PHONY: all readme
+readme-clean:
+	rm -f README.md README-eval.ipynb
+
+.PHONY: all readme readme-clean
 
 ########## for uploading onto pypi
 # this assumes you have an entry 'pypi' in your .pypirc

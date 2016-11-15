@@ -1,13 +1,25 @@
 
+<span style="float:left;">Licence CC BY-NC-ND</span>
+
 # A simplistic orchestration engine
 
 The main and single purpose of this library is to allow for the static description of a scenario involving `asyncio`-compliant jobs, that have dependencies in the sense that a given job cannot start until its requirements have not completed.
 
 So in a nutshell you would:
-* define a set of `Job` objects, and their `requires` relationship
+
+* define a set of `Job` objects, 
+* together with their `requires` relationship; that is to say, for each of them, which other jobs need to have completed before this one can be started,
 * and run this logic through an `Engine` object, that will orchestrate the whole secenario 
 
+Further features allow to
+
+* define a job as running `forever`, in which case the engine of course won't wait for it, but instead will terminate it when all other jobs are done;
+* define a job as `critical`; a critical job that raises an exception causes the orchestration to terminate abruptly;
+* define a global `timeout` for the whole engine.
+
+
 A job object can be created:
+
 * either as a `Job` instance from a regular asyncio coroutine
 * or by specializing the `AbstractJob` class and defining its `co_run()` method
 
@@ -78,6 +90,11 @@ ea.orchestrate()
     True
 
 
+
+
+```python
+z = mycoro(5)
+```
 
 ### example B : add requirements (dependencies)
 
@@ -159,9 +176,9 @@ for job in eb.jobs:
     print(job)
 ```
 
-    <Job `b2' finished -> 200.0 - requires:{b1}>
-    <Job `NOLABEL' finished -> 250.0>
-    <Job `b1' finished -> 100.0>
+      ☻ ☓   <Job `b2` -> 200.0> - requires:{b1}
+      ☻ ☓   <Job `NOLABEL` -> 250.0>
+      ☻ ☓   <Job `b1` -> 100.0>
 
 
 
@@ -243,10 +260,10 @@ Note that `orchestrate` always terminates as soon as all the non-`forever` jobs 
 ec.list()
 ```
 
-    0 <Job `c1' finished -> 2.0>
-    1 <Job `monitor'[∞] cancelled>
-    2 <Job `c2' finished -> 4.0>
-    3 <Job `c3' finished -> 3.0 - requires:{c1}>
+    00   ☻ ↺ ∞ <Job `monitor`>
+    01   ☻ ☓   <Job `c1` -> 2.0>
+    02   ☻ ☓   <Job `c2` -> 4.0>
+    03   ☻ ☓   <Job `c3` -> 3.0> - requires:{c1}
 
 
 ### example D : specifying a global timeout
@@ -267,9 +284,9 @@ e = Engine(j)
 e.orchestrate(timeout=0.25)
 ```
 
-    17:57:45: forever 0
-    17:57:46: forever 1
-    17:57:46: forever 2
+    20:40:01: forever 0
+    20:40:01: forever 1
+    20:40:01: forever 2
 
 
 
@@ -289,7 +306,7 @@ j
 
 
 
-    <Job `NOLABEL'[∞] cancelled>
+      ☻ ↺ ∞ <Job `NOLABEL`>
 
 
 
@@ -329,30 +346,12 @@ e.list()
 
     -> mycoro(0.2)
     <- mycoro(0.2)
-    ********************
-    ******************** BEG STACK
-    ********************
-    Traceback for <Task finished coro=<Job.co_run() done, defined at /Users/parmentelat/git/asynciojobs/asynciojobs/job.py:175> exception=Exception('boom after 0.2s',)> (most recent call last):
-    Exception: boom after 0.2s
-    ********************
-    ******************** END STACK
-    ********************
     -> mycoro(0.3)
-
-
-      File "/opt/local/Library/Frameworks/Python.framework/Versions/3.5/lib/python3.5/asyncio/tasks.py", line 286, in _step
-        self = None  # Needed to break cycles when an exception occurs.
-      File "/Users/parmentelat/git/asynciojobs/asynciojobs/job.py", line 176, in co_run
-        result = await self.coro
-      File "<ipython-input-18-37b06ecfa2a4>", line 3, in boom
-        raise Exception("boom after {}s".format(n))
-
-
     <- mycoro(0.3)
     orch: True
-    0 <Job `NOLABEL' finished -> 200.0>
-    1 <Job `boom' finished -> None EXCEPTION:!!Exception:boom after 0.2s!! - requires:{NOLABEL}>
-    2 <Job `NOLABEL' finished -> 300.0 - requires:{boom}>
+    00   ☻ ☓   <Job `NOLABEL` -> 200.0>
+    01   ☹ ☓   <Job `boom` => exception:!!Exception:boom after 0.2s!!> - requires:{NOLABEL}
+    02   ☻ ☓   <Job `NOLABEL` -> 300.0> - requires:{boom}
 
 
 ### Example F : critical jobs
@@ -373,26 +372,10 @@ e.list()
 
     -> mycoro(0.2)
     <- mycoro(0.2)
-    ********************
-    ******************** BEG STACK
-    ********************
-    Traceback for <Task finished coro=<Job.co_run() done, defined at /Users/parmentelat/git/asynciojobs/asynciojobs/job.py:175> exception=Exception('boom after 0.2s',)> (most recent call last):
-    Exception: boom after 0.2s
-    ********************
-    ******************** END STACK
-    ********************
     orchestrate: False
-    0 <Job `NOLABEL' finished -> 200.0>
-    1 <Job `boom' finished -> None CRITICAL EXCEPTION:!!Exception:boom after 0.2s!! - requires:{NOLABEL}>
-    2 <Job `NOLABEL' unscheduled - requires:{boom}>
-
-
-      File "/opt/local/Library/Frameworks/Python.framework/Versions/3.5/lib/python3.5/asyncio/tasks.py", line 286, in _step
-        self = None  # Needed to break cycles when an exception occurs.
-      File "/Users/parmentelat/git/asynciojobs/asynciojobs/job.py", line 176, in co_run
-        result = await self.coro
-      File "<ipython-input-18-37b06ecfa2a4>", line 3, in boom
-        raise Exception("boom after {}s".format(n))
+    00   ☻ ☓   <Job `NOLABEL` -> 200.0>
+    01 ⚠ ☹ ☓   <Job `boom` => CRITICAL EXCEPTION:!!Exception:boom after 0.2s!!> - requires:{NOLABEL}
+    02     ⚐   <Job `NOLABEL`> - requires:{boom}
 
 
 # More
@@ -440,9 +423,9 @@ e = Engine (Sequence(Job(mycoro(1), label="1"), Job(mycoro(2), label="2"), Job(m
 e.list()
 ```
 
-    0 <Job `1' unscheduled>
-    1 <Job `2' unscheduled - requires:{1}>
-    2 <Job `3' unscheduled - requires:{2}>
+    00     ⚐   <Job `1`>
+    01     ⚐   <Job `2`> - requires:{1}
+    02     ⚐   <Job `3`> - requires:{2}
 
 
 ### customizing the `Job` class
@@ -453,17 +436,8 @@ You can define your own `Job` class by specializing `job.AbstractJob` - more on 
 
 # TODO
 
-## naming & packaging
-
-* do we want to rename engine into scenario ?
-* package a separate library `aiorch` - would make sense to at least take the name in pypi
-
 ## termination and re-run
 
-1. provide a means to tidy up jobs once the engine has run out. Typically we would have several jobs using the same ssh connection, and these need to be closed at some point. Something like `Engine.shutdown` sending `Job.co_shutdown()`, or similar...
-
- * Would it work to just send e.g. `co_shutdown()` on all jobs ? 
- 
 1. related: for the tests at least, and maybe also in practical life, if we create an engine that does not pass  `rain_check`, and so don't run orchestrate, then we'd need a means to garbage collect the pending coroutines
 
 1. also related: there is an intention in the code that one engine object can be run several times. Looks like this won't work as expected anymore, and it can be an issue in the context of reproducible research: we may/will want to run the same scenario object several times, don't we ? 
