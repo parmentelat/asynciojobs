@@ -77,9 +77,10 @@ class AbstractJob:
     _c_circle_arrow  = "\u21ba" # ↺
     _c_flag          = "\u2690" # ⚐
     _c_warning       = "\u26a0" # ⚠
-    _c_frowning_face = "\u2639" # ☹
-    _c_smiling_face  = "\u263b" # ☻
-    #_c_sun           = "\u2609" # ☉
+    #_c_frowning_face = "\u2639" # ☹
+    _c_black_star     = "\u2605" # ☹
+    #_c_smiling_face  = "\u263b" # ☻
+    _c_sun           = "\u2609" # ☉
     _c_infinity      = "\u221e" # ∞
     
 
@@ -91,9 +92,8 @@ class AbstractJob:
         # is it critical or not ?
         c_crit = self._c_warning if self.is_critical() else " "
         # has it raised an exception or not ?
-        # white frowning face or sun
-        c_boom = self._c_frowning_face if self.raised_exception() \
-                 else self._c_smiling_face if self.is_started() \
+        c_boom = self._c_black_star if self.raised_exception() \
+                 else self._c_sun if self.is_started() \
                  else " "
         # is it going forever or not
         c_forever = self._c_infinity if self.forever else " "
@@ -109,7 +109,6 @@ class AbstractJob:
         # is it critical or not ?
         c_crit = "!" if self.is_critical() else " "
         # has it raised an exception or not ?
-        # white frowning face or sun
         c_boom = ":(" if self.raised_exception() \
                  else ":)" if self.is_started() \
                  else "  "
@@ -144,7 +143,7 @@ class AbstractJob:
         ### show info - IDLE means not started at all
         exception = self.raised_exception()
         if exception:
-            critical_msg = "CRITICAL EXCEPTION" if self.is_critical() else "exception"
+            critical_msg = "CRIT. EXC." if self.is_critical() else "exception"
             info += " => {}:!!{}:{}!!".format(critical_msg, type(exception).__name__, exception)
         elif self.is_done():
             info += " -> {}".format(self.result())
@@ -158,7 +157,7 @@ class AbstractJob:
         return info
     
     def __repr__(self):
-        return self.__repr__(show_requires=False, use_e_label = False)
+        return self.repr(show_requires=False, use_e_label = False)
 
     def requires(self, *requirements):
         """
