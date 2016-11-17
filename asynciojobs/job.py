@@ -136,28 +136,26 @@ class AbstractJob:
         # use the label set from engine if present, otherwise our own verbose one
         return self.label if not use_e_label else ( self._e_label or self.label )
 
-    def repr(self, show_requires=True, show_successors=False, use_e_label = False):
+    def repr(self, show_requires=True, use_e_label = True, show_result_or_exception=True):
         info = self.short()
         info += " <{} `{}`".format(type(self).__name__, self.label)
 
         ### show info - IDLE means not started at all
-        exception = self.raised_exception()
-        if exception:
-            critical_msg = "CRIT. EXC." if self.is_critical() else "exception"
-            info += " => {}:!!{}:{}!!".format(critical_msg, type(exception).__name__, exception)
-        elif self.is_done():
-            info += " -> {}".format(self.result())
+        if show_result_or_exception:
+            exception = self.raised_exception()
+            if exception:
+                critical_msg = "CRIT. EXC." if self.is_critical() else "exception"
+                info += " => {}:!!{}:{}!!".format(critical_msg, type(exception).__name__, exception)
+            elif self.is_done():
+                info += " -> {}".format(self.result())
         info += ">"
         ### show dependencies in both directions
         if show_requires and self.required:
             info += " - requires:{" + ", ".join(a.e_label(use_e_label) for a in self.required) + "}"
-        # this is almost always turned off anyways
-        if show_successors and self._e_successors:
-            info += " - allows: {" + ", ".join(a.e_label(use_e_label) for a in self._e_successors) + "}"
         return info
     
     def __repr__(self):
-        return self.repr(show_requires=False, use_e_label = False)
+        return self.repr(show_requires=False)
 
     def requires(self, *requirements):
         """
@@ -229,12 +227,13 @@ class AbstractJob:
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.co_run())
 
+    # if subclass redefines details(), then that will show up in list() 
 
 ####################
 class Job(AbstractJob):
 
     """
-    Most mundane form is to provide a coroutine yourself
+    Most mundane form: built from a coroutine
     """
     
     def __init__(self, coro, forever=False, label=None, *args, **kwds):
@@ -247,3 +246,41 @@ class Job(AbstractJob):
 
     async def co_shutdown(self):
         pass
+
+    def details(self):
+        return repr(self.coro)
+
+####################
+class PrintJob(AbstractJob):
+    """
+    A job that just prints a message, and optionnally sleeps for some time
+    """
+
+    def __init__(self, *messages, sleep=None, banner=None,
+                 # these are for AbstractJob
+                 label = None, required = None):
+        self.messages = messages
+        self.sleep = sleep
+        self.banner = banner
+        AbstractJob.__init__(self, forever=False, label=label, required = required)
+
+    async def co_run(self):
+        if self.banner:
+            print(self.banner + " ", end="")
+        print(*self.messages)
+        if self.sleep:
+            print("Sleeping for {}s".format(self.sleep))
+            await asyncoio.sleep(self.sleep)
+
+    async def co_shutdown(self):
+        pass
+
+    def details(self):
+        result = ""
+        if self.sleep:
+            result += "adds sleep {}s ".format(self.sleep)
+        result += "msg= "
+        result += self.messages[0]
+        result += "..." if len(self.messages) > 1 else ""
+        return result
+        

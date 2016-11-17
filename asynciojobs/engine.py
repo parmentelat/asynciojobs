@@ -252,7 +252,9 @@ class Engine:
             task.cancel()
             # if debug is turned on, provide details on the exceptions
             if debug:
-                self._show_task_stack(task, "TIDYING")
+                self._show_task_stack(task, "TIDYING {}"
+                                      .format(task._job.repr(show_result_or_exception=False,
+                                                             show_requires=False)))
         # don't bother to set a timeout, as this is expected to be immediate
         # since all tasks are canceled
         await asyncio.gather(*exception_tasks, return_exceptions=True)
@@ -310,7 +312,8 @@ class Engine:
         for job in jobs:
             if not isinstance(job, AbstractJob):
                 job = job._job
-            print("{}: {}: {}".format(time.strftime(time_format), state, job.repr(self.verbose)))
+            print("{}: {}: {}".format(time.strftime(time_format),
+                                      state, job.repr(self.verbose)))
 
     async def co_orchestrate(self, loop=None, timeout=None):
         """
@@ -342,7 +345,8 @@ class Engine:
             raise ValueError("No entry points found - cannot orchestrate")
         
         if self.verbose:
-            await self.feedback(None, "entering orchestrate with {} jobs".format(len(self.jobs)))
+            await self.feedback(None, "entering orchestrate with {} jobs"
+                                .format(len(self.jobs)))
 
         await self.feedback(entry_jobs, "STARTING")
         
@@ -355,11 +359,15 @@ class Engine:
                                      timeout = self.remaining_timeout(),
                                      return_when = asyncio.FIRST_COMPLETED)
 
-            await self.feedback(done, "DONE")
+            done_ok = { t for t in done if not t._exception }
+            await self.feedback(done_ok, "DONE")
+            done_ko = done - done_ok
+            await self.feedback(done_ko, "RAISED EXC.")
+            
             # nominally we have exactly one item in done
             # it looks like the only condition where we have nothing in done is
             # because a timeout occurred
-            # a little surprisingly, there might be cases where done has more than one entry
+            # a little surprisingly, there are cases where done has more than one entry
             # typically when 2 jobs have very similar durations
             if not done or len(done) == 0:
                 await self.feedback(None, "orchestrate: TIMEOUT occurred")
@@ -431,7 +439,7 @@ class Engine:
                     added += 1
 
     ####################
-    def list(self):
+    def list(self, details=False):
         """
         print jobs in some natural order
         beware that this might raise an exception if rain_check() has returned False
@@ -439,11 +447,18 @@ class Engine:
         l = len(self.jobs)
         format = "{:02}" if l < 100 else "{:04}"
         # inject number in each job in their _e_label field
-        for i, job in enumerate(self.scan_in_order()):
+        for i, job in enumerate(self.scan_in_order(), 1):
             job._e_label = format.format(i)
         # so now we can refer to other jobs by their id when showing requirements
-        for i, job in enumerate(self.scan_in_order()):
-            print(format.format(i), job.repr(show_requires=True, use_e_label=True))
+        for job in self.scan_in_order():
+            print(job._e_label, job.repr(show_requires=True, use_e_label=True))
+            if details and hasattr(job, 'details'):
+                try:
+                    details = job.details()
+                    if details is not None:
+                        print(details)
+                except Exception as e:
+                    print("<<cannot get details>>", e)
         
     def list_safe(self):
         """
@@ -491,7 +506,9 @@ class Engine:
             # show critical exceptions first
             for j in self.scan_in_order():
                 if j in criticals:
-                    self._show_task_stack(j, "CRITICAL JOB exception stack")
+                    self._show_task_stack(j, "stack for CRITICAL JOB {}"
+                                          .format(j.repr(show_result_or_exception=False,
+                                                         show_requires=False)))
             # then exceptions that were not critical
             non_critical_exceptions = exceptions - criticals
             for j in self.scan_in_order():
