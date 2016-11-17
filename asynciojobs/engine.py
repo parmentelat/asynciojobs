@@ -359,6 +359,8 @@ class Engine:
             # nominally we have exactly one item in done
             # it looks like the only condition where we have nothing in done is
             # because a timeout occurred
+            # a little surprisingly, there might be cases where done has more than one entry
+            # typically when 2 jobs have very similar durations
             if not done or len(done) == 0:
                 await self.feedback(None, "orchestrate: TIMEOUT occurred")
                 # clean up
@@ -386,7 +388,7 @@ class Engine:
                 return True
 
             # exceptions need to be cleaned up 
-            # clear the exception
+            # clear the exception(s) in done
             await self._tidy_tasks_exception(done)
             # do we have at least one critical job with an exception ?
             critical_failure = False
@@ -438,8 +440,10 @@ class Engine:
         """
         l = len(self.jobs)
         format = "{:02}" if l < 100 else "{:04}"
+        # inject number in each job in their _e_label field
         for i, job in enumerate(self.scan_in_order()):
             job._e_label = format.format(i)
+        # so now we can refer to other jobs by their id when showing requirements
         for i, job in enumerate(self.scan_in_order()):
             print(format.format(i), job.repr(show_requires=True, use_e_label=True))
         
@@ -484,7 +488,7 @@ class Engine:
         if exceptions:
             nb_exceptions  = len(exceptions)
             nb_criticals = len(criticals)
-            print("===== {} jobs with an exception, including {} critical"
+            print("===== {} job(s) with an exception, including {} critical"
                   .format(nb_exceptions, nb_criticals))
             # show critical exceptions first
             for j in self.scan_in_order():
