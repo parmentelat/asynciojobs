@@ -1,3 +1,10 @@
+# 0.3.2 - 2016 Nov 17
+
+* major bugfix, sometimes critical job was not properly dealt with because it was last
+* new class PrintJob  with an optional sleep delay
+* Engine.list(details=True) gives details on all the jobs
+  provided that they have the details() method
+
 # 0.3.1 - 2016 Nov 15
 
 * no semantic change, just simpler and nicer
