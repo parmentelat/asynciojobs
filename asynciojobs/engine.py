@@ -370,23 +370,6 @@ class Engine:
                 self._failed_timeout = timeout
                 return False
 
-            # a little surprisingly, there might be cases where done has more than one entry
-            # typically when 2 jobs have very similar durations
-
-            ### are we done ?
-            # only account for not forever jobs (that may still finish, one never knows)
-            done_jobs_not_forever = { j for j in done if not j._job.forever }
-            nb_jobs_done += len(done_jobs_not_forever)
-            if nb_jobs_done == nb_jobs_finite:
-                if debug:
-                    print("orchestrate: {} CLEANING UP at iteration {} / {}"
-                          .format(4*'-', nb_jobs_done, nb_jobs_finite))
-                assert len(pending) == nb_jobs_forever
-                await self.feedback(pending, "TIDYING forever")
-                await self._tidy_tasks(pending)
-                await self.co_shutdown()
-                return True
-
             # exceptions need to be cleaned up 
             # clear the exception(s) in done
             await self._tidy_tasks_exception(done)
@@ -407,6 +390,21 @@ class Engine:
                 self._failed_critical = True
                 await self.feedback(None, "Emergency exit upon exception in critical job")
                 return False
+
+            ### are we done ?
+            # only account for not forever jobs (that may still finish, one never knows)
+            done_jobs_not_forever = { j for j in done if not j._job.forever }
+            nb_jobs_done += len(done_jobs_not_forever)
+
+            if nb_jobs_done == nb_jobs_finite:
+                if debug:
+                    print("orchestrate: {} CLEANING UP at iteration {} / {}"
+                          .format(4*'-', nb_jobs_done, nb_jobs_finite))
+                assert len(pending) == nb_jobs_forever
+                await self.feedback(pending, "TIDYING forever")
+                await self._tidy_tasks(pending)
+                await self.co_shutdown()
+                return True
 
             # go on : find out the jobs that can be added to the mix
             # only consider the ones that are right behind any of the the jobs that just finished
