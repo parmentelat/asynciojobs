@@ -76,9 +76,9 @@ ea = Engine(a1, a2, a3)
 ea.orchestrate()
 ```
 
-    -> mycoro(0.25)
     -> mycoro(0.1)
     -> mycoro(0.2)
+    -> mycoro(0.25)
     <- mycoro(0.1)
     <- mycoro(0.2)
     <- mycoro(0.25)
@@ -118,8 +118,8 @@ eb = Engine(b1, b2, b3)
 eb.orchestrate()
 ```
 
-    -> mycoro(0.25)
     -> mycoro(0.1)
+    -> mycoro(0.25)
     <- mycoro(0.1)
     -> mycoro(0.2)
     <- mycoro(0.25)
@@ -176,9 +176,9 @@ for job in eb.jobs:
     print(job)
 ```
 
+      ☉ ☓   <Job `b1` -> 100.0>
       ☉ ☓   <Job `b2` -> 200.0>
       ☉ ☓   <Job `NOLABEL` -> 250.0>
-      ☉ ☓   <Job `b1` -> 100.0>
 
 
 
@@ -284,9 +284,9 @@ e = Engine(j)
 e.orchestrate(timeout=0.25)
 ```
 
-    16:37:53: forever 0
-    16:37:53: forever 1
-    16:37:53: forever 2
+    17:22:34: forever 0
+    17:22:34: forever 1
+    17:22:34: forever 2
 
 
 

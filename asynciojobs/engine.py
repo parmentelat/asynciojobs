@@ -514,13 +514,13 @@ class Engine:
             for j in self.scan_in_order():
                 if j in non_critical_exceptions:
                     if not self.verbose:
-                        print("non-critical: {}: exception {}".format(j.label, j.raised_exception()))
+                        print("non-critical: {}: exception {}".format(j.label(), j.raised_exception()))
                     if self.verbose:
                         self._show_task_stack(j, "non-critical job exception stack")
 
     def export_as_dotfile(self, filename):
         def label_to_id(job):
-            return job.label.replace(' ', '_')
+            return job.label().replace(' ', '_')
         with open(filename, 'w') as output:
             output.write("digraph G {\n")
             for job in self.scan_in_order():

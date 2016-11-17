@@ -38,12 +38,11 @@ class AbstractJob:
     It's mostly a companion class to the Engine class, that does the heavy lifting
     """
 
-    def __init__(self, forever, label, critical=None, required=None):
-        if label is None:
-            label = "NOLABEL"
-        self.label = str(label)
+    def __init__(self, forever, label=None, critical=None, required=None):
         self.forever = forever
         self.critical = critical
+        # access label through a method so we can invoke default_label() if missing
+        self._label = label
         # for convenience, one can mention only one AbstractJob
         self.required = set()
         self.requires(required)
@@ -57,6 +56,14 @@ class AbstractJob:
         self._e_successors = set()
         # if this is set by the engine, we use it for listing relationships
         self._e_label = None
+
+    def label(self):
+        if self._label is not None:
+            return str(self._label)
+        elif hasattr(self, 'default_label'):
+            return self.default_label()
+        else:
+            return "NOLABEL"
 
     ##########
     _has_support_for_unicode = None
@@ -73,13 +80,13 @@ class AbstractJob:
             
 
     ########## unicode version
+    #_c_frowning_face = "\u2639" # ☹
+    #_c_smiling_face  = "\u263b" # ☻
     _c_saltire       = "\u2613" # ☓
     _c_circle_arrow  = "\u21ba" # ↺
     _c_flag          = "\u2690" # ⚐
     _c_warning       = "\u26a0" # ⚠
-    #_c_frowning_face = "\u2639" # ☹
-    _c_black_star     = "\u2605" # ☹
-    #_c_smiling_face  = "\u263b" # ☻
+    _c_black_star    = "\u2605" # ★
     _c_sun           = "\u2609" # ☉
     _c_infinity      = "\u221e" # ∞
     
@@ -134,11 +141,11 @@ class AbstractJob:
     
     def e_label(self, use_e_label):
         # use the label set from engine if present, otherwise our own verbose one
-        return self.label if not use_e_label else ( self._e_label or self.label )
+        return self.label if not use_e_label else ( self._e_label or self.label() )
 
     def repr(self, show_requires=True, use_e_label = True, show_result_or_exception=True):
         info = self.short()
-        info += " <{} `{}`".format(type(self).__name__, self.label)
+        info += " <{} `{}`".format(type(self).__name__, self.label())
 
         ### show info - IDLE means not started at all
         if show_result_or_exception:
@@ -236,9 +243,9 @@ class Job(AbstractJob):
     Most mundane form: built from a coroutine
     """
     
-    def __init__(self, coro, forever=False, label=None, *args, **kwds):
+    def __init__(self, coro, forever=False, *args, **kwds):
         self.coro = coro
-        AbstractJob.__init__(self, forever=forever, label=label, *args, **kwds)
+        AbstractJob.__init__(self, forever=forever, *args, **kwds)
 
     async def co_run(self):
         result = await self.coro
@@ -284,3 +291,5 @@ class PrintJob(AbstractJob):
         result += "..." if len(self.messages) > 1 else ""
         return result
         
+    def default_label(self):
+        return self.details()
