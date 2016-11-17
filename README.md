@@ -1,5 +1,5 @@
 
-<span style="float:left;">Licence CC BY-NC-ND</span>
+<span style="float:left;">Licence CC BY-NC-ND</span><span style="float:right;">Thierry Parmentelat - Inria&nbsp;<img src="media/inria-25.png" style="display:inline"></span><br/>
 
 # A simplistic orchestration engine
 
@@ -118,8 +118,8 @@ eb = Engine(b1, b2, b3)
 eb.orchestrate()
 ```
 
-    -> mycoro(0.1)
     -> mycoro(0.25)
+    -> mycoro(0.1)
     <- mycoro(0.1)
     -> mycoro(0.2)
     <- mycoro(0.25)
@@ -176,9 +176,9 @@ for job in eb.jobs:
     print(job)
 ```
 
-      ☉ ☓   <Job `b1` -> 100.0>
       ☉ ☓   <Job `b2` -> 200.0>
       ☉ ☓   <Job `NOLABEL` -> 250.0>
+      ☉ ☓   <Job `b1` -> 100.0>
 
 
 
@@ -238,8 +238,8 @@ ec = Engine(c1, c2, c3, c4)
 ec.orchestrate()
 ```
 
-    BUS: -> mycoro(0.4)
     BUS: -> mycoro(0.2)
+    BUS: -> mycoro(0.4)
     BUS: <- mycoro(0.2)
     BUS: -> mycoro(0.3)
     BUS: <- mycoro(0.4)
@@ -260,10 +260,10 @@ Note that `orchestrate` always terminates as soon as all the non-`forever` jobs 
 ec.list()
 ```
 
-    00   ☉ ↺ ∞ <Job `monitor`>
-    01   ☉ ☓   <Job `c2` -> 4.0>
-    02   ☉ ☓   <Job `c1` -> 2.0>
-    03   ☉ ☓   <Job `c3` -> 3.0> - requires:{02}
+    01   ☉ ☓   <Job `c1` -> 2.0>
+    02   ☉ ↺ ∞ <Job `monitor`>
+    03   ☉ ☓   <Job `c2` -> 4.0>
+    04   ☉ ☓   <Job `c3` -> 3.0> - requires:{01}
 
 
 ### example D : specifying a global timeout
@@ -284,9 +284,9 @@ e = Engine(j)
 e.orchestrate(timeout=0.25)
 ```
 
-    21:49:17: forever 0
-    21:49:17: forever 1
-    21:49:18: forever 2
+    16:37:53: forever 0
+    16:37:53: forever 1
+    16:37:53: forever 2
 
 
 
@@ -349,9 +349,9 @@ e.list()
     -> mycoro(0.3)
     <- mycoro(0.3)
     orch: True
-    00   ☉ ☓   <Job `NOLABEL` -> 200.0>
-    01   ★ ☓   <Job `boom` => exception:!!Exception:boom after 0.2s!!> - requires:{00}
-    02   ☉ ☓   <Job `NOLABEL` -> 300.0> - requires:{01}
+    01   ☉ ☓   <Job `NOLABEL` -> 200.0>
+    02   ★ ☓   <Job `boom` => exception:!!Exception:boom after 0.2s!!> - requires:{01}
+    03   ☉ ☓   <Job `NOLABEL` -> 300.0> - requires:{02}
 
 
 ### Example F : critical jobs
@@ -373,9 +373,9 @@ e.list()
     -> mycoro(0.2)
     <- mycoro(0.2)
     orchestrate: False
-    00   ☉ ☓   <Job `NOLABEL` -> 200.0>
-    01 ⚠ ★ ☓   <Job `boom` => CRIT. EXC.:!!Exception:boom after 0.2s!!> - requires:{00}
-    02     ⚐   <Job `NOLABEL`> - requires:{01}
+    01   ☉ ☓   <Job `NOLABEL` -> 200.0>
+    02 ⚠ ★ ☓   <Job `boom` => CRIT. EXC.:!!Exception:boom after 0.2s!!> - requires:{01}
+    03     ⚐   <Job `NOLABEL`> - requires:{02}
 
 
 # More
@@ -398,35 +398,40 @@ e.list()
 
 * here's the legend of symbols used
 
-|          |   |                     |   |                                |   |
-|----------|---|---------------------|---|--------------------------------|---|
-| critical | `⚠` | raised an exception | `★`| went through without exception | `☉` |
-| complete | `☓` | running             | `↺` | idle                           | `⚐` |
-| forever  | `∞`|                     |   |                                |   |
+|          |   |
+|----------|---|
+| critical                       | `⚠` |
+|raised an exception             | `★` |
+| went through without exception | `☉` |
+| complete | `☓` |
+| running  | `↺` |
+| idle     | `⚐` |
+| forever  | `∞`|
 
 * and here's an example of output for `list()` . 
 
 ```
-00 ⚠ ★ ☓ ∞ <J `forever=True crit.=True status=done boom=True` => CRIT. EXC.:!!bool:True!!>
-01 ⚠ ★ ↺ ∞ <J `forever=True crit.=True status=ongoing boom=True` => CRIT. EXC.:!!bool:True!!> - requires:{00}
-02 ⚠ ★ ☓   <J `forever=False crit.=True status=done boom=True` => CRIT. EXC.:!!bool:True!!> - requires:{01}
-03 ⚠ ★ ↺   <J `forever=False crit.=True status=ongoing boom=True` => CRIT. EXC.:!!bool:True!!> - requires:{02}
-04 ⚠ ☉ ☓ ∞ <J `forever=True crit.=True status=done boom=False` -> 0> - requires:{03}
-05 ⚠ ☉ ↺ ∞ <J `forever=True crit.=True status=ongoing boom=False`> - requires:{04}
-06 ⚠   ⚐ ∞ <J `forever=True crit.=True status=idle boom=False`> - requires:{05}
-07 ⚠ ☉ ☓   <J `forever=False crit.=True status=done boom=False` -> 0> - requires:{06}
-08 ⚠ ☉ ↺   <J `forever=False crit.=True status=ongoing boom=False`> - requires:{07}
-09 ⚠   ⚐   <J `forever=False crit.=True status=idle boom=False`> - requires:{08}
-10   ★ ☓ ∞ <J `forever=True crit.=False status=done boom=True` => exception:!!bool:True!!> - requires:{09}
-11   ★ ↺ ∞ <J `forever=True crit.=False status=ongoing boom=True` => exception:!!bool:True!!> - requires:{10}
-12   ★ ☓   <J `forever=False crit.=False status=done boom=True` => exception:!!bool:True!!> - requires:{11}
-13   ★ ↺   <J `forever=False crit.=False status=ongoing boom=True` => exception:!!bool:True!!> - requires:{12}
-14   ☉ ☓ ∞ <J `forever=True crit.=False status=done boom=False` -> 0> - requires:{13}
-15   ☉ ↺ ∞ <J `forever=True crit.=False status=ongoing boom=False`> - requires:{14}
-16     ⚐ ∞ <J `forever=True crit.=False status=idle boom=False`> - requires:{15}
-17   ☉ ☓   <J `forever=False crit.=False status=done boom=False` -> 0> - requires:{16}
-18   ☉ ↺   <J `forever=False crit.=False status=ongoing boom=False`> - requires:{17}
-19     ⚐   <J `forever=False crit.=False status=idle boom=False`> - requires:{18}```
+01 ⚠ ★ ☓ ∞ <J `forever=True crit.=True status=done boom=True` => CRIT. EXC.:!!bool:True!!>
+02 ⚠ ★ ↺ ∞ <J `forever=True crit.=True status=ongoing boom=True` => CRIT. EXC.:!!bool:True!!> - requires:{01}
+03 ⚠ ★ ☓   <J `forever=False crit.=True status=done boom=True` => CRIT. EXC.:!!bool:True!!> - requires:{02}
+04 ⚠ ★ ↺   <J `forever=False crit.=True status=ongoing boom=True` => CRIT. EXC.:!!bool:True!!> - requires:{03}
+05 ⚠ ☉ ☓ ∞ <J `forever=True crit.=True status=done boom=False` -> 0> - requires:{04}
+06 ⚠ ☉ ↺ ∞ <J `forever=True crit.=True status=ongoing boom=False`> - requires:{05}
+07 ⚠   ⚐ ∞ <J `forever=True crit.=True status=idle boom=False`> - requires:{06}
+08 ⚠ ☉ ☓   <J `forever=False crit.=True status=done boom=False` -> 0> - requires:{07}
+09 ⚠ ☉ ↺   <J `forever=False crit.=True status=ongoing boom=False`> - requires:{08}
+10 ⚠   ⚐   <J `forever=False crit.=True status=idle boom=False`> - requires:{09}
+11   ★ ☓ ∞ <J `forever=True crit.=False status=done boom=True` => exception:!!bool:True!!> - requires:{10}
+12   ★ ↺ ∞ <J `forever=True crit.=False status=ongoing boom=True` => exception:!!bool:True!!> - requires:{11}
+13   ★ ☓   <J `forever=False crit.=False status=done boom=True` => exception:!!bool:True!!> - requires:{12}
+14   ★ ↺   <J `forever=False crit.=False status=ongoing boom=True` => exception:!!bool:True!!> - requires:{13}
+15   ☉ ☓ ∞ <J `forever=True crit.=False status=done boom=False` -> 0> - requires:{14}
+16   ☉ ↺ ∞ <J `forever=True crit.=False status=ongoing boom=False`> - requires:{15}
+17     ⚐ ∞ <J `forever=True crit.=False status=idle boom=False`> - requires:{16}
+18   ☉ ☓   <J `forever=False crit.=False status=done boom=False` -> 0> - requires:{17}
+19   ☉ ↺   <J `forever=False crit.=False status=ongoing boom=False`> - requires:{18}
+20     ⚐   <J `forever=False crit.=False status=idle boom=False`> - requires:{19}
+```
 
 Note that if your locale/terminal cannot output these, the code will tentatively resort to pure ASCII output.
 
@@ -458,13 +463,15 @@ You can group jobs in sequences so you don't need to worry about requirements. T
 ```python
 from asynciojobs import Sequence
 
-e = Engine (Sequence(Job(mycoro(1), label="1"), Job(mycoro(2), label="2"), Job(mycoro(3), label="3")))
+e = Engine (Sequence(Job(mycoro(1), label="j1"), 
+                     Job(mycoro(2), label="lab2"), 
+                     Job(mycoro(3), label="tag3")))
 e.list()
 ```
 
-    00     ⚐   <Job `1`>
-    01     ⚐   <Job `2`> - requires:{00}
-    02     ⚐   <Job `3`> - requires:{01}
+    01     ⚐   <Job `j1`>
+    02     ⚐   <Job `lab2`> - requires:{01}
+    03     ⚐   <Job `tag3`> - requires:{02}
 
 
 ### customizing the `Job` class

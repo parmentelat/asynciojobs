@@ -1,4 +1,8 @@
 CONVERT = jupyter nbconvert --ExecutePreprocessor.enabled=True --ExecutePreprocessor.allow_errors=True
+NBNORM = ../flotpython/tools/nbnorm.py
+
+norm:
+	$(NBNORM) --author "Thierry Parmentelat - Inria" README.ipynb
 
 all: readme
 readme: README.md
