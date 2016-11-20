@@ -13,6 +13,7 @@ Contents:
 
    README
    API
+   CHANGELOG
 
 Indices and tables
 ==================

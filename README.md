@@ -240,8 +240,8 @@ ec = Engine(c1, c2, c3, c4)
 ec.orchestrate()
 ```
 
-    BUS: -> mycoro(0.2)
     BUS: -> mycoro(0.4)
+    BUS: -> mycoro(0.2)
     BUS: <- mycoro(0.2)
     BUS: -> mycoro(0.3)
     BUS: <- mycoro(0.4)
@@ -262,10 +262,10 @@ Note that `orchestrate` always terminates as soon as all the non-`forever` jobs 
 ec.list()
 ```
 
-    01   ☉ ☓   <Job `c1`>[[ -> 2.0]]
+    01   ☉ ↺ ∞ <Job `monitor`>
     02   ☉ ☓   <Job `c2`>[[ -> 4.0]]
-    03   ☉ ☓   <Job `c3`>[[ -> 3.0]] - requires {01}
-    04   ☉ ↺ ∞ <Job `monitor`>
+    03   ☉ ☓   <Job `c1`>[[ -> 2.0]]
+    04   ☉ ☓   <Job `c3`>[[ -> 3.0]] - requires {03}
 
 
 ### example D : specifying a global timeout
@@ -286,9 +286,9 @@ e = Engine(j)
 e.orchestrate(timeout=0.25)
 ```
 
-    19:15:38: forever 0
-    19:15:38: forever 1
-    19:15:38: forever 2
+    19:24:39: forever 0
+    19:24:39: forever 1
+    19:24:39: forever 2
 
 
 
