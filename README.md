@@ -262,8 +262,8 @@ Note that `orchestrate` always terminates as soon as all the non-`forever` jobs 
 ec.list()
 ```
 
-    01   ☉ ☓   <Job `c2`>[[ -> 4.0]]
-    02   ☉ ↺ ∞ <Job `monitor`>
+    01   ☉ ↺ ∞ <Job `monitor`>
+    02   ☉ ☓   <Job `c2`>[[ -> 4.0]]
     03   ☉ ☓   <Job `c1`>[[ -> 2.0]]
     04   ☉ ☓   <Job `c3`>[[ -> 3.0]] - requires {03}
 
@@ -286,9 +286,9 @@ e = Engine(j)
 e.orchestrate(timeout=0.25)
 ```
 
-    14:13:56: forever 0
-    14:13:56: forever 1
-    14:13:56: forever 2
+    19:04:53: forever 0
+    19:04:53: forever 1
+    19:04:53: forever 2
 
 
 

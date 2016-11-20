@@ -75,4 +75,6 @@ docs:
 docs-clean:
 	$(MAKE) -C docs clean
 
-.PHONY: docs docs-clean
+all-docs: readme-clean readme docs
+
+.PHONY: docs docs-clean all-docs

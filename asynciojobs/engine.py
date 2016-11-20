@@ -15,7 +15,6 @@ debug = False
 
 """
 An attempt at some plain markdown 
-
 """
 
 class Engine:
@@ -32,7 +31,6 @@ class Engine:
     (*) the result of `co_run` is NOT taken into account to implement some
     logic about how the overall job should behave. Instead the result and/or exception
     of each individual job can be retrieved individually once the orchestration is complete
-
     """
 
     def __init__(self,  *jobs_or_sequences, verbose=False):
