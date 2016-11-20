@@ -23,6 +23,9 @@ print("current directory is", os.getcwd())
 for path in sys.path:
     print("in path", path)
 
+from sys import version_info as python_version
+print("python version", python_version)
+
 from asynciojobs.version import version as asynciojobs_version
 
 # -- General configuration -----------------------------------------------------
