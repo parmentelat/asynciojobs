@@ -17,7 +17,11 @@ import sys, os
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath('../..'))
+
+print("current directory is", os.getcwd())
+for path in sys.path:
+    print("in path", path)
 
 from asynciojobs.version import version as asynciojobs_version
 
