@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
 import time
-import asyncio
 import traceback
 import io
+
+import asyncio
 
 from .job import AbstractJob
 from .sequence import Sequence
@@ -24,8 +25,8 @@ class Engine:
 
     As of this rough/early implementation: 
     (*) the result of `co_run` is NOT taken into account to implement some
-        logic about how the overall job should behave. Instead the result and/or exception
-        of each individual job can be retrieved individually once the orchestration is complete
+    logic about how the overall job should behave. Instead the result and/or exception
+    of each individual job can be retrieved individually once the orchestration is complete
 
     """
 
@@ -207,7 +208,7 @@ class Engine:
         job._task = task
         return task
 
-    def record_beginning(self, timeout):
+    def _record_beginning(self, timeout):
         """
         Called once at the beginning of orchestrate, this method computes the absolute
         expiration date when a timeout is defined. 
@@ -217,7 +218,7 @@ class Engine:
         else:
             self.expiration = time.time() + timeout
 
-    def remaining_timeout(self):
+    def _remaining_timeout(self):
         """
         Called each time orchestrate is about to call asyncio.wait(), this method
         computes the timeout argument for wait - or None if orchestrate had no timeout
@@ -284,9 +285,9 @@ class Engine:
         that connection to be kept alive across an engine, but there is a need to tear these 
         connections down eventually
         """
-        await self.feedback(None, "engine is shutting down...")
+        await self._feedback(None, "engine is shutting down...")
         tasks = [ asyncio.ensure_future(job.co_shutdown()) for job in self.jobs ]
-        done, pending = await asyncio.wait(tasks, timeout = self.remaining_timeout())
+        done, pending = await asyncio.wait(tasks, timeout = self._remaining_timeout())
         if len(pending) != 0:
             print("WARNING: {}/{} co_shutdown() methods have not returned within timeout"
                   .format(len(pending), len(self.jobs)))
@@ -294,7 +295,7 @@ class Engine:
         # xxx should consume any exception as well ?
         # self._tidy_tasks_exception(done)
 
-    async def feedback(self, jobs, state):
+    async def _feedback(self, jobs, state):
         """
         When self.verbose is set, provide feedback about the mentioned
         jobs having reached this state 
@@ -313,7 +314,8 @@ class Engine:
             if not isinstance(job, AbstractJob):
                 job = job._job
             print("{}: {}: {}".format(time.strftime(time_format),
-                                      state, job.repr(self.verbose)))
+                                      state, job.repr(show_result_or_exception=self.verbose,
+                                                      show_requires=self.verbose)))
 
     async def co_orchestrate(self, loop=None, timeout=None):
         """
@@ -326,7 +328,7 @@ class Engine:
         # clear any Task instance
         self._reset_tasks()
         # for computing global timeout
-        self.record_beginning(timeout)
+        self._record_beginning(timeout)
         # reset status
         self._failed_critical = False
         self._failed_timeout = False
@@ -345,10 +347,10 @@ class Engine:
             raise ValueError("No entry points found - cannot orchestrate")
         
         if self.verbose:
-            await self.feedback(None, "entering orchestrate with {} jobs"
+            await self._feedback(None, "entering orchestrate with {} jobs"
                                 .format(len(self.jobs)))
 
-        await self.feedback(entry_jobs, "STARTING")
+        await self._feedback(entry_jobs, "STARTING")
         
         pending = [ self._ensure_future(job, loop=loop)
                     for job in entry_jobs ]
@@ -356,13 +358,13 @@ class Engine:
         while True:
             done, pending \
                 = await asyncio.wait(pending,
-                                     timeout = self.remaining_timeout(),
+                                     timeout = self._remaining_timeout(),
                                      return_when = asyncio.FIRST_COMPLETED)
 
             done_ok = { t for t in done if not t._exception }
-            await self.feedback(done_ok, "DONE")
+            await self._feedback(done_ok, "DONE")
             done_ko = done - done_ok
-            await self.feedback(done_ko, "RAISED EXC.")
+            await self._feedback(done_ko, "RAISED EXC.")
             
             # nominally we have exactly one item in done
             # it looks like the only condition where we have nothing in done is
@@ -370,9 +372,9 @@ class Engine:
             # a little surprisingly, there are cases where done has more than one entry
             # typically when 2 jobs have very similar durations
             if not done or len(done) == 0:
-                await self.feedback(None, "orchestrate: TIMEOUT occurred")
+                await self._feedback(None, "orchestrate: TIMEOUT occurred")
                 # clean up
-                await self.feedback(pending, "ABORTING")
+                await self._feedback(pending, "ABORTING")
                 await self._tidy_tasks(pending)
                 await self.co_shutdown()
                 self._failed_timeout = timeout
@@ -387,7 +389,7 @@ class Engine:
                 done_job = done_task._job
                 if done_job.raised_exception():
                     critical_failure = critical_failure or done_job.is_critical()
-                    await self.feedback(done_job, "EXCEPTION occurred - on {}critical job"
+                    await self._feedback(done_job, "EXCEPTION occurred - on {}critical job"
                                         .format("non-" if not done_job.is_critical() else ""))
                     # make sure these ones show up even if not in debug mode
                     if debug:
@@ -396,7 +398,7 @@ class Engine:
                 await self._tidy_tasks(pending)
                 await self.co_shutdown()
                 self._failed_critical = True
-                await self.feedback(None, "Emergency exit upon exception in critical job")
+                await self._feedback(None, "Emergency exit upon exception in critical job")
                 return False
 
             ### are we done ?
@@ -409,7 +411,7 @@ class Engine:
                     print("orchestrate: {} CLEANING UP at iteration {} / {}"
                           .format(4*'-', nb_jobs_done, nb_jobs_finite))
                 assert len(pending) == nb_jobs_forever
-                await self.feedback(pending, "TIDYING forever")
+                await self._feedback(pending, "TIDYING forever")
                 await self._tidy_tasks(pending)
                 await self.co_shutdown()
                 return True
@@ -434,7 +436,7 @@ class Engine:
                     if not req.is_done():
                         requirements_ok = False
                 if requirements_ok:
-                    await self.feedback(candidate_next, "STARTING")
+                    await self._feedback(candidate_next, "STARTING")
                     pending.add(self._ensure_future(candidate_next, loop=loop))
                     added += 1
 
@@ -451,7 +453,7 @@ class Engine:
             job._e_label = format.format(i)
         # so now we can refer to other jobs by their id when showing requirements
         for job in self.scan_in_order():
-            print(job._e_label, job.repr(show_requires=True, use_e_label=True))
+            print(job._e_label, job.repr(show_requires=True))
             if details and hasattr(job, 'details'):
                 try:
                     details = job.details()
