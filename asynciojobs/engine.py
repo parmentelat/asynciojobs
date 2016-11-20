@@ -34,7 +34,7 @@ class Engine:
     """
 
     def __init__(self,  *jobs_or_sequences, verbose=False):
-        self.jobs = set(Sequence.flatten(jobs_or_sequences))
+        self.jobs = set(Sequence._flatten(jobs_or_sequences))
         ### why does it fail ?
         # bool
         self._failed_critical = False
@@ -47,7 +47,7 @@ class Engine:
         """
         add a collection of jobs (like set.update())
         """
-        jobs = set(Sequence.flatten(jobs))
+        jobs = set(Sequence._flatten(jobs))
         self.jobs.update(jobs)
 
     def add(self, job):
