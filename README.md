@@ -1,7 +1,9 @@
 
 <span style="float:left;">Licence CC BY-NC-ND</span><span style="float:right;">Thierry Parmentelat - Inria&nbsp;<img src="media/inria-25.png" style="display:inline"></span><br/>
 
-# A simplistic orchestration engine
+# Introduction
+
+## A simplistic orchestration engine
 
 The main and single purpose of this library is to allow for the static description of a scenario involving `asyncio`-compliant jobs, that have dependencies in the sense that a given job cannot start until its requirements have not completed.
 
@@ -30,13 +32,13 @@ As a convenience, the `Sequence` class is mostly a helper class that can free yo
 import asyncio
 ```
 
-# Installing
+## Installing
 
 ```
 pip3 install asynciojobs
 ```
 
-# Examples
+## Examples
 
 Let's consider a simple coroutine for the sake of illustration
 
@@ -176,9 +178,9 @@ for job in eb.jobs:
     print(job)
 ```
 
-      ☉ ☓   <Job `b1` -> 100.0>
-      ☉ ☓   <Job `b2` -> 200.0>
-      ☉ ☓   <Job `NOLABEL` -> 250.0>
+      ☉ ☓   <Job `b1`>[[ -> 100.0]]
+      ☉ ☓   <Job `b2`>[[ -> 200.0]]
+      ☉ ☓   <Job `NOLABEL`>[[ -> 250.0]]
 
 
 
@@ -238,8 +240,8 @@ ec = Engine(c1, c2, c3, c4)
 ec.orchestrate()
 ```
 
-    BUS: -> mycoro(0.2)
     BUS: -> mycoro(0.4)
+    BUS: -> mycoro(0.2)
     BUS: <- mycoro(0.2)
     BUS: -> mycoro(0.3)
     BUS: <- mycoro(0.4)
@@ -260,10 +262,10 @@ Note that `orchestrate` always terminates as soon as all the non-`forever` jobs 
 ec.list()
 ```
 
-    01   ☉ ☓   <Job `c1` -> 2.0>
+    01   ☉ ☓   <Job `c2`>[[ -> 4.0]]
     02   ☉ ↺ ∞ <Job `monitor`>
-    03   ☉ ☓   <Job `c2` -> 4.0>
-    04   ☉ ☓   <Job `c3` -> 3.0> - requires:{01}
+    03   ☉ ☓   <Job `c1`>[[ -> 2.0]]
+    04   ☉ ☓   <Job `c3`>[[ -> 3.0]] - requires {03}
 
 
 ### example D : specifying a global timeout
@@ -284,9 +286,9 @@ e = Engine(j)
 e.orchestrate(timeout=0.25)
 ```
 
-    17:22:34: forever 0
-    17:22:34: forever 1
-    17:22:34: forever 2
+    14:13:56: forever 0
+    14:13:56: forever 1
+    14:13:56: forever 2
 
 
 
@@ -349,9 +351,9 @@ e.list()
     -> mycoro(0.3)
     <- mycoro(0.3)
     orch: True
-    01   ☉ ☓   <Job `NOLABEL` -> 200.0>
-    02   ★ ☓   <Job `boom` => exception:!!Exception:boom after 0.2s!!> - requires:{01}
-    03   ☉ ☓   <Job `NOLABEL` -> 300.0> - requires:{02}
+    01   ☉ ☓   <Job `NOLABEL`>[[ -> 200.0]]
+    02   ★ ☓   <Job `boom`>!! exception => Exception:boom after 0.2s!! - requires {01}
+    03   ☉ ☓   <Job `NOLABEL`>[[ -> 300.0]] - requires {02}
 
 
 ### Example F : critical jobs
@@ -373,12 +375,12 @@ e.list()
     -> mycoro(0.2)
     <- mycoro(0.2)
     orchestrate: False
-    01   ☉ ☓   <Job `NOLABEL` -> 200.0>
-    02 ⚠ ★ ☓   <Job `boom` => CRIT. EXC.:!!Exception:boom after 0.2s!!> - requires:{01}
-    03     ⚐   <Job `NOLABEL`> - requires:{02}
+    01   ☉ ☓   <Job `NOLABEL`>[[ -> 200.0]]
+    02 ⚠ ★ ☓   <Job `boom`>!! CRIT. EXC. => Exception:boom after 0.2s!! - requires {01}
+    03     ⚐   <Job `NOLABEL`> - requires {02}
 
 
-# More
+## More
 
 ### `co_orchestrate` 
 
@@ -447,7 +449,7 @@ In some cases like esp. test scenarios, it can be helpful to add requirements to
 
 Before returning, `orchestrate` sends the `co_shutdown()` method on all jobs. The default behaviour - in the `Job` class - is to do nothing, but this can be redefined when relevant. Typically, an implementation of an `SshJob` will allow for a given SSH connection to be shared amongs several `SshJob` instances, and so `co_shutdown()` may be used to  close the underlying SSH connections at the end of the scenario.
 
-### `save_as_dotfile`
+### `export_as_dotfile`
 
 An engine can be exported as a dotfile for feeding `graphviz` and producing visual diagrams. Provided that you have the `dot` program (which is part of `graphviz`) installed, you could do something like
 
@@ -470,8 +472,8 @@ e.list()
 ```
 
     01     ⚐   <Job `j1`>
-    02     ⚐   <Job `lab2`> - requires:{01}
-    03     ⚐   <Job `tag3`> - requires:{02}
+    02     ⚐   <Job `lab2`> - requires {01}
+    03     ⚐   <Job `tag3`> - requires {02}
 
 
 ### customizing the `Job` class
@@ -480,9 +482,9 @@ e.list()
 
 You can define your own `Job` class by specializing `job.AbstractJob` - more on this later, we'll define some predefined jobs, in particular for interacting through ssh, and possibly many others.
 
-# TODO
+## TODO
 
-## termination and re-run
+### termination and re-run
 
 1. related: for the tests at least, and maybe also in practical life, if we create an engine that does not pass  `rain_check`, and so don't run orchestrate, then we'd need a means to garbage collect the pending coroutines
 
@@ -513,12 +515,12 @@ run()
 ```
  
 
-## monitoring 
+### monitoring 
 * come up with some basic (curses ?) monitor to show what's going on; what I have in mind is something like rhubarbe load where all jobs would be displayed, one line each, and their status could be shown so that one can get a sense of what is going on
 * one way to look at this is to have the main Engine class send itself a `tick()` method, and then specialize `Engine` as `EngineCurses` that would actually do things on such events.
 * ***or*** this gets delegated on a `message_queue` object. **Review the rhubarbe code on this aspect**.
 
-## convenience
+### convenience
 * ~~do we want to support requires by labels ?~~ : NO
 
 * **BUT** it would make sense to allow `requires` to be passed at job creation time ?
@@ -530,7 +532,7 @@ a3 = J(mycoro(3), requires = [a1, a2])
 ```
 
 
-# Historical notes
+## Historical notes
 
 The purpose is to come up with an as-simple-as-it-gets replacement for our toolset for orchestrating network experiments. In its simplest form, it can be described as an ***orchestration tool for `asyncio`-based libraries***, with the following objectives
 

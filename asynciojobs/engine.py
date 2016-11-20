@@ -13,6 +13,11 @@ from .sequence import Sequence
 debug = False
 #debug = True
 
+"""
+An attempt at some plain markdown 
+
+"""
+
 class Engine:
     """
     An Engine instance works on a set of Job objects

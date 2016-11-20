@@ -67,3 +67,12 @@ check:
 	apssh -t r2lab.infra python3 -c '"import asynciojobs.version as version; print(version.version)"'
 
 .PHONY: infra check
+
+########## docs
+docs:
+	$(MAKE) -C docs html
+
+docs-clean:
+	$(MAKE) -C docs clean
+
+.PHONY: docs docs-clean

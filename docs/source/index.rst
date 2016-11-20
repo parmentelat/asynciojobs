@@ -11,9 +11,8 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   engine
-   job
-   sequence
+   README
+   API
 
 Indices and tables
 ==================
