@@ -20,22 +20,44 @@ debug = False
 # Engine == graph
 # Job == node
 
+ 
+
 class AbstractJob:
     """
     AbstractJob is a virtual class:
 
     (*) it offers some very basic graph-related features to model requirements
-        a la makefile
-    (*) its subclasses are expected to implement a `co_run()` method 
-        that specifies the actual behaviour as a coroutine
+        'a la' makefile
+    (*) its subclasses are expected to implement a `co_run()` and a `co_shutdown()` methods
+        that specifies the actual behaviour of the job, as coroutines
 
-    Can be created with 
+    It's mostly a companion class to the Engine class, that triggers these methods
+
+    In addition, each job can be created with 
     (*) boolean flag 'forever', if set, means the job is not returning at all and runs forever
-        in this case Engine.orchestrate will not wait for that job, and will terminate it once all
-        the regular i.e. not-forever jobs are done
+    in this case Engine.orchestrate will not wait for that job, and will terminate it once all
+    the regular i.e. not-forever jobs are done
     (*) an optional label - for convenience only
 
-    It's mostly a companion class to the Engine class, that does the heavy lifting
+    *** 
+
+    As far as labelling, things have become a little tricky
+
+    When listing an instance of Engine, there are 2 ways we need to show a job
+
+    * first there is a plain label, that may/should be set at creation time
+
+    * second, when showing references (like the jobs that a given job requires), 
+    we show ids like '01' and similar.
+    Except that, the job itself has no idea about that at first, 
+    it's the Engine instance that decides on that
+
+    ***
+
+    Besides, if a job instance has a `details()` method, then this is used to produce 
+    additional details for that job when running Engine.list(details=True)
+
+
     """
 
     def __init__(self, forever, label=None, critical=None, required=None):
@@ -57,19 +79,29 @@ class AbstractJob:
         # if this is set by the engine, we use it for listing relationships
         self._e_label = None
 
-    def label(self):
-        if self._label is not None:
-            return str(self._label)
-        elif hasattr(self, 'default_label'):
-            return self.default_label()
+    def label(self, use_e_label=False):
+        """
+        Implements the logic for finding a job's label
+        * if use_e_label is set, looks in self._e_label that is expected to have been set by
+        companion class Engine; if not set returns a warning msg 'XXXX'
+        * otherwise, looks for the label  used at creation-time, and otherwise
+        runs its class's `default_label()` method
+        """
+        if use_e_label:
+            return self._e_label or 'XXXX'
         else:
-            return "NOLABEL"
+            if self._label is not None:
+                return str(self._label)
+            elif hasattr(self, 'default_label'):
+                return self.default_label()
+            else:
+                return "NOLABEL"
 
     ##########
     _has_support_for_unicode = None
 
     @classmethod
-    def detect_support_for_unicode(klass):
+    def _detect_support_for_unicode(klass):
         if klass._has_support_for_unicode is None:
             try:
                 klass._c_saltire.encode(sys.stdout.encoding)
@@ -91,7 +123,11 @@ class AbstractJob:
     _c_infinity      = "\u221e" # ∞
     
 
-    def short_unicode(self):
+    def _short_unicode(self):
+        """
+        a small (7 chars) badge that summarizes the job's internal attributes
+        uses non-ASCII characters
+        """
         # is it done, or ongoing, or not yet started ?
         c_running = self._c_saltire if self.is_done() else \
                  self._c_circle_arrow if self.is_started() else \
@@ -108,7 +144,11 @@ class AbstractJob:
         # add extra white space as unicode chars in terminal tend to be wider than others
         return "{} {} {} {}".format(c_crit, c_boom, c_running, c_forever)
         
-    def short_ascii(self):
+    def _short_ascii(self):
+        """
+        a small (7 chars) badge that summarizes the job's internal attributes
+        uses ASCII-only characters
+        """
         # is it done, or ongoing, or not yet started ?
         c_running = "x" if self.is_done() else \
                  "o" if self.is_started() else \
@@ -127,38 +167,37 @@ class AbstractJob:
 
     def short(self):
         """
-        return a 4 characters string (in fact possibly 7 with interspaces)
-        that illustrate the 4 dimensions of the job, that is
+        return a 4 characters string (in fact 7 with interspaces)
+        that summarizes the 4 dimensions of the job, that is
         (*) is it done/started/idle
         (*) is it declared as forever
         (*) is it critical
         (*) did it trigger an exception
         """
-        if self.detect_support_for_unicode():
-            return self.short_unicode()
+        if self._detect_support_for_unicode():
+            return self._short_unicode()
         else:
-            return self.short_ascii()
+            return self._short_ascii()
     
-    def e_label(self, use_e_label):
-        # use the label set from engine if present, otherwise our own verbose one
-        return self.label if not use_e_label else ( self._e_label or self.label() )
-
-    def repr(self, show_requires=True, use_e_label = True, show_result_or_exception=True):
+    def repr(self, show_requires=True, show_result_or_exception=True):
+        """
+        returns a string that describes this job instance, with details as specified
+        """
         info = self.short()
-        info += " <{} `{}`".format(type(self).__name__, self.label())
+        info += " <{} `{}`>".format(type(self).__name__, self.label())
 
         ### show info - IDLE means not started at all
         if show_result_or_exception:
             exception = self.raised_exception()
             if exception:
                 critical_msg = "CRIT. EXC." if self.is_critical() else "exception"
-                info += " => {}:!!{}:{}!!".format(critical_msg, type(exception).__name__, exception)
+                info += "!! {} => {}:{}!!".format(critical_msg, type(exception).__name__, exception)
             elif self.is_done():
-                info += " -> {}".format(self.result())
-        info += ">"
+                info += "[[ -> {}]]".format(self.result())
+
         ### show dependencies in both directions
         if show_requires and self.required:
-            info += " - requires:{" + ", ".join(a.e_label(use_e_label) for a in self.required) + "}"
+            info += " - requires {" + ", ".join(a.label(use_e_label=True) for a in self.required) + "}"
         return info
     
     def __repr__(self):
@@ -196,17 +235,33 @@ class AbstractJob:
                 self.requires(list(requirement))
 
     def is_started(self):
+        """
+        returns a boolean that tells if the job has been scheduled already
+        """
         return self._task is not None
     def is_done(self):
+        """
+        returns a boolean that tells if the job has completed
+        """
         return self._task is not None and self._task._state == asyncio.futures._FINISHED
     def raised_exception(self):
-        """returns an exception if applicable, or None"""
+        """
+        returns an exception if the job has completed by raising an exception, None otherwise
+        """
         return self._task is not None and self._task._exception
 
     def is_critical(self):
+        """
+        a boolean that tells whether this job is a critical job or not
+        """
         return self.critical
 
     def result(self):
+        """
+        when this job is completed and has not raised an exception, this 
+        method lets you retrieve the job's result. i.e. the value returned 
+        by its `co_run()` method
+        """
         if not self.is_done():
             raise ValueError("job not finished")
         return self._task._result
@@ -227,9 +282,10 @@ class AbstractJob:
 
     def standalone_run(self):
         """
-        Just run this one job on its own - useful for debugging
-        the internals of that job, e.g. for checking for gross mistakes
-        and other exceptions
+        A convenience helper that just runs this one job on its own 
+        
+        Mostly useful for debugging the internals of that job,
+        e.g. for checking for gross mistakes and other exceptions
         """
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.co_run())
