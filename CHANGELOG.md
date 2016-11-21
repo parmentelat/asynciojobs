@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.4.0 - 2016 Nov 21
+
+* rename engine into scheduler
+
 ## 0.3.4 - 2016 Nov 20
 
 * a first sphinx doc, but not yet available at readthedocs.org because
