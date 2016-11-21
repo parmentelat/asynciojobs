@@ -68,13 +68,13 @@ check:
 
 .PHONY: infra check
 
-########## docs
-docs:
-	$(MAKE) -C docs html
+########## sphinx
+sphinx:
+	$(MAKE) -C sphinx html
 
-docs-clean:
-	$(MAKE) -C docs clean
+sphinx-clean:
+	$(MAKE) -C sphinx clean
 
-all-docs: readme-clean readme docs
+all-sphinx: readme-clean readme sphinx
 
-.PHONY: docs docs-clean all-docs
+.PHONY: sphinx sphinx-clean all-sphinx

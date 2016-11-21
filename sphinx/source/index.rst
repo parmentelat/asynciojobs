@@ -13,8 +13,14 @@ Contents:
 
    README
    API
-   CHANGELOG
 
+History:
+
+.. toctree::
+   :maxdepth: 1
+
+   CHANGELOG  
+ 
 Indices and tables
 ==================
 
