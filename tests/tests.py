@@ -90,7 +90,7 @@ async def co_exception(n):
 ####################            
 from asynciojobs import Job as J
 from asynciojobs import Sequence as Seq
-from asynciojobs import Engine
+from asynciojobs import Scheduler
 
 # shortcuts
 SLJ = SleepJob
@@ -100,17 +100,17 @@ sep = 40 * '*' + ' '
 
 import unittest
 
-def check_required_types(engine, message):
-    wrong = [j for j in engine.jobs if not isinstance(j, AbstractJob) or not hasattr(j, 'required')]
+def check_required_types(scheduler, message):
+    wrong = [j for j in scheduler.jobs if not isinstance(j, AbstractJob) or not hasattr(j, 'required')]
     if len(wrong) != 0:
-        print("Engine {} has {}/{} ill-typed jobs"
-              .format(len(len(wrong), engine.jobs)))
+        print("Scheduler {} has {}/{} ill-typed jobs"
+              .format(len(len(wrong), scheduler.jobs)))
         return False
     return True
 
-def list_sep(engine, sep):
+def list_sep(scheduler, sep):
     print(sep)
-    engine.list()
+    scheduler.list()
     print(sep)
 
 
@@ -124,10 +124,10 @@ class Tests(unittest.TestCase):
         a2.requires(a3)
         a3.requires(a1)
 
-        e = Engine(a1, a2, a3)
+        sched = Scheduler(a1, a2, a3)
 
         # these lines seem to trigger a nasty message about a coro not being waited
-        self.assertFalse(e.rain_check())
+        self.assertFalse(sched.rain_check())
 
     ####################
     # Job(asyncio.sleep(0.4))
@@ -144,44 +144,44 @@ class Tests(unittest.TestCase):
         a7.requires(a5)
         a7.requires(a6)
         
-        e = Engine(*jobs)
-        list_sep(e, sep + "LIST BEFORE")
-        self.assertTrue(e.rain_check())
-        self.assertTrue(e.orchestrate(loop=asyncio.get_event_loop()))
+        sched = Scheduler(*jobs)
+        list_sep(sched, sep + "LIST BEFORE")
+        self.assertTrue(sched.rain_check())
+        self.assertTrue(sched.orchestrate(loop=asyncio.get_event_loop()))
         for j in jobs:
             self.assertFalse(j.raised_exception())
-        list_sep(e, sep + "LIST AFTER")
+        list_sep(sched, sep + "LIST AFTER")
         print(sep + "DEBRIEF")
-        e.debrief()
+        sched.debrief()
         
     ####################
     def test_forever(self):
         a1, a2, t1 = SLJ(1), SLJ(1.5), TJ(.6)
         a2.requires(a1)
-        e = Engine(a1, a2, t1)
-        e.list()
-        self.assertTrue(e.orchestrate())
-        e.list()
+        sched = Scheduler(a1, a2, t1)
+        sched.list()
+        self.assertTrue(sched.orchestrate())
+        sched.list()
 
     ####################
     def test_timeout(self):
         a1, a2, a3 = [SLJ(x) for x in (0.5, 0.6, 0.7)]
         a2.requires(a1)
         a3.requires(a2)
-        e = Engine(a1, a2, a3)
+        sched = Scheduler(a1, a2, a3)
         # should timeout in the middle of stage 2
-        self.assertFalse(e.orchestrate(timeout=1))
-        e.list()
+        self.assertFalse(sched.orchestrate(timeout=1))
+        sched.list()
 
     ####################
     def _test_exc_non_critical(self, verbose):
 
         print("verbose = {}".format(verbose))
         a1, a2 = SLJ(1), J(co_exception(0.5), label='non critical boom')
-        e = Engine(a1, a2, verbose=verbose)
-        self.assertTrue(e.orchestrate())
+        sched = Scheduler(a1, a2, verbose=verbose)
+        self.assertTrue(sched.orchestrate())
         print(sep + 'debrief()')
-        e.debrief()
+        sched.debrief()
 
     def test_exc_non_critical_f(self): return self._test_exc_non_critical(False)
     def test_exc_non_critical_t(self): return self._test_exc_non_critical(True)
@@ -191,10 +191,10 @@ class Tests(unittest.TestCase):
 
         print("verbose = {}".format(verbose))
         a1, a2 = SLJ(1), J(co_exception(0.5), label='critical boom', critical=True)
-        e = Engine(a1, a2, verbose=verbose)
-        self.assertFalse(e.orchestrate())
+        sched = Scheduler(a1, a2, verbose=verbose)
+        self.assertFalse(sched.orchestrate())
         print(sep + 'debrief()')
-        e.debrief()
+        sched.debrief()
 
     def test_exc_critical_f(self): return self._test_exc_critical(False)
     def test_exc_critical_t(self): return self._test_exc_critical(True)
@@ -206,13 +206,13 @@ class Tests(unittest.TestCase):
         a2 = J(sl(0.1), label=2)
         a3 = J(sl(0.1), label=3)
         s = Seq(a1, a2, a3)
-        e = Engine(s)
-        list_sep(e, sep + "sequence1")
+        sched = Scheduler(s)
+        list_sep(sched, sep + "sequence1")
         self.assertEqual(len(a1.required), 0)
         self.assertEqual(len(a2.required), 1)
         self.assertEqual(len(a3.required), 1)
-        self.assertTrue(check_required_types(e, "test_sequence1"))
-        self.assertTrue(e.orchestrate())
+        self.assertTrue(check_required_types(sched, "test_sequence1"))
+        self.assertTrue(sched.orchestrate())
 
     ####################
     def test_sequence2(self):
@@ -221,13 +221,13 @@ class Tests(unittest.TestCase):
         a2 = J(sl(0.1), label=2)
         a3 = J(sl(0.1), label=3)
         s = Seq(a2, a3, required=a1)
-        e = Engine(a1, s)
-        list_sep(e, sep + "sequence2")
+        sched = Scheduler(a1, s)
+        list_sep(sched, sep + "sequence2")
         self.assertEqual(len(a1.required), 0)
         self.assertEqual(len(a2.required), 1)
         self.assertEqual(len(a3.required), 1)
-        self.assertTrue(check_required_types(e, "test_sequence2"))
-        self.assertTrue(e.orchestrate())
+        self.assertTrue(check_required_types(sched, "test_sequence2"))
+        self.assertTrue(sched.orchestrate())
 
     ####################
     def test_sequence3(self):
@@ -236,15 +236,15 @@ class Tests(unittest.TestCase):
         a2 = J(sl(0.1), label=2)
         s = Seq(a1, a2)
         a3 = J(sl(0.1), label=3, required=s)
-        #e = Engine(s, a3)
-        e = Engine()
-        e.update((s, a3))
-        list_sep(e, sep + "sequence3")
+        #e = Scheduler(s, a3)
+        sched = Scheduler()
+        sched.update((s, a3))
+        list_sep(sched, sep + "sequence3")
         self.assertEqual(len(a1.required), 0)
         self.assertEqual(len(a2.required), 1)
         self.assertEqual(len(a3.required), 1)
-        self.assertTrue(check_required_types(e, "test_sequence3"))
-        self.assertTrue(e.orchestrate())
+        self.assertTrue(check_required_types(sched, "test_sequence3"))
+        self.assertTrue(sched.orchestrate())
 
     ####################
     def test_sequence4(self):
@@ -255,14 +255,14 @@ class Tests(unittest.TestCase):
         a4 = J(sl(0.1), label=4)
         s1 = Seq(a1, a2)
         s2 = Seq(a3, a4)
-        e = Engine(Seq(s1, s2))
-        list_sep(e, sep + "sequence4")
+        sched = Scheduler(Seq(s1, s2))
+        list_sep(sched, sep + "sequence4")
         self.assertEqual(len(a1.required), 0)
         self.assertEqual(len(a2.required), 1)
         self.assertEqual(len(a3.required), 1)
         self.assertEqual(len(a4.required), 1)
-        self.assertTrue(check_required_types(e, "test_sequence4"))
-        self.assertTrue(e.orchestrate())
+        self.assertTrue(check_required_types(sched, "test_sequence4"))
+        self.assertTrue(sched.orchestrate())
     
         
     ####################
@@ -277,16 +277,26 @@ class Tests(unittest.TestCase):
         s1 = Seq(a1, a2)
         s2 = Seq(a3, a4, required = s1)
         s3 = Seq(a5, a6, required = s2)
-        e = Engine(s1, s2, s3)
-        list_sep(e, sep + "sequence5")
+        sched = Scheduler(s1, s2, s3)
+        list_sep(sched, sep + "sequence5")
         self.assertEqual(len(a1.required), 0)
         self.assertEqual(len(a2.required), 1)
         self.assertEqual(len(a3.required), 1)
         self.assertEqual(len(a4.required), 1)
         self.assertEqual(len(a5.required), 1)
         self.assertEqual(len(a6.required), 1)
-        self.assertTrue(check_required_types(e, "test_sequence5"))
-        self.assertTrue(e.orchestrate())
+        self.assertTrue(check_required_types(sched, "test_sequence5"))
+        self.assertTrue(sched.orchestrate())
+
+    ##########
+    def test_sequence6(self):
+        "adding a sequence"
+        sched = Scheduler()
+        a1 = J(sl(0.1), label=1)
+        a2 = J(sl(0.1), label=2)
+        a3 = J(sl(0.1), label=3)
+        sched.add(Seq(a1, a2, a3))
+        self.assertTrue(sched.orchestrate())
 
 
     ##########
@@ -352,7 +362,7 @@ class Tests(unittest.TestCase):
         a1 = J(sl(1), label="a1")
         a2 = J(sl(2), label="a2")
         a3 = J(sl(10), label="a3")
-        result = Engine(a1, a2, a3).orchestrate(timeout=3)
+        result = Scheduler(a1, a2, a3).orchestrate(timeout=3)
         self.assertEqual(result, False)
         self.assertEqual(a1.is_done(), True)
         self.assertEqual(a1.result(), 1)
@@ -370,8 +380,8 @@ class Tests(unittest.TestCase):
 
         a1 = J(sl(0.5), label="finite")
         a2 = J(tick(0.1), forever = True, label = "forever")
-        e = Engine(a1, a2)
-        result = e.orchestrate()
+        sched = Scheduler(a1, a2)
+        result = sched.orchestrate()
         self.assertEqual(result, True)
         self.assertEqual(a1.is_done(), True)
         self.assertEqual(a2.is_done(), False)
@@ -405,7 +415,7 @@ class Tests(unittest.TestCase):
 
         class J(AbstractJob): pass
 
-        e = Engine()
+        sched = Scheduler()
         previous = None
         for c in True, False:
             for boom in True, False:
@@ -418,17 +428,17 @@ class Tests(unittest.TestCase):
                               required = previous
                         )
                         if annotate_job_with_fake_task(j, state, boom):
-                            e.add(j)
+                            sched.add(j)
                             previous = j
-        e.list()
+        sched.list()
 
                 
 
 if __name__ == '__main__':
     import sys
     if '-v' in sys.argv:
-        import engine
-        engine.debug = True
+        import scheduler
+        scheduler.debug = True
         sys.argv.remove('-v')
     unittest.main()
 

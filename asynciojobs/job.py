@@ -17,9 +17,14 @@ debug = False
 # (*) from one Job, easily know what its status is by lloing into its Task obj
 #     (if already started)
 
-# Engine == graph
+# Scheduler == graph
 # Job == node
 
+"""
+This module defines `AbstractJob` that is the base class for all the jobs in a Scheduler.
+
+It also defines a couple of simple job classes.
+"""
  
 
 class AbstractJob:
@@ -31,36 +36,36 @@ class AbstractJob:
     (*) its subclasses are expected to implement a `co_run()` and a `co_shutdown()` methods
         that specifies the actual behaviour of the job, as coroutines
 
-    It's mostly a companion class to the Engine class, that triggers these methods
+    It's mostly a companion class to the Scheduler class, that triggers these methods
 
     In addition, each job can be created with 
     (*) boolean flag 'forever', if set, means the job is not returning at all and runs forever
-    in this case Engine.orchestrate will not wait for that job, and will terminate it once all
+    in this case Scheduler.orchestrate will not wait for that job, and will terminate it once all
     the regular i.e. not-forever jobs are done
     (*) an optional label - for convenience only
 
-    *** 
+    -----
 
     As far as labelling, things have become a little tricky
 
-    When listing an instance of Engine, there are 2 ways we need to show a job
+    When listing an instance of Scheduler, there are 2 ways we need to show a job
 
     * first there is a plain label, that may/should be set at creation time
 
     * second, when showing references (like the jobs that a given job requires), 
     we show ids like '01' and similar.
     Except that, the job itself has no idea about that at first, 
-    it's the Engine instance that decides on that
+    it's the Scheduler instance that decides on that
 
-    ***
+    ------
 
     Besides, if a job instance has a `details()` method, then this is used to produce 
-    additional details for that job when running Engine.list(details=True)
+    additional details for that job when running Scheduler.list(details=True)
 
 
     """
 
-    def __init__(self, forever, label=None, critical=None, required=None):
+    def __init__(self, forever=False, label=None, critical=False, required=None):
         self.forever = forever
         self.critical = critical
         # access label through a method so we can invoke default_label() if missing
@@ -71,24 +76,24 @@ class AbstractJob:
         # once submitted in the asyncio loop/scheduler, the `co_run()` gets embedded in a 
         # Task object, that is our handle when talking to asyncio.wait
         self._task = None
-        # ==== fields for our friend Engine all start with _e_
+        # ==== fields for our friend Scheduler all start with _s_
         # this is for graph browsing algos
-        self._e_mark = None
+        self._s_mark = None
         # the reverse of required
-        self._e_successors = set()
-        # if this is set by the engine, we use it for listing relationships
-        self._e_label = None
+        self._s_successors = set()
+        # if this is set by the scheduler, we use it for listing relationships
+        self._s_label = None
 
-    def label(self, use_e_label=False):
+    def label(self, use_s_label=False):
         """
         Implements the logic for finding a job's label
-        * if use_e_label is set, looks in self._e_label that is expected to have been set by
-        companion class Engine; if not set returns a warning msg 'XXXX'
+        * if use_s_label is set, looks in self._s_label that is expected to have been set by
+        companion class Scheduler; if not set returns a warning msg 'XXXX'
         * otherwise, looks for the label  used at creation-time, and otherwise
         runs its class's `default_label()` method
         """
-        if use_e_label:
-            return self._e_label or 'XXXX'
+        if use_s_label:
+            return self._s_label or 'XXXX'
         else:
             if self._label is not None:
                 return str(self._label)
@@ -197,7 +202,7 @@ class AbstractJob:
 
         ### show dependencies in both directions
         if show_requires and self.required:
-            info += " - requires {" + ", ".join(a.label(use_e_label=True) for a in self.required) + "}"
+            info += " - requires {" + ", ".join(a.label(use_s_label=True) for a in self.required) + "}"
         return info
     
     def __repr__(self):
@@ -299,24 +304,41 @@ class Job(AbstractJob):
     Most mundane form: built from a coroutine
     """
     
-    def __init__(self, coro, forever=False, *args, **kwds):
-        self.coro = coro
-        AbstractJob.__init__(self, forever=forever, *args, **kwds)
+    def __init__(self, corun, coshutdown=None, *args, **kwds):
+        """
+        Create a job from a coroutine
+
+        Example:
+        async def aprint(message, delay):
+            print(message)
+            await asyncio.sleep(delay)
+
+        j = Job(aprint("Welcome - idling for 3 seconds", 3))
+        """
+        self.corun = corun
+        self.coshutdown = coshutdown
+        AbstractJob.__init__(self, *args, **kwds)
 
     async def co_run(self):
-        result = await self.coro
+        result = await self.corun
         return result
 
     async def co_shutdown(self):
-        pass
+        if self.coshutdown:
+            result = await self.coshutdown
+            return result
 
     def details(self):
-        return repr(self.coro)
+        return repr(self.corun)
 
 ####################
 class PrintJob(AbstractJob):
     """
-    A job that just prints a message, and optionnally sleeps for some time
+    A job that just  does print on messages, and optionnally sleeps for some time
+
+    sleep is an optional float that tells how long to sleep after the messages get printed
+
+    banner is an optional separation line, like 40*'='; it won't make it into details()
     """
 
     def __init__(self, *messages, sleep=None, banner=None,
@@ -325,7 +347,7 @@ class PrintJob(AbstractJob):
         self.messages = messages
         self.sleep = sleep
         self.banner = banner
-        AbstractJob.__init__(self, forever=False, label=label, required = required)
+        AbstractJob.__init__(self, label = label, required = required)
 
     async def co_run(self):
         if self.banner:

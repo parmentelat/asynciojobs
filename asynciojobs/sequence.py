@@ -6,11 +6,11 @@ class Sequence:
     of AbstratJobs in a sequence.
     
     Sequences are not first-class citizen objets, in the sense that 
-    the engine primarily ignores these objects, only the jobs inside 
+    the scheduler primarily ignores these objects, only the jobs inside 
     the sequence matter.
 
     However a sequence can be used mostly every place where a job 
-    could be, either being inserted in an engine, as a requirement,
+    could be, either being inserted in an scheduler, as a requirement,
     and it can have requirements too
     """
 

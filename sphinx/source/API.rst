@@ -1,10 +1,10 @@
 The asynciojobs API
 ========================================
 
-The Engine class
+The Scheduler class
 --------------------
 
-.. automodule:: asynciojobs.engine
+.. automodule:: asynciojobs.scheduler
 		:members:
 
 Job-like classes

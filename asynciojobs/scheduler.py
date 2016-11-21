@@ -17,9 +17,9 @@ debug = False
 An attempt at some plain markdown 
 """
 
-class Engine:
+class Scheduler:
     """
-    An Engine instance works on a set of Job objects
+    An Scheduler instance works on a set of Job objects
 
     It will orchestrate them until they are all complete,
     starting with the ones that have no requirements, 
@@ -35,17 +35,17 @@ class Engine:
 
     def __init__(self,  *jobs_or_sequences, verbose=False):
         self.jobs = set(Sequence._flatten(jobs_or_sequences))
+        self.verbose = verbose
         ### why does it fail ?
         # bool
         self._failed_critical = False
         # False, or the intial timeout
         self._failed_timeout = False
-        self.verbose = verbose
 
-    # think of an engine as a set of jobs
+    # think of an scheduler as a set of jobs
     def update(self, jobs):
         """
-        add a collection of jobs (like set.update())
+        add a collection of jobs - name is inspired from plain python `set.update`
         """
         jobs = set(Sequence._flatten(jobs))
         self.jobs.update(jobs)
@@ -88,7 +88,7 @@ class Engine:
     ####################
     def sanitize(self):
         """
-        Removes requirements that are not part of the engine
+        Removes requirements that are not part of the scheduler
         This is mostly convenient in many test scenarios
         but in any case it is crucial that this property holds
         for orchestrate to perform properly
@@ -97,7 +97,7 @@ class Engine:
         for job in self.jobs:
             before = len(job.required)
             job.required &= self.jobs
-            job._e_successors &= self.jobs
+            job._s_successors &= self.jobs
             after = len(job.required)
             if self.verbose and before != after:
                 print(20*'*', "WARNING: job {} has had {} requirements removed"
@@ -113,7 +113,7 @@ class Engine:
         but it's safer to run this before calling orchestrate if one wants 
         to type-check the jobs dependency graph early on
 
-        it might also help to have a sanitized engine, 
+        it might also help to have a sanitized scheduler, 
         but here again this is up to the caller
 
         RETURN:
@@ -147,17 +147,17 @@ class Engine:
             # loop on unfinished business
             for job in self.jobs:
                 # ignore jobs already marked
-                if job._e_mark:
+                if job._s_mark:
                     continue
                 # if there's no requirement (first pass),
                 # or later on if all requirements have already been marked,
                 # then we can mark this one
                 has_unmarked_requirements = False
                 for required_job in job.required:
-                    if required_job._e_mark is None:
+                    if required_job._s_mark is None:
                         has_unmarked_requirements = True
                 if not has_unmarked_requirements:
-                    job._e_mark = True
+                    job._s_mark = True
                     nb_marked += 1
                     changed = True
                     yield job
@@ -167,38 +167,38 @@ class Engine:
                 break
             if not changed:
                 # this is wrong
-                raise Exception("engine could not be scanned - most likely because of cycles") 
+                raise Exception("scheduler could not be scanned - most likely because of cycles") 
         # if we still have jobs here it's not good either, although it should not happen
-        # on a sanitized engine
+        # on a sanitized scheduler
         if nb_marked != target_marked:
-            raise Exception("engine could not be scanned, {} jobs are not reachable from free jobs"
+            raise Exception("scheduler could not be scanned, {} jobs are not reachable from free jobs"
                             .format(target_marked - nb_marked))
 
     ####################
     def _reset_marks(self):
         """
-        reset Job._e_mark on all jobs
+        reset Job._s_mark on all jobs
         """
         for job in self.jobs:
-            job._e_mark = None
+            job._s_mark = None
 
     def _reset_tasks(self):
         """
-        In case one tries to run the same engine twice
+        In case one tries to run the same scheduler twice
         """
         for job in self.jobs:
             job._task = None
 
     def _backlinks(self):
         """
-        initialize Job._e_successors on all jobs
+        initialize Job._s_successors on all jobs
         as the reverse of Job.required
         """
         for job in self.jobs:
-            job._e_successors = set()
+            job._s_successors = set()
         for job in self.jobs:
             for req in job.required:
-                req._e_successors.add(job)
+                req._s_successors.add(job)
 
     def _ensure_future(self, job, loop):
         """
@@ -285,10 +285,10 @@ class Engine:
         """
         The idea here is to send a message to all the jobs once the orchestration is over
         Typically for example, several jobs sharing the same ssh connection will arrange for 
-        that connection to be kept alive across an engine, but there is a need to tear these 
+        that connection to be kept alive across an scheduler, but there is a need to tear these 
         connections down eventually
         """
-        await self._feedback(None, "engine is shutting down...")
+        await self._feedback(None, "scheduler is shutting down...")
         tasks = [ asyncio.ensure_future(job.co_shutdown()) for job in self.jobs ]
         done, pending = await asyncio.wait(tasks, timeout = self._remaining_timeout())
         if len(pending) != 0:
@@ -309,7 +309,7 @@ class Engine:
             return
         time_format = "%H-%M-%S"
         if jobs is None:
-            print("{}: ENGINE: {}".format(time.strftime(time_format), state))
+            print("{}: SCHEDULER: {}".format(time.strftime(time_format), state))
             return
         if not isinstance(jobs, (list, set, tuple)):
             jobs = jobs,
@@ -326,7 +326,7 @@ class Engine:
         """
         if loop is None:
             loop = asyncio.get_event_loop()
-        # initialize backlinks - i.e. _e_successors is the reverse of required
+        # initialize backlinks - i.e. _s_successors is the reverse of required
         self._backlinks()
         # clear any Task instance
         self._reset_tasks()
@@ -423,7 +423,7 @@ class Engine:
             # only consider the ones that are right behind any of the the jobs that just finished
             possible_next_jobs = set()
             for done_task in done:
-                possible_next_jobs.update(done_task._job._e_successors)
+                possible_next_jobs.update(done_task._job._s_successors)
 
             # find out which ones really can be added
             added = 0
@@ -451,12 +451,12 @@ class Engine:
         """
         l = len(self.jobs)
         format = "{:02}" if l < 100 else "{:04}"
-        # inject number in each job in their _e_label field
+        # inject number in each job in their _s_label field
         for i, job in enumerate(self.scan_in_order(), 1):
-            job._e_label = format.format(i)
+            job._s_label = format.format(i)
         # so now we can refer to other jobs by their id when showing requirements
         for job in self.scan_in_order():
-            print(job._e_label, job.repr(show_requires=True))
+            print(job._s_label, job.repr(show_requires=True))
             if details and hasattr(job, 'details'):
                 try:
                     details = job.details()
@@ -491,7 +491,7 @@ class Engine:
         exceptions = { j for j in self.jobs if j.raised_exception()}
         criticals =  { j for j in exceptions if j.is_critical()}
 
-        message = "engine has a total of {} jobs".format(nb_total)
+        message = "scheduler has a total of {} jobs".format(nb_total)
         def legible_message(nb, adj):
             if nb == 0: return " none is {}".format(adj)
             elif nb == 1: return " 1 is {}".format(adj)

@@ -1,10 +1,11 @@
 __all__ = []
 
-from .engine import Engine
-__all__.append("Engine")
+from .scheduler import Scheduler
+__all__.append("Scheduler")
 
-from .sequence import Sequence
-__all__.append("Sequence")
 
 from .job import AbstractJob, Job, PrintJob
 __all__ += [ "AbstractJob", "Job", "PrintJob" ]
+
+from .sequence import Sequence
+__all__.append("Sequence")

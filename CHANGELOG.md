@@ -3,7 +3,7 @@
 ## 0.3.4 - 2016 Nov 20
 
 * a first sphinx doc, but not yet available at readthedocs.org because
-  I could not get it to run python3.5
+  I could not get rtd to run python3.5
 
 ## 0.3.3 - 2016 Nov 17
 

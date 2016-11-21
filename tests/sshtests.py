@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os.path
 
-from asynciojobs.engine import Engine
+from asynciojobs.scheduler import Scheduler
 from asynciojobs.job import Job
 
 from apssh.jobs.sshjobs import SshNode, SshJob, SshJobScript
@@ -67,20 +67,20 @@ def two_passes(gateway, node_ids, synchro, debug=False, before=True, after=True)
         for j2 in jobs2:
             j2.requires(middle)
 
-    e = Engine(debug=debug)
+    s = Scheduler(debug=debug)
     if before:
-        e.update(jobs1)
-    e.add(middle)
+        s.update(jobs1)
+    s.add(middle)
     if after:
-        e.update(jobs2)
+        s.update(jobs2)
     print("========== sanitize")
-    e.sanitize()
+    s.sanitize()
     print("========== rain check")
-    e.rain_check()
+    s.rain_check()
     print("========== orchestrating")
-    orch = e.orchestrate()
+    orch = s.orchestrate()
     print('********** orchestrate ->', orch)
-    e.list()
+    s.list()
     print('**********')
 
 if __name__ == '__main__':
