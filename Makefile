@@ -78,3 +78,17 @@ sphinx-clean:
 all-sphinx: readme-clean readme sphinx
 
 .PHONY: sphinx sphinx-clean all-sphinx
+
+########## on r2lab.inria.fr a.k.a. nepi-ng.inria.fr
+INFRA-PATH = /root/asynciojobs
+PUBLISH-PATH = /var/www/nepi-ng/asynciojobs
+EXCLUDES = .git
+RSYNC-EXCLUDES = $(foreach exc,$(EXCLUDES), --exclude $(exc))
+
+publish: readme sphinx
+	rsync -av $(RSYNC-EXCLUDES) --delete --delete-excluded ./ $(PUBLISH-PATH)/
+
+www:
+	ssh root@nepi-ng.inria.fr "(cd $(INFRA-PATH); git reset --hard HEAD; git pull; make publish)"
+
+.PHONY: publish www

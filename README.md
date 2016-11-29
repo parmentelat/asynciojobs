@@ -184,7 +184,7 @@ sb2.orchestrate()
 
 
 
-### Return value for `orchestrate` 
+### Return value for `Scheduler.orchestrate()` 
 
 Note that because `sb.orchestrate()` had returned `True`, we could have inferred that all jobs have completed. As a matter of fact, `orchestrate` returns `True` if and only if:
 
@@ -228,15 +228,13 @@ sb.list()
 
 Here is a complete list of the symbols used, with their meaning 
 
-|          |   |
-|----------|---|
-| critical                       | `⚠` |
-|raised an exception             | `★` |
-| went through without exception | `☉` |
-| complete | `☓` |
-| running  | `↺` |
-| idle     | `⚐` |
-| forever  | `∞`|
+* `⚠` : critical
+* `★` : raised an exception
+* `☉` : went through fine (no exception raised)
+* `☓` : complete 
+* `↺` : running  
+* `⚐` : idle     
+* `∞` : forever  
 
 
 And and here's an example of output for `list()` with all possible combinations of jobs:
@@ -330,8 +328,8 @@ sc.list()
 ```
 
     01   ☉ ☓   <Job `c1`>[[ -> 2.0]]
-    02   ☉ ↺ ∞ <Job `monitor`>
-    03   ☉ ☓   <Job `c2`>[[ -> 4.0]]
+    02   ☉ ☓   <Job `c2`>[[ -> 4.0]]
+    03   ☉ ↺ ∞ <Job `monitor`>
     04   ☉ ☓   <Job `c3`>[[ -> 3.0]] - requires {01}
 
 
@@ -353,9 +351,9 @@ sd = Scheduler(j)
 sd.orchestrate(timeout=0.25)
 ```
 
-    11:38:48: forever 0
-    11:38:48: forever 1
-    11:38:48: forever 2
+    23:10:59: forever 0
+    23:10:59: forever 1
+    23:10:59: forever 2
 
 
 
@@ -446,34 +444,35 @@ sf.list()
     03     ⚐   <Job `NOLABEL`> - requires {02}
 
 
-## More
+## Customizing jobs
 
-### `co_orchestrate` 
+### Customizing the `Job` class
 
-`orchestrate` is a regular `def` function (i.e. not an `async def`), but in fact just a wrapper around the native coroutine called `co_orchestrate`.
+`Job` actually is a specializtion of `AbstractJob`, and the specification is that the `co_run()` method should denote a coroutine itself, as that is what is triggered by `Scheduler` for running said job.
 
-    def orchestrate(self, loop=None, *args, **kwds):
-        if loop is None:
-            loop = asyncio.get_event_loop()
-        return loop.run_until_complete(self.co_orchestrate(loop=loop, *args, **kwds))
+### `AbstractJob.co_shutdown()`
 
-### `debrief()`
+Before returning, `orcheutrate` sends the `co_shutdown()` method on all jobs. The default behaviour - in the `Job` class - is to do nothing, but this can be redefined when relevant. Typically, an implementation of an `SshJob` will allow for a given SSH connection to be shared amongs several `SshJob` instances, and so `co_shutdown()` may be used to  close the underlying SSH connections at the end of the scenario.
+
+### The `apssh`  library and the ` SshJob` class
+
+You can easily define your own `Job` class by specializing `job.AbstractJob`. As an example, which was the primary target when developping `asynciojobs`, you can find [in the `apssh` library](https://github.com/parmentelat/apssh) a `SshJob` class, with which you can easily orchestrate scenarios involving several hosts that you interact with using ssh.
+
+## Other useful features on the `Scheduler`class
+
+### `Scheduler.debrief()`
 
 `Scheduler.debrief()` is designed for schedulers that have run and returned `False`, it does output the same listing as `list()` but with additional statistics on the number of jobs, and, most importantly, on the stacks of jobs that have raised an exception.
 
-### `rain_check`
-
-`rain_check` will check for cycles in the requirements graph. It returns a boolean. It's a good idea to call it before running an orchestration.
-
-### `sanitize`
+### `Scheduler.sanitize()`
 
 In some cases like esp. test scenarios, it can be helpful to add requirements to jobs that are not in the scheduler. The `sanitize` method removes such extra requirements, and unless you are certain it is not your case, it might be a good idea to call it explcitly before an orchestration.
 
-### `co_shutdown`
+### `Scheduler.rain_check()`
 
-Before returning, `orchestrate` sends the `co_shutdown()` method on all jobs. The default behaviour - in the `Job` class - is to do nothing, but this can be redefined when relevant. Typically, an implementation of an `SshJob` will allow for a given SSH connection to be shared amongs several `SshJob` instances, and so `co_shutdown()` may be used to  close the underlying SSH connections at the end of the scenario.
+`rain_check` will check for cycles in the requirements graph. It returns a boolean. It's a good idea to call it before running an orchestration.
 
-### `export_as_dotfile`
+### `Scheduler.export_as_dotfile()`
 
 An scheduler can be exported as a dotfile for feeding `graphviz` and producing visual diagrams. Provided that you have the `dot` program (which is part of `graphviz`) installed, you could do something like
 
@@ -481,10 +480,11 @@ An scheduler can be exported as a dotfile for feeding `graphviz` and producing v
     os.system("dot -Tpng foo.dot -o foo.png")
 
 
-### Customizing the `Job` class
+### `Scheduler.co_orchestrate()` 
 
-`Job` actually is a specializtion of `AbstractJob`, and the specification is that the `co_run()` method should denote a coroutine itself, as that is what is triggered by `Scheduler` for running said job.
+`orchestrate` is a regular `def` function (i.e. not an `async def`), but in fact just a wrapper around the native coroutine called `co_orchestrate`.
 
-### The `apssh`  library and the ` SshJob` class
-
-You can easily define your own `Job` class by specializing `job.AbstractJob`. As an example, which was the primary target when developping `asynciojobs`, you can find [in the `apssh` library](https://github.com/parmentelat/apssh) a `SshJob` class, with which you can easily orchestrate scenarios involving several hosts that you interact with using ssh.
+    def orchestrate(self, loop=None, *args, **kwds):
+        if loop is None:
+            loop = asyncio.get_event_loop()
+        return loop.run_until_complete(self.co_orchestrate(loop=loop, *args, **kwds))
