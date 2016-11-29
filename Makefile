@@ -85,7 +85,7 @@ PUBLISH-PATH = /var/www/nepi-ng/asynciojobs
 EXCLUDES = .git
 RSYNC-EXCLUDES = $(foreach exc,$(EXCLUDES), --exclude $(exc))
 
-publish: readme sphinx
+publish: sphinx
 	rsync -av $(RSYNC-EXCLUDES) --delete --delete-excluded ./ $(PUBLISH-PATH)/
 
 www:
