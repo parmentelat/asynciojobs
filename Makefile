@@ -4,6 +4,8 @@ NBNORM = ../flotpython/tools/nbnorm.py
 norm:
 	$(NBNORM) --author "Thierry Parmentelat - Inria" README.ipynb
 
+# readme is NOT expected to be redone on a doc-publishing website
+# remember that ReADME.md is part of the git repo
 all: readme
 readme: README.md
 README.md: README-eval.ipynb
@@ -85,10 +87,11 @@ PUBLISH-PATH = /var/www/nepi-ng/asynciojobs
 EXCLUDES = .git
 RSYNC-EXCLUDES = $(foreach exc,$(EXCLUDES), --exclude $(exc))
 
+# invoked by restart-website.sh on r2lab
 publish: sphinx
 	rsync -av $(RSYNC-EXCLUDES) --delete --delete-excluded ./ $(PUBLISH-PATH)/
 
-www:
+infra-doc:
 	ssh root@nepi-ng.inria.fr "(cd $(INFRA-PATH); git reset --hard HEAD; git pull; make publish)"
 
-.PHONY: publish www
+.PHONY: publish infra-doc

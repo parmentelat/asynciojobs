@@ -18,22 +18,28 @@ An attempt at some plain markdown
 """
 
 class Scheduler:
-    """
-    An Scheduler instance works on a set of Job objects
+    """An Scheduler instance works on a set of Job objects
 
     It will orchestrate them until they are all complete,
     starting with the ones that have no requirements, 
     and then starting the othe ones as their requirements are satisfied
 
-    Running a Job means executing its co_run() method, which must be a coroutine
+    Running a Job means executing its `co_run()` method, which must be a coroutine
 
-    As of this rough/early implementation: 
-    (*) the result of `co_run` is NOT taken into account to implement some
-    logic about how the overall job should behave. Instead the result and/or exception
-    of each individual job can be retrieved individually once the orchestration is complete
+    The result of a job's `co_run()` is NOT taken into account, as
+    long as it returns without raising an exception. If it does raise
+    an exception, overall execution is aborted iff the job is
+    critical. In all cases, the result and/or exception of each
+    individual job can be inspected and retrieved individually at any
+    time, including of course once the orchestration is complete.
     """
 
     def __init__(self,  *jobs_or_sequences, verbose=False):
+        """
+        Initialize from an iterable of jobs or sequences; their order is
+        irrelevant.  More of these can be added later on.
+
+        """
         self.jobs = set(Sequence._flatten(jobs_or_sequences))
         self.verbose = verbose
         ### why does it fail ?
@@ -45,26 +51,27 @@ class Scheduler:
     # think of an scheduler as a set of jobs
     def update(self, jobs):
         """
-        add a collection of jobs - name is inspired from plain python `set.update`
+        add a collection of jobs - ditto, after `set.update()`
         """
         jobs = set(Sequence._flatten(jobs))
         self.jobs.update(jobs)
 
     def add(self, job):
         """
-        add a single job (like set.add())
+        add a single job - name is inspired from plain python `set.add()`
         """
         self.update([job])
 
     def failed_time_out(self):
         """
-        if orchestrate has failed because of a time out
+        Tells whether `orchestrate` has failed because of a time out
         """
         return self._failed_timeout
 
     def failed_critical(self):
         """
-        if orchestrate has failed because of a critical job had an exception
+        Tells whether `orchestrate` has failed because 
+        a critical job raised an exception
         """
         return self._failed_critical
 
@@ -81,6 +88,9 @@ class Scheduler:
         
     ####################
     def orchestrate(self, loop=None, *args, **kwds):
+        """
+        a synchroneous wrapper around `co_orchestrate()`
+        """
         if loop is None:
             loop = asyncio.get_event_loop()
         return loop.run_until_complete(self.co_orchestrate(loop=loop, *args, **kwds))
@@ -89,9 +99,9 @@ class Scheduler:
     def sanitize(self):
         """
         Removes requirements that are not part of the scheduler
-        This is mostly convenient in many test scenarios
-        but in any case it is crucial that this property holds
-        for orchestrate to perform properly
+        This is mostly convenient in test scenarios
+        In any case it is crucial that this property holds
+        for orchestrate to perform properly.
         """
 
         for job in self.jobs:
@@ -106,14 +116,16 @@ class Scheduler:
     ####################
     def rain_check(self):
         """
-        performs minimum sanity check
+        Performs minimum sanity check
 
-        NOTE: the purpose of this is primarily to check for cycles
-        it's not embedded in orchestrate because it's not strictly necessary
+        The purpose of this is primarily to check for cycles, 
+        and/or missing starting points.
+
+        It's not embedded in orchestrate because it's not strictly necessary
         but it's safer to run this before calling orchestrate if one wants 
-        to type-check the jobs dependency graph early on
+        to type-check the jobs dependency graph early on.
 
-        it might also help to have a sanitized scheduler, 
+        It might also help to have a sanitized scheduler, 
         but here again this is up to the caller
 
         RETURN:
@@ -132,10 +144,10 @@ class Scheduler:
     def scan_in_order(self):
         """
         a generator function that scans the graph in the "right" order,
-        i.e. starting from jobs that hav no dependencies and moving forward
+        i.e. starting from jobs that have no dependencies, and moving forward.
 
-        beware that this is not a separate iterator, so it can't be nested
-        which in practice hould not be a problem
+        Beware that this is not a separate iterator, so it can't be nested
+        which in practice should not be a problem.
         """
         self._reset_marks()
         nb_marked = 0
@@ -446,8 +458,10 @@ class Scheduler:
     ####################
     def list(self, details=False):
         """
-        print jobs in some natural order
-        beware that this might raise an exception if rain_check() has returned False
+        Print a complete list of jobs in some natural order, with their status
+        summarized with a few signs.
+
+        Beware that this might raise an exception if rain_check() has returned False
         """
         l = len(self.jobs)
         format = "{:02}" if l < 100 else "{:04}"
@@ -467,16 +481,17 @@ class Scheduler:
         
     def list_safe(self):
         """
-        print jobs as sorted in self.jobs
+        Print jobs in no specific order, works even if scheduler is broken wrt rain_check()
         """
         for i, job in enumerate(self.jobs):
             print(i, job)
         
     def debrief(self):
         """
-        On an object that has gone through orchestration:
-        displays a listing of what has gone fine or wrong
-        Mostly useful if orchestrate() returned False, but well
+        Designed for schedulers that have failed to orchestrate.
+
+        Print a complete report, that includes `list()` but also gives 
+        more stats and data.
         """
         nb_total =   len(self.jobs)
         done =       { j for j in self.jobs if j.is_done() }
@@ -524,6 +539,14 @@ class Scheduler:
                         self._show_task_stack(j, "non-critical job exception stack")
 
     def export_as_dotfile(self, filename):
+        """
+        Create a graph that depicts the jobs and their requires relationships
+        in dot format for graphviz's `dot` utility.
+
+        For example a PNG image can be then obtained by post-processing that dotfile with e.g. 
+
+        `dot -Tpng foo.dot -o foo.png`
+        """
         def label_to_id(job):
             return job.label().replace(' ', '_')
         with open(filename, 'w') as output:
