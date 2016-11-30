@@ -334,7 +334,17 @@ class Scheduler:
 
     async def co_orchestrate(self, loop=None, timeout=None):
         """
-        the primary entry point for running an ordered set of jobs
+        coroutine: the primary entry point for running an ordered set of jobs.
+
+        Runs members jobs in order (that is, schedule their `co_run()` method).
+
+        Proceed to the end no matter what, except if either
+        one critical job raises an exception, or a timeout occurs.
+        Returns `True` if none of these 2 conditions occur, `False` otherwise.
+
+        Jobs marked as forever are not waited for. All jobs get
+        terminated through their `co_shutdown()` method.
+
         """
         if loop is None:
             loop = asyncio.get_event_loop()
