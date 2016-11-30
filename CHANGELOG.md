@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.4.1 - 2016 Nov 30
+
+* sphinx documentation on http://nepi-ng.inria.fr/asynciojobs
+
 ## 0.4.0 - 2016 Nov 21
 
 * rename engine into scheduler
