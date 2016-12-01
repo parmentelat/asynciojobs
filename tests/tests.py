@@ -387,6 +387,15 @@ class Tests(unittest.TestCase):
         self.assertEqual(a2.is_done(), False)
 
     ##########
+    def test_creation_scheduler(self):
+        sched = Scheduler()
+        s = Seq( J(sl(1)), J(sl(2)), scheduler=sched)
+        j = J(sl(3), required = s, scheduler=sched)
+        self.assertEqual(len(sched.jobs), 3)
+        self.assertTrue(sched.rain_check())
+        self.assertTrue(sched.orchestrate())
+
+    ##########
     def test_display(self):
 
         class FakeTask:

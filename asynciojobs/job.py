@@ -65,7 +65,8 @@ class AbstractJob:
 
     """
 
-    def __init__(self, forever=False, label=None, critical=False, required=None):
+    def __init__(self, forever=False, label=None, critical=False, required=None,
+                 scheduler = None):
         self.forever = forever
         self.critical = critical
         # access label through a method so we can invoke default_label() if missing
@@ -73,6 +74,9 @@ class AbstractJob:
         # for convenience, one can mention only one AbstractJob
         self.required = set()
         self.requires(required)
+        # convenience again
+        if scheduler is not None:
+            scheduler.add(self)
         # once submitted in the asyncio loop/scheduler, the `co_run()` gets embedded in a 
         # Task object, that is our handle when talking to asyncio.wait
         self._task = None

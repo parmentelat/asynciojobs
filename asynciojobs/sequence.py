@@ -14,7 +14,7 @@ class Sequence:
     and it can have requirements too
     """
 
-    def __init__(self, *sequences_or_jobs, required=None):
+    def __init__(self, *sequences_or_jobs, required=None, scheduler=None):
         """
         Expects a list of jobs or sequences as input
 
@@ -29,6 +29,9 @@ class Sequence:
         # actually apply to the first item
         if self.jobs:
             self.jobs[0].requires(required)
+        # make all jobs belong in the scheduler if provided
+        if scheduler is not None:
+            scheduler.update(self.jobs)
 
     @staticmethod
     def _flatten(sequences_or_jobs):
