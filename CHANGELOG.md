@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.4.2 - 2016 Dec 1
+
+* can create jobs and sequences with scheduler=
+
 ## 0.4.1 - 2016 Nov 30
 
 * sphinx documentation on http://nepi-ng.inria.fr/asynciojobs
