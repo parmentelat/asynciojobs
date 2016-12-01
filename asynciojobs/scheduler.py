@@ -435,7 +435,9 @@ class Scheduler:
                 if debug:
                     print("orchestrate: {} CLEANING UP at iteration {} / {}"
                           .format(4*'-', nb_jobs_done, nb_jobs_finite))
-                assert len(pending) == nb_jobs_forever
+                if self.verbose and nb_jobs_forever != len(pending):
+                    print("WARNING - apparent mismatch - {} forever jobs, {} are pending"
+                          .format(nb_jobs_forever, len(pending)))
                 await self._feedback(pending, "TIDYING forever")
                 await self._tidy_tasks(pending)
                 await self.co_shutdown()
