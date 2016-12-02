@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.4.3 - 2016 Dec 2
+
+* hardened export_as_dotfile()
+
 ## 0.4.2 - 2016 Dec 1
 
 * can create jobs and sequences with scheduler=
