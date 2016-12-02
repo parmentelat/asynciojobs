@@ -467,6 +467,18 @@ class Scheduler:
                     pending.add(self._ensure_future(candidate_next, loop=loop))
                     added += 1
 
+    def _set_s_labels(self):
+        """
+        write into each job._s_label an id compliant
+        with topological order
+        """
+        l = len(self.jobs)
+        format = "{:02}" if l < 100 else "{:04}"
+        # inject number in each job in their _s_label field
+        for i, job in enumerate(self.scan_in_order(), 1):
+            job._s_label = format.format(i)
+        
+
     ####################
     def list(self, details=False):
         """
@@ -475,12 +487,8 @@ class Scheduler:
 
         Beware that this might raise an exception if rain_check() has returned False
         """
-        l = len(self.jobs)
-        format = "{:02}" if l < 100 else "{:04}"
-        # inject number in each job in their _s_label field
-        for i, job in enumerate(self.scan_in_order(), 1):
-            job._s_label = format.format(i)
         # so now we can refer to other jobs by their id when showing requirements
+        self._set_s_labels()
         for job in self.scan_in_order():
             print(job._s_label, job.repr(show_requires=True))
             if details and hasattr(job, 'details'):
@@ -558,15 +566,35 @@ class Scheduler:
         For example a PNG image can be then obtained by post-processing that dotfile with e.g. 
 
         `dot -Tpng foo.dot -o foo.png`
+
+        See also https://en.wikipedia.org/wiki/DOT_(graph_description_language) for a list of
+        tools that support the dot format.
         """
+        self._set_s_labels()
+        to_rewrite = '- .+'
+        to_remove  = '''<>&/()[]'"'''
         def label_to_id(job):
-            return job.label().replace(' ', '_')
+            result = ""
+            if job._s_label:
+                result += "x{}-".format(job._s_label)
+            result += job.label()
+            for x in to_remove:
+                result = result.replace(x, '')
+            for x in to_rewrite:
+                result = result.replace(x, '_')
+            return result
+
+        # need to figure out totally isolated nodes
+        exported = set()
         with open(filename, 'w') as output:
             output.write("digraph G {\n")
             for job in self.scan_in_order():
                 for r in job.required:
                     output.write("{} -> {};\n"
                                  .format(label_to_id(r),
-                                         label_to_id(job)))                                 
+                                         label_to_id(job)))
+                    exported.update( (job, r))
+            for isolated in self.jobs - exported:
+                output.write("{};\n".format(label_to_id(isolated)))
             output.write("}\n")
         print("(Over)wrote {}".format(filename))
