@@ -1,5 +1,11 @@
 # ChangeLog
 
+## 0.4.4 - 2016 Dec 5
+
+* feedback message is forced for severe conditions (crit. exc. and timeout)
+* debrief(details)
+* minor improvements in export_as_dotfile
+
 ## 0.4.3 - 2016 Dec 2
 
 * hardened export_as_dotfile()
