@@ -1,5 +1,11 @@
 # ChangeLog
 
+## 0.4.5 - 2016 Dec 5
+
+* much nicer dotfile output, using double quotes to render
+  strings instead of identifiers like we were trying to do
+* PrintJob can be created in a scheduler as well
+
 ## 0.4.4 - 2016 Dec 5
 
 * feedback message is forced for severe conditions (crit. exc. and timeout)
