@@ -360,7 +360,7 @@ class PrintJob(AbstractJob):
         print(*self.messages)
         if self.sleep:
             print("Sleeping for {}s".format(self.sleep))
-            await asyncoio.sleep(self.sleep)
+            await asyncio.sleep(self.sleep)
 
     async def co_shutdown(self):
         pass
