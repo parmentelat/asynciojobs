@@ -347,11 +347,12 @@ class PrintJob(AbstractJob):
 
     def __init__(self, *messages, sleep=None, banner=None,
                  # these are for AbstractJob
+                 scheduler = None,
                  label = None, required = None):
         self.messages = messages
         self.sleep = sleep
         self.banner = banner
-        AbstractJob.__init__(self, label = label, required = required)
+        AbstractJob.__init__(self, label = label, required = required, scheduler = scheduler)
 
     async def co_run(self):
         if self.banner:
