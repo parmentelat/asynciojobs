@@ -3,6 +3,7 @@
 import time
 import traceback
 import io
+import re
 
 import asyncio
 
@@ -571,8 +572,8 @@ class Scheduler:
         tools that support the dot format.
         """
         self._set_s_labels()
-        to_rewrite = '- .+'
-        to_remove  = '''<>&/()[]'"'''
+        to_rewrite = '- .+,'
+        to_remove  = '''<>&()[]<>/\;'"*'''
         def label_to_id(job):
             result = ""
             if job._s_label:
@@ -582,6 +583,8 @@ class Scheduler:
                 result = result.replace(x, '')
             for x in to_rewrite:
                 result = result.replace(x, '_')
+            # collapse long suites of _ in a single _
+            result = re.sub(r'_+', '_', result)
             return result
 
         # need to figure out totally isolated nodes
