@@ -508,7 +508,7 @@ class Scheduler:
         for i, job in enumerate(self.jobs):
             print(i, job)
         
-    def debrief(self):
+    def debrief(self, details=False):
         """
         Designed for schedulers that have failed to orchestrate.
 
@@ -538,7 +538,7 @@ class Scheduler:
         message += ", " + legible_message(nb_idle, "idle") 
 
         print(5 * '-', self.why())
-        self.list()
+        self.list(details)
         #####
         if exceptions:
             nb_exceptions  = len(exceptions)
