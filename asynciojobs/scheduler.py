@@ -311,14 +311,14 @@ class Scheduler:
         # xxx should consume any exception as well ?
         # self._tidy_tasks_exception(done)
 
-    async def _feedback(self, jobs, state):
+    async def _feedback(self, jobs, state, force=False):
         """
         When self.verbose is set, provide feedback about the mentioned
         jobs having reached this state 
         if jobs is None, then state is a message to be shown as-is
         jobs may be a collection or an individual Job or Task object
         """
-        if not self.verbose:
+        if not force and not self.verbose:
             return
         time_format = "%H-%M-%S"
         if jobs is None:
@@ -398,7 +398,7 @@ class Scheduler:
             # a little surprisingly, there are cases where done has more than one entry
             # typically when 2 jobs have very similar durations
             if not done or len(done) == 0:
-                await self._feedback(None, "orchestrate: TIMEOUT occurred")
+                await self._feedback(None, "orchestrate: TIMEOUT occurred", force=True)
                 # clean up
                 await self._feedback(pending, "ABORTING")
                 await self._tidy_tasks(pending)
@@ -424,7 +424,8 @@ class Scheduler:
                 await self._tidy_tasks(pending)
                 await self.co_shutdown()
                 self._failed_critical = True
-                await self._feedback(None, "Emergency exit upon exception in critical job")
+                await self._feedback(None, "Emergency exit upon exception in critical job",
+                                     force=True)
                 return False
 
             ### are we done ?
