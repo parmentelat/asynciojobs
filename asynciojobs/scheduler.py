@@ -573,20 +573,17 @@ class Scheduler:
         tools that support the dot format.
         """
         self._set_s_labels()
-        to_rewrite = '- .+,'
-        to_remove  = '''<>&()[]<>/\;'"*'''
         def label_to_id(job):
             result = ""
+            # add the _s_label so we avoid 2 nodes accidentally
+            # merged into one because they chare the same label
             if job._s_label:
-                result += "x{}-".format(job._s_label)
+                result += "{}: ".format(job._s_label)
             result += job.label()
-            for x in to_remove:
-                result = result.replace(x, '')
-            for x in to_rewrite:
-                result = result.replace(x, '_')
-            # collapse long suites of _ in a single _
-            result = re.sub(r'_+', '_', result)
-            return result
+            # escape any double quote
+            result = result.replace('"', r'\"')
+            # put double quotes around all this 
+            return '"' + result + '"'
 
         # need to figure out totally isolated nodes
         exported = set()
