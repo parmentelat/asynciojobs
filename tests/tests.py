@@ -407,29 +407,43 @@ class Tests(unittest.TestCase):
         self.assertTrue(s.orchestrate(loop=loop))
         
 
-    def test_window(self):
-        """
-        estimate global time 
-        """
-        total = 15
-        window = 3
-        duration = .1
-        tolerance = .08 # more or less 5% in terms of overall time 
-        expected = (total/window) * duration
+    # if window is defined, total should be a multiple of window 
+    def _test_window(self, total, window):
+        atom = .1
+        tolerance = 8 # more or less % in terms of overall time 
         s = Scheduler()
-        jobs = [ PrintJob("{}-th {}s job".format(i, duration),
-                          sleep=duration, scheduler = s) for i in range(1, total+1)]
+        jobs = [ PrintJob("{}-th {}s job".format(i, atom),
+                          sleep=atom, scheduler = s) for i in range(1, total+1)]
         import time
         beg = time.time()
-        self.assertTrue(s.orchestrate(jobs_window = window))
+        ok = s.orchestrate(jobs_window = window)
+        ok or s.debrief(details=True)
         end = time.time()
+        duration = end - beg
+        
+        # estimate global time 
+        # unwindowed: overall duration is atom
+        # otherwise a multiple of it (assuming total = k*window)
+        expected = atom if not window else (total/window) * atom
+        print('overall expected {} - measured {}'
+              .format(expected, duration))
 
-        distortion = (end-beg)/expected
-        ok = 1-tolerance <= distortion <= 1 + tolerance
-        if not ok:
-            print("test_window : wrong execution time {} - not within {}% of {}"
-                  .format(end-beg, int(tolerance*100), expected))
+        distortion = duration/expected
+        time_ok = 1-tolerance/100 <= distortion <= 1 + tolerance/100
+        if not time_ok:
+            print("_test_window - window = {} :"
+                  "wrong execution time {} - not within {}% of {}"
+                  .format(window, end-beg, tolerance, expected))
+
+        self.assertTrue(time_ok)
         self.assertTrue(ok)
+
+
+    def test_window(self):
+        self._test_window(total = 15, window = 3)
+
+    def test_no_window(self):
+        self._test_window(total = 15, window = None)
 
 
     ##########
@@ -445,14 +459,21 @@ class Tests(unittest.TestCase):
             if state == "done":
                 task._state = asyncio.futures._FINISHED
                 job._task = task
-            elif state == "ongoing":
+                job._running = True
+            elif state == "running":
                 task._state = "NONE"
                 job._task = task
+                job._running = True
+            elif state == "scheduled":
+                task._state = "NONE"
+                job._task = task
+                job._running = False
             else:
                 pass
 
+            # here we assume that a job that has raised an exception is necessarily done
             if boom:
-                if state == "idle":
+                if state in ("idle", "scheduled", "running") :
                     print("incompatible combination boom x idle - ignored")
                     return
                 else:
@@ -463,14 +484,14 @@ class Tests(unittest.TestCase):
 
         sched = Scheduler()
         previous = None
-        for c in True, False:
+        for state in "idle", "scheduled", "running", "done":
             for boom in True, False:
-                for f in True, False:
-                    for state in "done", "ongoing", "idle":
-                        j = J(critical = c,
-                              forever = f,
+                for critical in True, False:
+                    for forever in True, False:
+                        j = J(critical = critical,
+                              forever = forever,
                               label = "forever={} crit.={} status={} boom={}"
-                              .format(f, c, state, boom),
+                              .format(forever, critical, state, boom),
                               required = previous
                         )
                         if annotate_job_with_fake_task(j, state, boom):

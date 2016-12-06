@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import time
-import traceback
 import io
 import re
 
@@ -220,9 +219,11 @@ class Scheduler:
         backlink pointer to its correponding job
         """
         #
-        # this is where we call object decorated by Window
-        #                                                         vv
-        task = asyncio.ensure_future(window.windowed(job.co_run())(), loop=loop)
+        # this is where we call co_run()
+        #
+        # the decorated object is a coroutine that needs to be CALLED:
+        #                                               vv
+        task = asyncio.ensure_future(window.run_job(job)(), loop=loop)
         # create references back and forth between Job and asyncio.Task
         task._job = job
         job._task = task
@@ -340,8 +341,7 @@ class Scheduler:
 
     
     async def co_orchestrate(self, timeout=None, jobs_window = None, loop=None):
-        """
-        coroutine: the primary entry point for running an ordered set of jobs.
+        """coroutine: the primary entry point for running an ordered set of jobs.
 
         Runs member jobs (that is, schedule their `co_run()` method) 
         in an order that satisfies their `required` relationsship.
@@ -359,8 +359,8 @@ class Scheduler:
         in seconds; it applies to the overall orchestration, not to
         any individual job.
 
-        Optional `jobs_window` is an integer that says 
-        how many jobs can be run simultaneously.
+        Optional `jobs_window` is an integer that says how many jobs
+        can be run simultaneously. None or 0 means no limit.
 
         Optional `loop` is an asyncio events loop, defaults to
         `asyncio.get_event_loop()`
@@ -478,10 +478,10 @@ class Scheduler:
             added = 0
             for candidate_next in possible_next_jobs:
                 # do not add an job twice
-                if candidate_next.is_started():
+                if candidate_next.is_running():
                     continue
                 # we can start only if all requirements are satisfied
-                # at this point entry points have is_started() -> return True so
+                # at this point entry points have is_running() -> return True so
                 # they won't run this code
                 requirements_ok = True
                 for req in candidate_next.required:
@@ -541,11 +541,11 @@ class Scheduler:
         nb_total =   len(self.jobs)
         done =       { j for j in self.jobs if j.is_done() }
         nb_done =    len(done)
-        started =    { j for j in self.jobs if j.is_started() }
-        nb_started = len(started)
-        ongoing =    started - done
+        running =    { j for j in self.jobs if j.is_running() }
+        nb_running = len(running)
+        ongoing =    running - done
         nb_ongoing = len(ongoing)
-        idle =       self.jobs - started
+        idle =       self.jobs - running
         nb_idle =    len(idle)
         
         exceptions = { j for j in self.jobs if j.raised_exception()}
@@ -558,7 +558,7 @@ class Scheduler:
             else : return " {} are {}".format(nb, adj)
         message += ", " + legible_message(nb_done, "done") 
         message += ", " + legible_message(nb_ongoing, "ongoing") 
-        message += ", " + legible_message(nb_idle, "idle") 
+        message += ", " + legible_message(nb_idle, "idle (or scheduled but not running)") 
 
         print(5 * '-', self.why())
         self.list(details)

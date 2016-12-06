@@ -11,11 +11,11 @@ debug = False
 # but in asyncio, creating a Task object implies scheduling that for execution
 
 # so, let's have it the other way around
-# what we need is a way to attach our own Job instances to the Task (and back)
-# classes right after Task creation, so that
+# what we need is a way to attach our own Job instance to the corresp. Task instance
+# (and back) right after Task creation, so that
 # (*) once asyncio.wait is done, we can easily find out wich Jobs are done or pending
-# (*) from one Job, easily know what its status is by lloing into its Task obj
-#     (if already started)
+# (*) from one Job, easily know what its status is by looking into its Task obj
+#     (if already scheduled)
 
 # Scheduler == graph
 # Job == node
@@ -73,6 +73,8 @@ class AbstractJob:
         # once submitted in the asyncio loop/scheduler, the `co_run()` gets embedded in a 
         # Task object, that is our handle when talking to asyncio.wait
         self._task = None
+        # this is updated by the Window class when the job makes it through
+        self._running = False
         # ==== fields for our friend Scheduler all start with _s_
         # this is for graph browsing algos
         self._s_mark = None
@@ -97,14 +99,14 @@ class AbstractJob:
         instance that decides on that. This is what `_s_label` is for.
 
         * if use_s_label is set, looks in self._s_label that is expected to have been set by
-        companion class Scheduler; if not set returns a warning msg 'XXXX'
+        companion class Scheduler; if not set returns a warning msg '??'
 
         * otherwise, looks for the label  used at creation-time, and otherwise
         runs its class's `default_label()` method
 
         """
         if use_s_label:
-            return self._s_label or 'XXXX'
+            return self._s_label or '??'
         else:
             if self._label is not None:
                 return str(self._label)
@@ -132,7 +134,8 @@ class AbstractJob:
     #_c_smiling_face  = "\u263b" # ☻
     _c_saltire       = "\u2613" # ☓
     _c_circle_arrow  = "\u21ba" # ↺
-    _c_flag          = "\u2690" # ⚐
+    _c_black_flag    = "\u2691" # ⚑
+    _c_white_flag    = "\u2690" # ⚐
     _c_warning       = "\u26a0" # ⚠
     _c_black_star    = "\u2605" # ★
     _c_sun           = "\u2609" # ☉
@@ -144,15 +147,16 @@ class AbstractJob:
         a small (7 chars) badge that summarizes the job's internal attributes
         uses non-ASCII characters
         """
-        # is it done, or ongoing, or not yet started ?
+        # where is it in the lifecycle
         c_running = self._c_saltire if self.is_done() else \
-                 self._c_circle_arrow if self.is_started() else \
-                 self._c_flag
+                 self._c_circle_arrow if self.is_running() else \
+                 self._c_black_flag if self.is_scheduled() else \
+                 self._c_white_flag
         # is it critical or not ?
         c_crit = self._c_warning if self.is_critical() else " "
         # has it raised an exception or not ?
         c_boom = self._c_black_star if self.raised_exception() \
-                 else self._c_sun if self.is_started() \
+                 else self._c_sun if self.is_running() \
                  else " "
         # is it going forever or not
         c_forever = self._c_infinity if self.forever else " "
@@ -165,15 +169,16 @@ class AbstractJob:
         a small (7 chars) badge that summarizes the job's internal attributes
         uses ASCII-only characters
         """
-        # is it done, or ongoing, or not yet started ?
+        # where is it in the lifecycle
         c_running = "x" if self.is_done() else \
-                 "o" if self.is_started() else \
+                 "o" if self.is_running() else \
+                 "." if self.is_scheduled() else \
                  ">"
         # is it critical or not ?
         c_crit = "!" if self.is_critical() else " "
         # has it raised an exception or not ?
         c_boom = ":(" if self.raised_exception() \
-                 else ":)" if self.is_started() \
+                 else ":)" if self.is_running() \
                  else "  "
         # is it going forever or not
         c_forever = "8" if self.forever else " "
@@ -186,13 +191,19 @@ class AbstractJob:
         return a 4 characters string (in fact 7 with interspaces)
         that summarizes the 4 dimensions of the job, that is
 
-        * is it done/started/idle
+        * its point in the lifecycle: idle → scheduled → running → done
         
         * is it declared as forever
 
-        * is it critical
+        * is it declared as critical
 
         * did it trigger an exception
+
+        LifeCycle: see `is_done` for more details; in un-windowed schedulers,
+        there is no distinction between scheduled and running. 
+
+        In windowed orchestrations, a job that is scheduled but not running 
+        is waiting for a slot in the global window.
         """
         if self._detect_support_for_unicode():
             return self._short_unicode()
@@ -206,7 +217,6 @@ class AbstractJob:
         info = self.short()
         info += " <{} `{}`>".format(type(self).__name__, self.label())
 
-        ### show info - IDLE means not started at all
         if show_result_or_exception:
             exception = self.raised_exception()
             if exception:
@@ -262,14 +272,36 @@ class AbstractJob:
                 print("WARNING: fishy requirement in AbstractJob.requires")
                 self.requires(list(requirement))
 
-    def is_started(self):
+    def is_idle(self):
         """
-        returns a boolean that tells if the job has been scheduled already
+        a boolean that is true if the job has not been scheduled
+        already, which means that one of its requirements is not fulfilled.
+
+        Implies `not is_scheduled()` and a fortiori `not is_running` and `not is_done()`
+
+        """
+        return self._taask is None
+    def is_scheduled(self):
+        """
+        boolean that tells if the job has been scheduled; 
+        if True, the job's requirements are met and it has 
+        proceeded to the windowing system; equivalent to `not is_idle()`
         """
         return self._task is not None
+    def is_running(self):
+        """
+        Once a job starts, it tries to get a slot in the windowing sytem.
+        This method returns True if the job has received the green
+        light from the windowing system. Implies `is_scheduled()`
+        """
+        return self._running
     def is_done(self):
         """
-        returns a boolean that tells if the job has completed
+        a job lifecycle is idle → scheduled → running → done
+
+        a boolean that tells if the job has completed. 
+
+        Implies `is_scheduled()` and `is_running()`
         """
         return self._task is not None and self._task._state == asyncio.futures._FINISHED
     def raised_exception(self):
@@ -374,12 +406,17 @@ class PrintJob(AbstractJob):
         AbstractJob.__init__(self, label = label, required = required, scheduler = scheduler)
 
     async def co_run(self):
+      try:  
         if self.banner:
             print(self.banner + " ", end="")
         print(*self.messages)
         if self.sleep:
             print("Sleeping for {}s".format(self.sleep))
             await asyncio.sleep(self.sleep)
+      except Exceptin as e:
+          import traceback
+          traceback.print_exc()
+          
 
     async def co_shutdown(self):
         pass
@@ -387,7 +424,7 @@ class PrintJob(AbstractJob):
     def details(self):
         result = ""
         if self.sleep:
-            result += "adds sleep {}s ".format(self.sleep)
+            result += "[+ sleep {}s] ".format(self.sleep)
         result += "msg= "
         result += self.messages[0]
         result += "..." if len(self.messages) > 1 else ""

@@ -3,6 +3,9 @@ import asyncio
 class Window:
 
     def __init__(self, jobs_window, loop):
+        # jobs_window needs to be an integer
+        if jobs_window is None:
+            jobs_window = 0
         self.jobs_window = jobs_window
         self.loop = loop
         self.queue = asyncio.Queue(maxsize=jobs_window, loop=loop)
@@ -13,15 +16,12 @@ class Window:
     # REMEMBER that this object will need to be CALLED to become
     # a future itself
     # 
-    def windowed(self, future):
-        # keep todo intact if not windowed
-        if self.jobs_window is None:
-            return future
+    def run_job(self, job):
         async def wrapped():
-            # take a slot in the queue
-            # what we actually put in the queue does not matter
+            # put anything to take a slot in the queue 
             await self.queue.put(1)
-            value = await future
+            job._running = True
+            value = await job.co_run()
             # release slot in the queue
             await self.queue.get()
             # return the right thing

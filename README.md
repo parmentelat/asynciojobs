@@ -1,7 +1,7 @@
 
 <span style="float:left;">Licence CC BY-NC-ND</span><span style="float:right;">Thierry Parmentelat - Inria&nbsp;<img src="media/inria-25.png" style="display:inline"></span><br/>
 
-# Introduction
+# README
 
 ## A simplistic orchestration engine
 
@@ -10,7 +10,7 @@ The main and single purpose of this library is to allow for the static descripti
 So in a nutshell you would:
 
 * define a set of `Job` objects, 
-* together with their `requires` relationship; that is to say, for each of them, which other jobs need to have completed before this one can be started,
+* together with their `requires` relationship; that is to say, for each of them, which other jobs need to have completed before this one can be triggered,
 * and run this logic through an `Scheduler` object, that will orchestrate the whole scenario.
 
 Further features allow to
@@ -155,8 +155,8 @@ sb = Scheduler(b1, b2, b3)
 sb.orchestrate()
 ```
 
-    -> in_out(0.1)
     -> in_out(0.25)
+    -> in_out(0.1)
     <- in_out(0.1)
     -> in_out(0.2)
     <- in_out(0.25)
@@ -185,8 +185,8 @@ sb2 = Scheduler(Sequence(Job(in_out(0.1), label="bp1"),
 sb2.orchestrate()
 ```
 
-    -> in_out(0.25)
     -> in_out(0.1)
+    -> in_out(0.25)
     <- in_out(0.1)
     -> in_out(0.2)
     <- in_out(0.25)
@@ -237,45 +237,46 @@ To see an overview of a scheduler, just use the `list()` method that will give y
 sb.list()
 ```
 
-    01   ☉ ☓   <Job `b1`>[[ -> 100.0]]
-    02   ☉ ☓   <Job `b2`>[[ -> 200.0]] - requires {01}
-    03   ☉ ☓   <Job `NOLABEL`>[[ -> 250.0]]
+    01   ☉ ☓   <Job `NOLABEL`>[[ -> 250.0]]
+    02   ☉ ☓   <Job `b1`>[[ -> 100.0]]
+    03   ☉ ☓   <Job `b2`>[[ -> 200.0]] - requires {02}
 
 
 Here is a complete list of the symbols used, with their meaning 
 
-* `⚠` : critical
+* `⚐` : idle (read: requirements are not fulfilled)
+* `⚑` : scheduled (read: waiting for a slot in the jobs window)
+* `↺` : running
+* `☓` : complete 
 * `★` : raised an exception
 * `☉` : went through fine (no exception raised)
-* `☓` : complete 
-* `↺` : running  
-* `⚐` : idle     
-* `∞` : forever  
+* `⚠` : defined as critical
+* `∞` : defined as forever  
 
 
 And and here's an example of output for `list()` with all possible combinations of jobs:
 
 ```
-01 ⚠ ★ ☓ ∞ <J `forever=True crit.=True status=done boom=True` => CRIT. EXC.:!!bool:True!!>
-02 ⚠ ★ ↺ ∞ <J `forever=True crit.=True status=ongoing boom=True` => CRIT. EXC.:!!bool:True!!> - requires:{01}
-03 ⚠ ★ ☓   <J `forever=False crit.=True status=done boom=True` => CRIT. EXC.:!!bool:True!!> - requires:{02}
-04 ⚠ ★ ↺   <J `forever=False crit.=True status=ongoing boom=True` => CRIT. EXC.:!!bool:True!!> - requires:{03}
-05 ⚠ ☉ ☓ ∞ <J `forever=True crit.=True status=done boom=False` -> 0> - requires:{04}
-06 ⚠ ☉ ↺ ∞ <J `forever=True crit.=True status=ongoing boom=False`> - requires:{05}
-07 ⚠   ⚐ ∞ <J `forever=True crit.=True status=idle boom=False`> - requires:{06}
-08 ⚠ ☉ ☓   <J `forever=False crit.=True status=done boom=False` -> 0> - requires:{07}
-09 ⚠ ☉ ↺   <J `forever=False crit.=True status=ongoing boom=False`> - requires:{08}
-10 ⚠   ⚐   <J `forever=False crit.=True status=idle boom=False`> - requires:{09}
-11   ★ ☓ ∞ <J `forever=True crit.=False status=done boom=True` => exception:!!bool:True!!> - requires:{10}
-12   ★ ↺ ∞ <J `forever=True crit.=False status=ongoing boom=True` => exception:!!bool:True!!> - requires:{11}
-13   ★ ☓   <J `forever=False crit.=False status=done boom=True` => exception:!!bool:True!!> - requires:{12}
-14   ★ ↺   <J `forever=False crit.=False status=ongoing boom=True` => exception:!!bool:True!!> - requires:{13}
-15   ☉ ☓ ∞ <J `forever=True crit.=False status=done boom=False` -> 0> - requires:{14}
-16   ☉ ↺ ∞ <J `forever=True crit.=False status=ongoing boom=False`> - requires:{15}
-17     ⚐ ∞ <J `forever=True crit.=False status=idle boom=False`> - requires:{16}
-18   ☉ ☓   <J `forever=False crit.=False status=done boom=False` -> 0> - requires:{17}
-19   ☉ ↺   <J `forever=False crit.=False status=ongoing boom=False`> - requires:{18}
-20     ⚐   <J `forever=False crit.=False status=idle boom=False`> - requires:{19}
+01 ⚠   ⚐ ∞ <J `forever=True crit.=True status=idle boom=False`>
+02 ⚠   ⚐   <J `forever=False crit.=True status=idle boom=False`> - requires {01}
+03     ⚐ ∞ <J `forever=True crit.=False status=idle boom=False`> - requires {02}
+04     ⚐   <J `forever=False crit.=False status=idle boom=False`> - requires {03}
+05 ⚠   ⚑ ∞ <J `forever=True crit.=True status=scheduled boom=False`> - requires {04}
+06 ⚠   ⚑   <J `forever=False crit.=True status=scheduled boom=False`> - requires {05}
+07     ⚑ ∞ <J `forever=True crit.=False status=scheduled boom=False`> - requires {06}
+08     ⚑   <J `forever=False crit.=False status=scheduled boom=False`> - requires {07}
+09 ⚠ ☉ ↺ ∞ <J `forever=True crit.=True status=running boom=False`> - requires {08}
+10 ⚠ ☉ ↺   <J `forever=False crit.=True status=running boom=False`> - requires {09}
+11   ☉ ↺ ∞ <J `forever=True crit.=False status=running boom=False`> - requires {10}
+12   ☉ ↺   <J `forever=False crit.=False status=running boom=False`> - requires {11}
+13 ⚠ ★ ☓ ∞ <J `forever=True crit.=True status=done boom=True`>!! CRIT. EXC. => bool:True!! - requires {12}
+14 ⚠ ★ ☓   <J `forever=False crit.=True status=done boom=True`>!! CRIT. EXC. => bool:True!! - requires {13}
+15   ★ ☓ ∞ <J `forever=True crit.=False status=done boom=True`>!! exception => bool:True!! - requires {14}
+16   ★ ☓   <J `forever=False crit.=False status=done boom=True`>!! exception => bool:True!! - requires {15}
+17 ⚠ ☉ ☓ ∞ <J `forever=True crit.=True status=done boom=False`>[[ -> 0]] - requires {16}
+18 ⚠ ☉ ☓   <J `forever=False crit.=True status=done boom=False`>[[ -> 0]] - requires {17}
+19   ☉ ☓ ∞ <J `forever=True crit.=False status=done boom=False`>[[ -> 0]] - requires {18}
+20   ☉ ☓   <J `forever=False crit.=False status=done boom=False`>[[ -> 0]] - requires {19}
 ```
 
 Note that if your locale/terminal cannot output these, the code will tentatively resort to pure ASCII output.
@@ -321,8 +322,8 @@ sc = Scheduler(c1, c2, c3, c4)
 sc.orchestrate()
 ```
 
-    BUS: -> in_out(0.4)
     BUS: -> in_out(0.2)
+    BUS: -> in_out(0.4)
     BUS: <- in_out(0.2)
     BUS: -> in_out(0.3)
     BUS: <- in_out(0.4)
@@ -343,10 +344,10 @@ Note that `orchestrate` always terminates as soon as all the non-`forever` jobs 
 sc.list()
 ```
 
-    01   ☉ ↺ ∞ <Job `monitor`>
-    02   ☉ ☓   <Job `c2`>[[ -> 4.0]]
-    03   ☉ ☓   <Job `c1`>[[ -> 2.0]]
-    04   ☉ ☓   <Job `c3`>[[ -> 3.0]] - requires {03}
+    01   ☉ ☓   <Job `c1`>[[ -> 2.0]]
+    02   ☉ ↺ ∞ <Job `monitor`>
+    03   ☉ ☓   <Job `c2`>[[ -> 4.0]]
+    04   ☉ ☓   <Job `c3`>[[ -> 3.0]] - requires {01}
 
 
 ### Example D : specifying a global timeout
@@ -367,10 +368,10 @@ sd = Scheduler(j)
 sd.orchestrate(timeout=0.25)
 ```
 
-    11:35:23: forever 0
-    11:35:23: forever 1
-    11:35:23: forever 2
-    11-35-23: SCHEDULER: orchestrate: TIMEOUT occurred
+    17:09:08: forever 0
+    17:09:08: forever 1
+    17:09:08: forever 2
+    17-09-08: SCHEDULER: orchestrate: TIMEOUT occurred
 
 
 
@@ -455,11 +456,56 @@ sf.list()
 
     -> in_out(0.2)
     <- in_out(0.2)
-    11-35-25: SCHEDULER: Emergency exit upon exception in critical job
+    17-09-09: SCHEDULER: Emergency exit upon exception in critical job
     orchestrate: False
     01   ☉ ☓   <Job `NOLABEL`>[[ -> 200.0]]
     02 ⚠ ★ ☓   <Job `boom`>!! CRIT. EXC. => Exception:boom after 0.2s!! - requires {01}
     03     ⚐   <Job `NOLABEL`> - requires {02}
+
+
+### Limiting the number of simultaneous jobs
+
+`orchestrate` accepts an optional argument `jobs_window` that allows to specify a maximum number of jobs running simultaneously. 
+
+When `jobs_windows` is not specified or `0`, it means no limit is imposed on the running jobs.
+
+
+```python
+from asynciojobs import PrintJob
+
+s = Scheduler()
+# each of these jobs takes 0.5 second
+for i in range(1, 9):
+    PrintJob("{}-th job".format(i), sleep=0.5, scheduler=s)
+
+# so running them with a window of 4 means 1 approx. 1 second
+import time
+beg = time.time()
+s.orchestrate(jobs_window = 4)
+end = time.time()
+
+# expect around 1 second
+print("total duration = {}s".format(end-beg))
+
+```
+
+    2-th job
+    Sleeping for 0.5s
+    3-th job
+    Sleeping for 0.5s
+    8-th job
+    Sleeping for 0.5s
+    6-th job
+    Sleeping for 0.5s
+    4-th job
+    Sleeping for 0.5s
+    1-th job
+    Sleeping for 0.5s
+    5-th job
+    Sleeping for 0.5s
+    7-th job
+    Sleeping for 0.5s
+    total duration = 1.0097899436950684s
 
 
 ## Customizing jobs
@@ -470,7 +516,7 @@ sf.list()
 
 ### `AbstractJob.co_shutdown()`
 
-Before returning, `orcheutrate` sends the `co_shutdown()` method on all jobs. The default behaviour - in the `Job` class - is to do nothing, but this can be redefined when relevant. Typically, an implementation of an `SshJob` will allow for a given SSH connection to be shared amongs several `SshJob` instances, and so `co_shutdown()` may be used to  close the underlying SSH connections at the end of the scenario.
+Before returning, `orchestrate` sends the `co_shutdown()` method on all jobs. The default behaviour - in the `Job` class - is to do nothing, but this can be redefined when relevant. Typically, an implementation of an `SshJob` will allow for a given SSH connection to be shared amongs several `SshJob` instances, and so `co_shutdown()` may be used to  close the underlying SSH connections at the end of the scenario.
 
 ### The `apssh`  library and the ` SshJob` class
 
