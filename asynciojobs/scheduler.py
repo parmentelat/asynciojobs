@@ -9,6 +9,7 @@ import asyncio
 
 from .job import AbstractJob
 from .sequence import Sequence
+from .window import Window
 
 # will hopefully go away some day
 debug = False
@@ -213,12 +214,15 @@ class Scheduler:
             for req in job.required:
                 req._s_successors.add(job)
 
-    def _ensure_future(self, job, loop):
+    def _ensure_future(self, job, window, loop):
         """
         this is the hook that lets us make sure the created Task object have a 
         backlink pointer to its correponding job
         """
-        task = asyncio.ensure_future(job.co_run(), loop=loop)
+        #
+        # this is where we call object decorated by Window
+        #                                                         vv
+        task = asyncio.ensure_future(window.windowed(job.co_run())(), loop=loop)
         # create references back and forth between Job and asyncio.Task
         task._job = job
         job._task = task
@@ -334,7 +338,8 @@ class Scheduler:
                                       state, job.repr(show_result_or_exception=self.verbose,
                                                       show_requires=self.verbose)))
 
-    async def co_orchestrate(self, loop=None, timeout=None):
+    
+    async def co_orchestrate(self, timeout=None, jobs_window = None, loop=None):
         """
         coroutine: the primary entry point for running an ordered set of jobs.
 
@@ -354,12 +359,19 @@ class Scheduler:
         in seconds; it applies to the overall orchestration, not to
         any individual job.
 
+        Optional `jobs_window` is an integer that says 
+        how many jobs can be run simultaneously.
+
         Optional `loop` is an asyncio events loop, defaults to
         `asyncio.get_event_loop()`
 
         """
         if loop is None:
             loop = asyncio.get_event_loop()
+        # create a Window no matter what; it will know what to do
+        # also if jobs_window is None
+        window = Window(jobs_window, loop)
+        
         # initialize backlinks - i.e. _s_successors is the reverse of required
         self._backlinks()
         # clear any Task instance
@@ -389,7 +401,7 @@ class Scheduler:
 
         await self._feedback(entry_jobs, "STARTING")
         
-        pending = [ self._ensure_future(job, loop=loop)
+        pending = [ self._ensure_future(job, window, loop=loop)
                     for job in entry_jobs ]
 
         while True:
@@ -477,7 +489,7 @@ class Scheduler:
                         requirements_ok = False
                 if requirements_ok:
                     await self._feedback(candidate_next, "STARTING")
-                    pending.add(self._ensure_future(candidate_next, loop=loop))
+                    pending.add(self._ensure_future(candidate_next, window, loop=loop))
                     added += 1
 
     def _set_s_labels(self):

@@ -18,6 +18,9 @@ def ts():
     return time.strftime("%M-%S-") + "{:03d}".format(ms)
 
 ##############################
+from asynciojobs import AbstractJob, PrintJob
+
+##############################
 async def _sl(n, middle, emergency):
     """
 _sl(timeout, middle=False) returns a future that specifies an job like this:
@@ -51,8 +54,6 @@ def sl(n): return _sl(n, middle=False, emergency=False)
 def slm(n): return _sl(n, middle=True, emergency=False)
 
 ##############################
-from asynciojobs.job import AbstractJob
-
 class SleepJob(AbstractJob):
     def __init__(self, timeout, middle=False):
         AbstractJob.__init__(self, forever=False, label="sleep for {}s".format(timeout))
@@ -405,6 +406,31 @@ class Tests(unittest.TestCase):
         loop = asyncio.get_event_loop()
         self.assertTrue(s.orchestrate(loop=loop))
         
+
+    def test_window(self):
+        """
+        estimate global time 
+        """
+        total = 15
+        window = 3
+        duration = .1
+        tolerance = .08 # more or less 5% in terms of overall time 
+        expected = (total/window) * duration
+        s = Scheduler()
+        jobs = [ PrintJob("{}-th {}s job".format(i, duration),
+                          sleep=duration, scheduler = s) for i in range(1, total+1)]
+        import time
+        beg = time.time()
+        self.assertTrue(s.orchestrate(jobs_window = window))
+        end = time.time()
+
+        distortion = (end-beg)/expected
+        ok = 1-tolerance <= distortion <= 1 + tolerance
+        if not ok:
+            print("test_window : wrong execution time {} - not within {}% of {}"
+                  .format(end-beg, int(tolerance*100), expected))
+        self.assertTrue(ok)
+
 
     ##########
     def test_display(self):
