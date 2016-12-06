@@ -1,17 +1,22 @@
 from .job import AbstractJob
 
 class Sequence:
-    """
-    A Sequence is an object that organizes a set
-    of AbstratJobs in a sequence.
+    """A Sequence is an object that organizes a set
+    of AbstratJobs in a sequence. Its main purpose is to add
+    a single `required` relationship per job in the sequence, 
+    except the first that instead that receives as its `required`
+     the sequence's requirements.
     
-    Sequences are not first-class citizen objets, in the sense that 
+    If `scheduler` is passed to the sequence's constructor, 
+    all the jobs passed to the sequence are added in that scheduler.
+
+    Sequences are not first-class citizens, in the sense that 
     the scheduler primarily ignores these objects, only the jobs inside 
     the sequence matter.
 
-    However a sequence can be used mostly every place where a job 
-    could be, either being inserted in an scheduler, as a requirement,
-    and it can have requirements too
+    However a sequence can be used mostly every place where a job
+    could be, either being inserted in an scheduler, added as a
+    requirement, and it can have requirements too
     """
 
     def __init__(self, *sequences_or_jobs, required=None, scheduler=None):
@@ -30,13 +35,14 @@ class Sequence:
         if self.jobs:
             self.jobs[0].requires(required)
         # make all jobs belong in the scheduler if provided
-        if scheduler is not None:
-            scheduler.update(self.jobs)
+        self.scheduler = scheduler
+        if self.scheduler is not None:
+            self.scheduler.update(self.jobs)
 
     @staticmethod
     def _flatten(sequences_or_jobs):
         """
-        given a list of objects typed either AbstractJob or Sequence
+        given an iterable of objects typed either AbstractJob or Sequence
         returns an ordered list of jobs
         """
         result = []
@@ -59,6 +65,8 @@ class Sequence:
         if self.jobs:
             new_jobs[0].requires(self.jobs[-1])
         self.jobs += new_jobs
+        if self.scheduler is not None:
+            self.scheduler.update(new_jobs)
 
     def requires(self, *requirements):
         """

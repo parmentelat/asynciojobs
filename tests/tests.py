@@ -391,7 +391,10 @@ class Tests(unittest.TestCase):
         sched = Scheduler()
         s = Seq( J(sl(1)), J(sl(2)), scheduler=sched)
         j = J(sl(3), required = s, scheduler=sched)
-        self.assertEqual(len(sched.jobs), 3)
+        # make sure that jobs appended in the sequence
+        # even later on are also added to the scheduler
+        s.append(J(sl(.5)))
+        self.assertEqual(len(sched.jobs), 4)
         self.assertTrue(sched.rain_check())
         self.assertTrue(sched.orchestrate())
 
