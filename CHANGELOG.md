@@ -1,5 +1,11 @@
 # ChangeLog
 
+## 0.5.0 - 2016 Dec 6
+
+* windowing capability to limit number of simultaneous jobs
+* new status in job lifecycle: idle → scheduled → running → done
+  'scheduled' means : waiting for a slot in window
+
 ## 0.4.6 - 2016 Dec 5
 
 * much nicer dotfile output, using double quotes to render
