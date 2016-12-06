@@ -17,7 +17,8 @@ Further features allow to
 
 * define a job as running `forever`, in which case the scheduler of course won't wait for it, but instead will terminate it when all other jobs are done;
 * define a job as `critical`; a critical job that raises an exception causes the orchestration to terminate abruptly;
-* define a global `timeout` for the whole scheduler.
+* define a global `timeout` for the whole scheduler;
+* define a *window* in terms of a maximal number of simultaneous jobs that are allowed to run.
 
 
 A job object can be created:
@@ -30,6 +31,8 @@ As a convenience, the `Sequence` class is mostly a helper class that can free yo
 ## Full documentation
 
 This document, along with API reference doc, and changelog, is available at http://nepi-ng.inria.fr/asynciojobs/
+
+Contact author : *thierry dot parmentelat at inria dot fr*
 
 ## Prerequisites
 
@@ -185,8 +188,8 @@ sb2 = Scheduler(Sequence(Job(in_out(0.1), label="bp1"),
 sb2.orchestrate()
 ```
 
-    -> in_out(0.1)
     -> in_out(0.25)
+    -> in_out(0.1)
     <- in_out(0.1)
     -> in_out(0.2)
     <- in_out(0.25)
@@ -322,8 +325,8 @@ sc = Scheduler(c1, c2, c3, c4)
 sc.orchestrate()
 ```
 
-    BUS: -> in_out(0.2)
     BUS: -> in_out(0.4)
+    BUS: -> in_out(0.2)
     BUS: <- in_out(0.2)
     BUS: -> in_out(0.3)
     BUS: <- in_out(0.4)
@@ -344,10 +347,10 @@ Note that `orchestrate` always terminates as soon as all the non-`forever` jobs 
 sc.list()
 ```
 
-    01   ☉ ☓   <Job `c1`>[[ -> 2.0]]
-    02   ☉ ↺ ∞ <Job `monitor`>
-    03   ☉ ☓   <Job `c2`>[[ -> 4.0]]
-    04   ☉ ☓   <Job `c3`>[[ -> 3.0]] - requires {01}
+    01   ☉ ☓   <Job `c2`>[[ -> 4.0]]
+    02   ☉ ☓   <Job `c1`>[[ -> 2.0]]
+    03   ☉ ↺ ∞ <Job `monitor`>
+    04   ☉ ☓   <Job `c3`>[[ -> 3.0]] - requires {02}
 
 
 ### Example D : specifying a global timeout
@@ -368,10 +371,10 @@ sd = Scheduler(j)
 sd.orchestrate(timeout=0.25)
 ```
 
-    17:09:08: forever 0
-    17:09:08: forever 1
-    17:09:08: forever 2
-    17-09-08: SCHEDULER: orchestrate: TIMEOUT occurred
+    19:27:36: forever 0
+    19:27:36: forever 1
+    19:27:36: forever 2
+    19-27-36: SCHEDULER: orchestrate: TIMEOUT occurred
 
 
 
@@ -456,7 +459,7 @@ sf.list()
 
     -> in_out(0.2)
     <- in_out(0.2)
-    17-09-09: SCHEDULER: Emergency exit upon exception in critical job
+    19-27-38: SCHEDULER: Emergency exit upon exception in critical job
     orchestrate: False
     01   ☉ ☓   <Job `NOLABEL`>[[ -> 200.0]]
     02 ⚠ ★ ☓   <Job `boom`>!! CRIT. EXC. => Exception:boom after 0.2s!! - requires {01}
@@ -489,23 +492,23 @@ print("total duration = {}s".format(end-beg))
 
 ```
 
+    7-th job
+    Sleeping for 0.5s
+    5-th job
+    Sleeping for 0.5s
     2-th job
     Sleeping for 0.5s
     3-th job
-    Sleeping for 0.5s
-    8-th job
     Sleeping for 0.5s
     6-th job
     Sleeping for 0.5s
     4-th job
     Sleeping for 0.5s
+    8-th job
+    Sleeping for 0.5s
     1-th job
     Sleeping for 0.5s
-    5-th job
-    Sleeping for 0.5s
-    7-th job
-    Sleeping for 0.5s
-    total duration = 1.0097899436950684s
+    total duration = 1.011382818222046s
 
 
 ## Customizing jobs
