@@ -398,6 +398,14 @@ class Tests(unittest.TestCase):
         self.assertTrue(sched.rain_check())
         self.assertTrue(sched.orchestrate())
 
+    def test_loop(self):
+        s = Scheduler()
+        Seq(J(sl(.1)), J(sl(.2)),
+            scheduler = s)                 
+        loop = asyncio.get_event_loop()
+        self.assertTrue(s.orchestrate(loop=loop))
+        
+
     ##########
     def test_display(self):
 

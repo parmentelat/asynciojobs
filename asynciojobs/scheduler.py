@@ -88,7 +88,7 @@ class Scheduler:
             return "FINE"
         
     ####################
-    def orchestrate(self, loop=None, *args, **kwds):
+    def orchestrate(self, *args,  loop=None, **kwds):
         """
         a synchroneous wrapper around `co_orchestrate()`
         """
