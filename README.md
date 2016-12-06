@@ -27,9 +27,20 @@ A job object can be created:
 
 As a convenience, the `Sequence` class is mostly a helper class that can free you from manually managing the `requires` deps in long strings of jobs.
 
+## Full documentation
+
+This document, along with API reference doc, and changelog, is available at http://nepi-ng.inria.fr/asynciojobs/
+
+## Prerequisites
+
+`asynciojobs` requires `asyncio` and python-3.5.
+
 
 ```python
-import asyncio
+import sys
+major, minor = sys.version_info[:2]
+if (major, minor) < (3, 5):
+    print("asynciojobs won't work in this environment")
 ```
 
 ## Installing
@@ -41,6 +52,11 @@ pip3 install asynciojobs
 ```
 
 ## Examples
+
+
+```python
+import asyncio
+```
 
 Let's consider a simple coroutine for the sake of illustration
 
@@ -139,8 +155,8 @@ sb = Scheduler(b1, b2, b3)
 sb.orchestrate()
 ```
 
-    -> in_out(0.25)
     -> in_out(0.1)
+    -> in_out(0.25)
     <- in_out(0.1)
     -> in_out(0.2)
     <- in_out(0.25)
@@ -221,9 +237,9 @@ To see an overview of a scheduler, just use the `list()` method that will give y
 sb.list()
 ```
 
-    01   ☉ ☓   <Job `NOLABEL`>[[ -> 250.0]]
-    02   ☉ ☓   <Job `b1`>[[ -> 100.0]]
-    03   ☉ ☓   <Job `b2`>[[ -> 200.0]] - requires {02}
+    01   ☉ ☓   <Job `b1`>[[ -> 100.0]]
+    02   ☉ ☓   <Job `b2`>[[ -> 200.0]] - requires {01}
+    03   ☉ ☓   <Job `NOLABEL`>[[ -> 250.0]]
 
 
 Here is a complete list of the symbols used, with their meaning 
@@ -305,8 +321,8 @@ sc = Scheduler(c1, c2, c3, c4)
 sc.orchestrate()
 ```
 
-    BUS: -> in_out(0.2)
     BUS: -> in_out(0.4)
+    BUS: -> in_out(0.2)
     BUS: <- in_out(0.2)
     BUS: -> in_out(0.3)
     BUS: <- in_out(0.4)
@@ -327,10 +343,10 @@ Note that `orchestrate` always terminates as soon as all the non-`forever` jobs 
 sc.list()
 ```
 
-    01   ☉ ☓   <Job `c1`>[[ -> 2.0]]
+    01   ☉ ↺ ∞ <Job `monitor`>
     02   ☉ ☓   <Job `c2`>[[ -> 4.0]]
-    03   ☉ ↺ ∞ <Job `monitor`>
-    04   ☉ ☓   <Job `c3`>[[ -> 3.0]] - requires {01}
+    03   ☉ ☓   <Job `c1`>[[ -> 2.0]]
+    04   ☉ ☓   <Job `c3`>[[ -> 3.0]] - requires {03}
 
 
 ### Example D : specifying a global timeout
@@ -351,9 +367,10 @@ sd = Scheduler(j)
 sd.orchestrate(timeout=0.25)
 ```
 
-    23:10:59: forever 0
-    23:10:59: forever 1
-    23:10:59: forever 2
+    11:35:23: forever 0
+    11:35:23: forever 1
+    11:35:23: forever 2
+    11-35-23: SCHEDULER: orchestrate: TIMEOUT occurred
 
 
 
@@ -438,6 +455,7 @@ sf.list()
 
     -> in_out(0.2)
     <- in_out(0.2)
+    11-35-25: SCHEDULER: Emergency exit upon exception in critical job
     orchestrate: False
     01   ☉ ☓   <Job `NOLABEL`>[[ -> 200.0]]
     02 ⚠ ★ ☓   <Job `boom`>!! CRIT. EXC. => Exception:boom after 0.2s!! - requires {01}
