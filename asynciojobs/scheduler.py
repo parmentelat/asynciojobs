@@ -311,6 +311,7 @@ class Scheduler:
         # xxx should consume any exception as well ?
         # self._tidy_tasks_exception(done)
 
+
     async def _feedback(self, jobs, state, force=False):
         """
         When self.verbose is set, provide feedback about the mentioned
@@ -337,14 +338,24 @@ class Scheduler:
         """
         coroutine: the primary entry point for running an ordered set of jobs.
 
-        Runs members jobs in order (that is, schedule their `co_run()` method).
+        Runs member jobs (that is, schedule their `co_run()` method) 
+        in an order that satisfies their `required` relationsship.
 
-        Proceed to the end no matter what, except if either
-        one critical job raises an exception, or a timeout occurs.
+        Proceeds to the end no matter what, except if either
+        (1) one critical job raises an exception, or (2) a timeout occurs.
         Returns `True` if none of these 2 conditions occur, `False` otherwise.
 
         Jobs marked as forever are not waited for. All jobs get
         terminated through their `co_shutdown()` method.
+
+        ---
+
+        Optional `timeout` can be an `int` or `float` and is expressed
+        in seconds; it applies to the overall orchestration, not to
+        any individual job.
+
+        Optional `loop` is an asyncio events loop, defaults to
+        `asyncio.get_event_loop()`
 
         """
         if loop is None:

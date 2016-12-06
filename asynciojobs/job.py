@@ -28,40 +28,33 @@ It also defines a couple of simple job classes.
  
 
 class AbstractJob:
-    """
-    AbstractJob is a virtual class:
+    """AbstractJob is a virtual class:
 
-    (*) it offers some very basic graph-related features to model requirements
+    * it offers some very basic graph-related features to model requirements
         'a la' makefile
-    (*) its subclasses are expected to implement a `co_run()` and a `co_shutdown()` methods
+    * its subclasses are expected to implement a `co_run()` and a `co_shutdown()` methods
         that specifies the actual behaviour of the job, as coroutines
 
     It's mostly a companion class to the Scheduler class, that triggers these methods
 
     In addition, each job can be created with 
-    (*) boolean flag 'forever', if set, means the job is not returning at all and runs forever
+
+    * boolean flag 'forever', if set, means the job is not returning at all and runs forever
     in this case Scheduler.orchestrate will not wait for that job, and will terminate it once all
     the regular i.e. not-forever jobs are done
-    (*) an optional label - for convenience only
+    
+    * an optional label - for convenience only
 
     -----
 
-    As far as labelling, things have become a little tricky
-
-    When listing an instance of Scheduler, there are 2 ways we need to show a job
-
-    * first there is a plain label, that may/should be set at creation time
-
-    * second, when showing references (like the jobs that a given job requires), 
-    we show ids like '01' and similar.
-    Except that, the job itself has no idea about that at first, 
-    it's the Scheduler instance that decides on that
+    As far as labelling, each subclass of `AbstractJob` implements a
+    default labelling scheme, so it is not mandatory to set a specific
+    label on each job instance, however it is sometimes useful.
 
     ------
 
     Besides, if a job instance has a `details()` method, then this is used to produce 
     additional details for that job when running Scheduler.list(details=True)
-
 
     """
 
@@ -91,10 +84,24 @@ class AbstractJob:
     def label(self, use_s_label=False):
         """
         Implements the logic for finding a job's label
+
+        In terms of labelling, things have become a little tricky over
+        time. When listing an instance of Scheduler, there are 2 ways
+        we need to show a job
+
+        * first there is a plain label, that may/should be set at creation time
+
+        * second, when showing references (like the jobs that a given job requires), 
+        we show ids like '01' and similar.
+        Except that, the job itself has no idea about that at first, it's the Scheduler
+        instance that decides on that. This is what `_s_label` is for.
+
         * if use_s_label is set, looks in self._s_label that is expected to have been set by
         companion class Scheduler; if not set returns a warning msg 'XXXX'
+
         * otherwise, looks for the label  used at creation-time, and otherwise
         runs its class's `default_label()` method
+
         """
         if use_s_label:
             return self._s_label or 'XXXX'
@@ -178,10 +185,14 @@ class AbstractJob:
         """
         return a 4 characters string (in fact 7 with interspaces)
         that summarizes the 4 dimensions of the job, that is
-        (*) is it done/started/idle
-        (*) is it declared as forever
-        (*) is it critical
-        (*) did it trigger an exception
+
+        * is it done/started/idle
+        
+        * is it declared as forever
+
+        * is it critical
+
+        * did it trigger an exception
         """
         if self._detect_support_for_unicode():
             return self._short_unicode()
@@ -216,15 +227,23 @@ class AbstractJob:
         """
         add requirements to a given job
 
-        with j* being jobs or sequences, one can call:
-        j1.requires(None)
-        j1.requires([None])
-        j1.requires((None,))
-        j1.requires(j2)
-        j1.requires(j2, j3)
-        j1.requires([j2, j3])
-        j1.requires((j2, j3))
-        j1.requires(([j2], [[[j3]]]))
+        with `j{1,2,3}` being jobs or sequences, one can call:
+
+        * j1.requires(None)
+
+        * j1.requires([None])
+
+        * j1.requires((None,))
+
+        * j1.requires(j2)
+
+        * j1.requires(j2, j3)
+
+        * j1.requires([j2, j3])
+
+        * j1.requires((j2, j3))
+
+        * j1.requires(([j2], [[[j3]]]))
         """
         from .sequence import Sequence
         for requirement in requirements:
