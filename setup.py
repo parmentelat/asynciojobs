@@ -12,9 +12,6 @@ if not (major == 3 and minor >= 5):
     print("python 3.5 or higher is required")
     exit(1)
 
-# read licence info
-with open("COPYING") as f:
-    license = f.read()
 with open("README.md") as f:
     long_description = f.read()
 
