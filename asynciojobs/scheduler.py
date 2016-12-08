@@ -517,12 +517,9 @@ class Scheduler:
         for job in self.scan_in_order():
             print(job._s_label, job.repr(show_requires=True))
             if details and hasattr(job, 'details'):
-                try:
-                    details = job.details()
-                    if details is not None:
-                        print(details)
-                except Exception as e:
-                    print("<<cannot get details>>", e)
+                details = job.details()
+                if details is not None:
+                    print(details)
         
     def list_safe(self):
         """

@@ -119,14 +119,14 @@ class AbstractJob:
     _has_support_for_unicode = None
 
     @classmethod
-    def _detect_support_for_unicode(klass):
-        if klass._has_support_for_unicode is None:
+    def _detect_support_for_unicode(cls):
+        if cls._has_support_for_unicode is None:
             try:
-                klass._c_saltire.encode(sys.stdout.encoding)
-                klass._has_support_for_unicode = True
+                cls._c_saltire.encode(sys.stdout.encoding)
+                cls._has_support_for_unicode = True
             except UnicodeEncodeError as e:
-                klass._has_support_for_unicode = False
-        return klass._has_support_for_unicode
+                cls._has_support_for_unicode = False
+        return cls._has_support_for_unicode
             
 
     ########## unicode version
@@ -372,7 +372,7 @@ class Job(AbstractJob):
         """
         self.corun = corun
         self.coshutdown = coshutdown
-        AbstractJob.__init__(self, *args, **kwds)
+        super().__init__(*args, **kwds)
 
     async def co_run(self):
         result = await self.corun
@@ -403,7 +403,7 @@ class PrintJob(AbstractJob):
         self.messages = messages
         self.sleep = sleep
         self.banner = banner
-        AbstractJob.__init__(self, label = label, required = required, scheduler = scheduler)
+        super().__init__(label = label, required = required, scheduler = scheduler)
 
     async def co_run(self):
       try:  
