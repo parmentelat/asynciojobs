@@ -85,7 +85,7 @@ class AbstractJob:
 
     def label(self, use_s_label=False):
         """
-        Implements the logic for finding a job's label
+        The logic for finding a job's label
 
         In terms of labelling, things have become a little tricky over
         time. When listing an instance of Scheduler, there are 2 ways
