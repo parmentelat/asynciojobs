@@ -12,8 +12,7 @@ if not (major == 3 and minor >= 5):
     print("python 3.5 or higher is required")
     exit(1)
 
-with open("README.md") as f:
-    long_description = f.read()
+long_description = "See notebook at https://github.com/parmentelat/asynciojobs/blob/master/README.ipynb"
 
 ### requirements - used by pip install
 # *NOTE* for ubuntu: also run this beforehand
