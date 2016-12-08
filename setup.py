@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 
-from __future__ import print_function
-
 import sys
-import os
-import os.path
-from distutils.core import setup
-from asynciojobs.version import version as asynciojobs_version
+import setuptools
+
+from asynciojobs.version import version as version
 
 # check python version
 from sys import version_info
@@ -18,9 +15,8 @@ if not (major == 3 and minor >= 5):
 # read licence info
 with open("COPYING") as f:
     license = f.read()
-#with open("README.md") as f:
-#    long_description = f.read()
-long_description = "See notebook at https://github.com/parmentelat/asynciojobs/blob/master/README.ipynb"
+with open("README.md") as f:
+    long_description = f.read()
 
 ### requirements - used by pip install
 # *NOTE* for ubuntu: also run this beforehand
@@ -30,19 +26,23 @@ required_modules = [
     'asyncssh',
 ]
 
-setup(
+setuptools.setup(
     name             = "asynciojobs",
-    version          = asynciojobs_version,
-    description      = "A simplistic orchestration engine for asyncio-based jobs",
-    long_description = long_description,
-    license          = license,
+    version          = version,
     author           = "Thierry Parmentelat",
     author_email     = "thierry.parmentelat@inria.fr",
-    download_url     = "http://github/build.onelab.eu/asynciojobs/asynciojobs-{v}.tar.gz".format(v=asynciojobs_version),
-    url              = "https://github.com/parmentelat/fitsophia/tree/master/asynciojobs",
-    platforms        = "Linux",
+    description      = "A simplistic orchestration engine for asyncio-based jobs",
+    long_description = long_description,
+    license          = "CC BY-SA 4.0",
+    download_url     = "http://github/build.onelab.eu/asynciojobs/asynciojobs-{v}.tar.gz".format(v=version),
+    url              = "http://nepi-ng.inria.fr/asynciojobs",
     packages         = [ 'asynciojobs' ],
-#    scripts          = [ 'bin/asynciojobs'],
     install_requires = required_modules,
+    classifiers = [
+        "Development Status :: 4 - Beta",
+        "Environment :: Console",
+        "Intended Audience :: Information Technology",
+        "Programming Language :: Python :: 3.5",
+        ],
 )
 
