@@ -1,11 +1,12 @@
 # ChangeLog
 
-## 0.5.1 - 2016 Dec 8
+## 0.5.2 - 2016 Dec 8
 
 * setup uses setuptools and no distutils anymore
 * cleaned __init__.py
 * use super() in subclasses
 * autodoc should now outline coroutines
+* 0.5.1 broken
 
 ## 0.5.0 - 2016 Dec 6
 
