@@ -25,7 +25,7 @@ This module defines `AbstractJob` that is the base class for all the jobs in a S
 
 It also defines a couple of simple job classes.
 """
- 
+
 
 class AbstractJob:
     """AbstractJob is a virtual class:
@@ -42,7 +42,7 @@ class AbstractJob:
     * boolean flag 'forever', if set, means the job is not returning at all and runs forever
     in this case Scheduler.orchestrate will not wait for that job, and will terminate it once all
     the regular i.e. not-forever jobs are done
-    
+
     * an optional label - for convenience only
 
     -----
@@ -59,10 +59,11 @@ class AbstractJob:
     """
 
     def __init__(self, forever=False, label=None, critical=False, required=None,
-                 scheduler = None):
+                 scheduler=None):
         self.forever = forever
         self.critical = critical
-        # access label through a method so we can invoke default_label() if missing
+        # access label through a method so we can invoke default_label() if
+        # missing
         self._label = label
         # for convenience, one can mention only one AbstractJob
         self.required = set()
@@ -70,7 +71,7 @@ class AbstractJob:
         # convenience again
         if scheduler is not None:
             scheduler.add(self)
-        # once submitted in the asyncio loop/scheduler, the `co_run()` gets embedded in a 
+        # once submitted in the asyncio loop/scheduler, the `co_run()` gets embedded in a
         # Task object, that is our handle when talking to asyncio.wait
         self._task = None
         # this is updated by the Window class when the job makes it through
@@ -116,7 +117,7 @@ class AbstractJob:
                 return "NOLABEL"
 
     ##########
-    _has_support_for_unicode = None # type: bool
+    _has_support_for_unicode = None  # type: bool
 
     @classmethod
     def _detect_support_for_unicode(cls):
@@ -127,20 +128,18 @@ class AbstractJob:
             except UnicodeEncodeError as e:
                 cls._has_support_for_unicode = False
         return cls._has_support_for_unicode
-            
 
-    ########## unicode version
+    # unicode version
     #_c_frowning_face = "\u2639" # ☹
     #_c_smiling_face  = "\u263b" # ☻
-    _c_saltire       = "\u2613" # ☓
-    _c_circle_arrow  = "\u21ba" # ↺
-    _c_black_flag    = "\u2691" # ⚑
-    _c_white_flag    = "\u2690" # ⚐
-    _c_warning       = "\u26a0" # ⚠
-    _c_black_star    = "\u2605" # ★
-    _c_sun           = "\u2609" # ☉
-    _c_infinity      = "\u221e" # ∞
-    
+    _c_saltire = "\u2613"  # ☓
+    _c_circle_arrow = "\u21ba"  # ↺
+    _c_black_flag = "\u2691"  # ⚑
+    _c_white_flag = "\u2690"  # ⚐
+    _c_warning = "\u26a0"  # ⚠
+    _c_black_star = "\u2605"  # ★
+    _c_sun = "\u2609"  # ☉
+    _c_infinity = "\u221e"  # ∞
 
     def _short_unicode(self):
         """
@@ -149,21 +148,22 @@ class AbstractJob:
         """
         # where is it in the lifecycle
         c_running = self._c_saltire if self.is_done() else \
-                 self._c_circle_arrow if self.is_running() else \
-                 self._c_black_flag if self.is_scheduled() else \
-                 self._c_white_flag
+            self._c_circle_arrow if self.is_running() else \
+            self._c_black_flag if self.is_scheduled() else \
+            self._c_white_flag
         # is it critical or not ?
         c_crit = self._c_warning if self.is_critical() else " "
         # has it raised an exception or not ?
         c_boom = self._c_black_star if self.raised_exception() \
-                 else self._c_sun if self.is_running() \
-                 else " "
+            else self._c_sun if self.is_running() \
+            else " "
         # is it going forever or not
         c_forever = self._c_infinity if self.forever else " "
 
-        # add extra white space as unicode chars in terminal tend to be wider than others
+        # add extra white space as unicode chars in terminal tend to be wider
+        # than others
         return "{} {} {} {}".format(c_crit, c_boom, c_running, c_forever)
-        
+
     def _short_ascii(self):
         """
         a small (7 chars) badge that summarizes the job's internal attributes
@@ -171,9 +171,9 @@ class AbstractJob:
         """
         # where is it in the lifecycle
         c_running = "x" if self.is_done() else \
-                 "o" if self.is_running() else \
-                 "." if self.is_scheduled() else \
-                 ">"
+            "o" if self.is_running() else \
+            "." if self.is_scheduled() else \
+            ">"
         # is it critical or not ?
         c_crit = "!" if self.is_critical() else " "
         # has it raised an exception or not ?
@@ -183,7 +183,8 @@ class AbstractJob:
         # is it going forever or not
         c_forever = "8" if self.forever else " "
 
-        # add extra white space as unicode chars in terminal tend to be wider than others
+        # add extra white space as unicode chars in terminal tend to be wider
+        # than others
         return "{} {} {} {}".format(c_crit, c_boom, c_running, c_forever)
 
     def short(self):
@@ -192,7 +193,7 @@ class AbstractJob:
         that summarizes the 4 dimensions of the job, that is
 
         * its point in the lifecycle: idle → scheduled → running → done
-        
+
         * is it declared as forever
 
         * is it declared as critical
@@ -209,7 +210,7 @@ class AbstractJob:
             return self._short_unicode()
         else:
             return self._short_ascii()
-    
+
     def repr(self, show_requires=True, show_result_or_exception=True):
         """
         returns a string that describes this job instance, with details as specified
@@ -221,15 +222,17 @@ class AbstractJob:
             exception = self.raised_exception()
             if exception:
                 critical_msg = "CRIT. EXC." if self.is_critical() else "exception"
-                info += "!! {} => {}:{}!!".format(critical_msg, type(exception).__name__, exception)
+                info += "!! {} => {}:{}!!".format(critical_msg,
+                                                  type(exception).__name__, exception)
             elif self.is_done():
                 info += "[[ -> {}]]".format(self.result())
 
-        ### show dependencies in both directions
+        # show dependencies in both directions
         if show_requires and self.required:
-            info += " - requires {" + ", ".join(a.label(use_s_label=True) for a in self.required) + "}"
+            info += " - requires {" + ", ".join(a.label(use_s_label=True)
+                                                for a in self.required) + "}"
         return info
-    
+
     def __repr__(self):
         return self.repr(show_requires=False)
 
@@ -281,6 +284,7 @@ class AbstractJob:
 
         """
         return self._task is None
+
     def is_scheduled(self):
         """
         boolean that tells if the job has been scheduled; 
@@ -288,6 +292,7 @@ class AbstractJob:
         proceeded to the windowing system; equivalent to `not is_idle()`
         """
         return self._task is not None
+
     def is_running(self):
         """
         Once a job starts, it tries to get a slot in the windowing sytem.
@@ -295,6 +300,7 @@ class AbstractJob:
         light from the windowing system. Implies `is_scheduled()`
         """
         return self._running
+
     def is_done(self):
         """
         a job lifecycle is idle → scheduled → running → done
@@ -304,6 +310,7 @@ class AbstractJob:
         Implies `is_scheduled()` and `is_running()`
         """
         return self._task is not None and self._task._state == asyncio.futures._FINISHED
+
     def raised_exception(self):
         """
         returns an exception if the job has completed by raising an exception, None otherwise
@@ -343,22 +350,24 @@ class AbstractJob:
     def standalone_run(self):
         """
         A convenience helper that just runs this one job on its own 
-        
+
         Mostly useful for debugging the internals of that job,
         e.g. for checking for gross mistakes and other exceptions
         """
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.co_run())
 
-    # if subclass redefines details(), then that will show up in list() 
+    # if subclass redefines details(), then that will show up in list()
 
 ####################
+
+
 class Job(AbstractJob):
 
     """
     Most mundane form: built from a coroutine
     """
-    
+
     def __init__(self, corun, coshutdown=None, *args, **kwds):
         """
         Create a job from a coroutine
@@ -387,6 +396,8 @@ class Job(AbstractJob):
         return repr(self.corun)
 
 ####################
+
+
 class PrintJob(AbstractJob):
     """
     A job that just  does print on messages, and optionnally sleeps for some time
@@ -398,25 +409,24 @@ class PrintJob(AbstractJob):
 
     def __init__(self, *messages, sleep=None, banner=None,
                  # these are for AbstractJob
-                 scheduler = None,
-                 label = None, required = None):
+                 scheduler=None,
+                 label=None, required=None):
         self.messages = messages
         self.sleep = sleep
         self.banner = banner
-        super().__init__(label = label, required = required, scheduler = scheduler)
+        super().__init__(label=label, required=required, scheduler=scheduler)
 
     async def co_run(self):
-      try:  
-        if self.banner:
-            print(self.banner + " ", end="")
-        print(*self.messages)
-        if self.sleep:
-            print("Sleeping for {}s".format(self.sleep))
-            await asyncio.sleep(self.sleep)
-      except Exceptin as e:
-          import traceback
-          traceback.print_exc()
-          
+        try:
+            if self.banner:
+                print(self.banner + " ", end="")
+            print(*self.messages)
+            if self.sleep:
+                print("Sleeping for {}s".format(self.sleep))
+                await asyncio.sleep(self.sleep)
+        except Exceptin as e:
+            import traceback
+            traceback.print_exc()
 
     async def co_shutdown(self):
         pass
@@ -429,6 +439,6 @@ class PrintJob(AbstractJob):
         result += self.messages[0]
         result += "..." if len(self.messages) > 1 else ""
         return result
-        
+
     def default_label(self):
         return self.details()

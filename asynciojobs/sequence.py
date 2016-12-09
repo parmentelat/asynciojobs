@@ -1,12 +1,13 @@
 from .job import AbstractJob
 
+
 class Sequence:
     """A Sequence is an object that organizes a set
     of AbstratJobs in a sequence. Its main purpose is to add
     a single `required` relationship per job in the sequence, 
     except the first that instead that receives as its `required`
      the sequence's requirements.
-    
+
     If `scheduler` is passed to the sequence's constructor, 
     all the jobs passed to the sequence are added in that scheduler.
 

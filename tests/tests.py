@@ -8,13 +8,14 @@ import time
 import math
 import asyncio
 
+
 def ts():
     """ 
     a time stamp with millisecond 
     """
     # apparently this is not supported by strftime ?!?
     cl = time.time()
-    ms = int(1000 * (cl-math.floor(cl)))
+    ms = int(1000 * (cl - math.floor(cl)))
     return time.strftime("%M-%S-") + "{:03d}".format(ms)
 
 ##############################
@@ -40,23 +41,30 @@ _sl(timeout, middle=True) returns a future that specifies an job like this:
 """
     print("{} -> sl({})".format(ts(), n))
     if middle:
-        await asyncio.sleep(n/2)
+        await asyncio.sleep(n / 2)
         print("{} == sl({})".format(ts(), n))
         if emergency:
             raise Exception("emergency exit")
-        await asyncio.sleep(n/2)
+        await asyncio.sleep(n / 2)
     else:
         await asyncio.sleep(n)
     print("{} <- sl({})".format(ts(), n))
     return n
 
+
 def sl(n): return _sl(n, middle=False, emergency=False)
+
+
 def slm(n): return _sl(n, middle=True, emergency=False)
 
 ##############################
+
+
 class SleepJob(AbstractJob):
+
     def __init__(self, timeout, middle=False):
-        AbstractJob.__init__(self, forever=False, label="sleep for {}s".format(timeout))
+        AbstractJob.__init__(self, forever=False,
+                             label="sleep for {}s".format(timeout))
         self.timeout = timeout
         self.middle = middle
 
@@ -66,11 +74,13 @@ class SleepJob(AbstractJob):
 
     async def co_shutdown(self):
         pass
-        
+
 
 class TickJob(AbstractJob):
+
     def __init__(self, cycle):
-        AbstractJob.__init__(self, forever=True, label="Cyclic tick every {}s".format(cycle))
+        AbstractJob.__init__(self, forever=True,
+                             label="Cyclic tick every {}s".format(cycle))
         self.cycle = cycle
 
     async def co_run(self):
@@ -86,28 +96,31 @@ class TickJob(AbstractJob):
 
 async def co_exception(n):
     await asyncio.sleep(n)
-    raise ValueError(10**6*n)
-    
-####################            
+    raise ValueError(10**6 * n)
+
+####################
 from asynciojobs import Job as J
 from asynciojobs import Sequence as Seq
 from asynciojobs import Scheduler
 
 # shortcuts
 SLJ = SleepJob
-TJ  = TickJob
+TJ = TickJob
 
 sep = 40 * '*' + ' '
 
 import unittest
 
+
 def check_required_types(scheduler, message):
-    wrong = [j for j in scheduler.jobs if not isinstance(j, AbstractJob) or not hasattr(j, 'required')]
+    wrong = [j for j in scheduler.jobs if not isinstance(
+        j, AbstractJob) or not hasattr(j, 'required')]
     if len(wrong) != 0:
         print("Scheduler {} has {}/{} ill-typed jobs"
               .format(len(len(wrong), scheduler.jobs)))
         return False
     return True
+
 
 def list_sep(scheduler, sep):
     print(sep)
@@ -127,7 +140,8 @@ class Tests(unittest.TestCase):
 
         sched = Scheduler(a1, a2, a3)
 
-        # these lines seem to trigger a nasty message about a coro not being waited
+        # these lines seem to trigger a nasty message about a coro not being
+        # waited
         self.assertFalse(sched.rain_check())
 
     ####################
@@ -137,14 +151,15 @@ class Tests(unittest.TestCase):
     # are almost equivalent forms to do the same thing
     def test_simple(self):
         """a simple topology, that should work"""
-        jobs = SLJ(0.1), SLJ(0.2), SLJ(0.3), SLJ(0.4), SLJ(0.5), J(sl(0.6)), J(sl(0.7))
+        jobs = SLJ(0.1), SLJ(0.2), SLJ(0.3), SLJ(
+            0.4), SLJ(0.5), J(sl(0.6)), J(sl(0.7))
         a1, a2, a3, a4, a5, a6, a7 = jobs
         a4.requires(a1, a2, a3)
         a5.requires(a4)
         a6.requires(a4)
         a7.requires(a5)
         a7.requires(a6)
-        
+
         sched = Scheduler(*jobs)
         list_sep(sched, sep + "LIST BEFORE")
         self.assertTrue(sched.rain_check())
@@ -154,7 +169,7 @@ class Tests(unittest.TestCase):
         list_sep(sched, sep + "LIST AFTER")
         print(sep + "DEBRIEF")
         sched.debrief()
-        
+
     ####################
     def test_forever(self):
         a1, a2, t1 = SLJ(1), SLJ(1.5), TJ(.6)
@@ -184,22 +199,26 @@ class Tests(unittest.TestCase):
         print(sep + 'debrief()')
         sched.debrief()
 
-    def test_exc_non_critical_f(self): return self._test_exc_non_critical(False)
+    def test_exc_non_critical_f(
+        self): return self._test_exc_non_critical(False)
+
     def test_exc_non_critical_t(self): return self._test_exc_non_critical(True)
-        
+
     ####################
     def _test_exc_critical(self, verbose):
 
         print("verbose = {}".format(verbose))
-        a1, a2 = SLJ(1), J(co_exception(0.5), label='critical boom', critical=True)
+        a1, a2 = SLJ(1), J(co_exception(0.5),
+                           label='critical boom', critical=True)
         sched = Scheduler(a1, a2, verbose=verbose)
         self.assertFalse(sched.orchestrate())
         print(sep + 'debrief()')
         sched.debrief()
 
     def test_exc_critical_f(self): return self._test_exc_critical(False)
+
     def test_exc_critical_t(self): return self._test_exc_critical(True)
-    
+
     ####################
     def test_sequence1(self):
         "a simple sequence"
@@ -264,8 +283,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(len(a4.required), 1)
         self.assertTrue(check_required_types(sched, "test_sequence4"))
         self.assertTrue(sched.orchestrate())
-    
-        
+
     ####################
     def test_sequence5(self):
         "sequences with required"
@@ -276,8 +294,8 @@ class Tests(unittest.TestCase):
         a5 = J(sl(0.1), label=5)
         a6 = J(sl(0.1), label=6)
         s1 = Seq(a1, a2)
-        s2 = Seq(a3, a4, required = s1)
-        s3 = Seq(a5, a6, required = s2)
+        s2 = Seq(a3, a4, required=s1)
+        s3 = Seq(a5, a6, required=s2)
         sched = Scheduler(s1, s2, s3)
         list_sep(sched, sep + "sequence5")
         self.assertEqual(len(a1.required), 0)
@@ -299,7 +317,6 @@ class Tests(unittest.TestCase):
         sched.add(Seq(a1, a2, a3))
         self.assertTrue(sched.orchestrate())
 
-
     ##########
     def test_requires_job(self):
 
@@ -310,23 +327,23 @@ class Tests(unittest.TestCase):
         a5 = J(sl(0.1), label="a5")
 
         # several forms to create
-        b = J(sl(0.2), required = None)
+        b = J(sl(0.2), required=None)
         self.assertEqual(len(b.required), 0)
-        b = J(sl(0.2), required = (None,))
+        b = J(sl(0.2), required=(None,))
         self.assertEqual(len(b.required), 0)
-        b = J(sl(0.2), required = [None])
+        b = J(sl(0.2), required=[None])
         self.assertEqual(len(b.required), 0)
-        b = J(sl(0.2), required = a1)
+        b = J(sl(0.2), required=a1)
         self.assertEqual(len(b.required), 1)
-        b = J(sl(0.2), required = (a1,))
+        b = J(sl(0.2), required=(a1,))
         self.assertEqual(len(b.required), 1)
-        b = J(sl(0.2), required = [a1])
+        b = J(sl(0.2), required=[a1])
         self.assertEqual(len(b.required), 1)
-        b = J(sl(0.2), label='BROKEN', required = (a1, a2))
+        b = J(sl(0.2), label='BROKEN', required=(a1, a2))
         self.assertEqual(len(b.required), 2)
-        b = J(sl(0.2), required = [a1, a2])
+        b = J(sl(0.2), required=[a1, a2])
         self.assertEqual(len(b.required), 2)
-        b = J(sl(0.2), required = [a1, (a2,), set([a3, a4]), [[[[[[a5]]]]]]])
+        b = J(sl(0.2), required=[a1, (a2,), set([a3, a4]), [[[[[[a5]]]]]]])
         self.assertEqual(len(b.required), 5)
 
     ##########
@@ -338,7 +355,7 @@ class Tests(unittest.TestCase):
         a3 = J(sl(0.1), label="a3")
         a4 = J(sl(0.1), label="a4")
         a5 = J(sl(0.1), label="a5")
-        
+
         # re-create these each time to have fresh data
         def bs():
             b1 = J(sl(0.1), label="b1")
@@ -347,16 +364,15 @@ class Tests(unittest.TestCase):
             return b1, b2, b3
 
         b1, b2, b3, *_ = bs()
-        s1 = Seq(b1, b2, b3, required = [a1, a2])
+        s1 = Seq(b1, b2, b3, required=[a1, a2])
         self.assertEqual(len(b1.required), 2)
         self.assertEqual(len(b2.required), 1)
-        
+
         b1, b2, b3, *_ = bs()
         s1 = Seq(b1, b2, b3)
         s1.requires([a1, a2])
         self.assertEqual(len(b1.required), 2)
         self.assertEqual(len(b2.required), 1)
-        
 
     ##########
     def test_timeout(self):
@@ -370,8 +386,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(a2.is_done(), True)
         self.assertEqual(a2.result(), 2)
         self.assertEqual(a3.is_done(), False)
-        
-        
+
     ##########
     def test_forever(self):
         async def tick(n):
@@ -380,7 +395,7 @@ class Tests(unittest.TestCase):
                 await asyncio.sleep(n)
 
         a1 = J(sl(0.5), label="finite")
-        a2 = J(tick(0.1), forever = True, label = "forever")
+        a2 = J(tick(0.1), forever=True, label="forever")
         sched = Scheduler(a1, a2)
         result = sched.orchestrate()
         self.assertEqual(result, True)
@@ -390,8 +405,8 @@ class Tests(unittest.TestCase):
     ##########
     def test_creation_scheduler(self):
         sched = Scheduler()
-        s = Seq( J(sl(1)), J(sl(2)), scheduler=sched)
-        j = J(sl(3), required = s, scheduler=sched)
+        s = Seq(J(sl(1)), J(sl(2)), scheduler=sched)
+        j = J(sl(3), required=s, scheduler=sched)
         # make sure that jobs appended in the sequence
         # even later on are also added to the scheduler
         s.append(J(sl(.5)))
@@ -402,54 +417,52 @@ class Tests(unittest.TestCase):
     def test_loop(self):
         s = Scheduler()
         Seq(J(sl(.1)), J(sl(.2)),
-            scheduler = s)                 
+            scheduler=s)
         loop = asyncio.get_event_loop()
         self.assertTrue(s.orchestrate(loop=loop))
-        
 
-    # if window is defined, total should be a multiple of window 
+    # if window is defined, total should be a multiple of window
     def _test_window(self, total, window):
         atom = .1
-        tolerance = 8 # more or less % in terms of overall time 
+        tolerance = 8  # more or less % in terms of overall time
         s = Scheduler()
-        jobs = [ PrintJob("{}-th {}s job".format(i, atom),
-                          sleep=atom, scheduler = s) for i in range(1, total+1)]
+        jobs = [PrintJob("{}-th {}s job".format(i, atom),
+                         sleep=atom, scheduler=s) for i in range(1, total + 1)]
         import time
         beg = time.time()
-        ok = s.orchestrate(jobs_window = window)
+        ok = s.orchestrate(jobs_window=window)
         ok or s.debrief(details=True)
         end = time.time()
         duration = end - beg
-        
-        # estimate global time 
+
+        # estimate global time
         # unwindowed: overall duration is atom
         # otherwise a multiple of it (assuming total = k*window)
-        expected = atom if not window else (total/window) * atom
+        expected = atom if not window else (total / window) * atom
         print('overall expected {} - measured {}'
               .format(expected, duration))
 
-        distortion = duration/expected
-        time_ok = 1-tolerance/100 <= distortion <= 1 + tolerance/100
+        distortion = duration / expected
+        time_ok = 1 - tolerance / 100 <= distortion <= 1 + tolerance / 100
         if not time_ok:
             print("_test_window - window = {} :"
                   "wrong execution time {} - not within {}% of {}"
-                  .format(window, end-beg, tolerance, expected))
+                  .format(window, end - beg, tolerance, expected))
 
         self.assertTrue(time_ok)
         self.assertTrue(ok)
 
-
     def test_window(self):
-        self._test_window(total = 15, window = 3)
+        self._test_window(total=15, window=3)
 
     def test_no_window(self):
-        self._test_window(total = 15, window = None)
-
+        self._test_window(total=15, window=None)
 
     ##########
     def test_display(self):
 
         class FakeTask:
+
             def __init__(self):
                 self._result = 0
                 self._exception = None
@@ -471,16 +484,18 @@ class Tests(unittest.TestCase):
             else:
                 pass
 
-            # here we assume that a job that has raised an exception is necessarily done
+            # here we assume that a job that has raised an exception is
+            # necessarily done
             if boom:
-                if state in ("idle", "scheduled", "running") :
+                if state in ("idle", "scheduled", "running"):
                     print("incompatible combination boom x idle - ignored")
                     return
                 else:
                     job._task._exception = True
             return job
 
-        class J(AbstractJob): pass
+        class J(AbstractJob):
+            pass
 
         sched = Scheduler()
         previous = None
@@ -488,18 +503,17 @@ class Tests(unittest.TestCase):
             for boom in True, False:
                 for critical in True, False:
                     for forever in True, False:
-                        j = J(critical = critical,
-                              forever = forever,
-                              label = "forever={} crit.={} status={} boom={}"
+                        j = J(critical=critical,
+                              forever=forever,
+                              label="forever={} crit.={} status={} boom={}"
                               .format(forever, critical, state, boom),
-                              required = previous
-                        )
+                              required=previous
+                              )
                         if annotate_job_with_fake_task(j, state, boom):
                             sched.add(j)
                             previous = j
         sched.list()
 
-                
 
 if __name__ == '__main__':
     import sys
@@ -508,4 +522,3 @@ if __name__ == '__main__':
         scheduler.debug = True
         sys.argv.remove('-v')
     unittest.main()
-

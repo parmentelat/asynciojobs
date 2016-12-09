@@ -22,6 +22,7 @@ debug = False
 An attempt at some plain markdown 
 """
 
+
 class Scheduler:
     """An Scheduler instance works on a set of Job objects
 
@@ -39,7 +40,7 @@ class Scheduler:
     time, including of course once the orchestration is complete.
     """
 
-    def __init__(self,  *jobs_or_sequences : Iterable[Schedulable],
+    def __init__(self,  *jobs_or_sequences: Iterable[Schedulable],
                  verbose=False):
         """
         Initialize from an iterable of jobs or sequences; their order is
@@ -48,21 +49,21 @@ class Scheduler:
         """
         self.jobs = set(Sequence._flatten(jobs_or_sequences))
         self.verbose = verbose
-        ### why does it fail ?
+        # why does it fail ?
         # bool
         self._failed_critical = False
         # False, or the intial timeout
         self._failed_timeout = False
 
     # think of an scheduler as a set of jobs
-    def update(self, jobs : Iterable[Schedulable]):
+    def update(self, jobs: Iterable[Schedulable]):
         """
         add a collection of jobs - ditto, after `set.update()`
         """
         jobs = set(Sequence._flatten(jobs))
         self.jobs.update(jobs)
 
-    def add(self, job : Schedulable):
+    def add(self, job: Schedulable):
         """
         add a single job - name is inspired from plain python `set.add()`
         """
@@ -91,7 +92,7 @@ class Scheduler:
             return "at least one CRITICAL job has raised an exception"
         else:
             return "FINE"
-        
+
     ####################
     def orchestrate(self, *args,  loop=None, **kwds):
         """
@@ -116,7 +117,7 @@ class Scheduler:
             job._s_successors &= self.jobs
             after = len(job.required)
             if self.verbose and before != after:
-                print(20*'*', "WARNING: job {} has had {} requirements removed"
+                print(20 * '*', "WARNING: job {} has had {} requirements removed"
                       .format(job, before - after))
 
     ####################
@@ -160,7 +161,7 @@ class Scheduler:
         target_marked = len(self.jobs)
 
         while True:
-            # detect a fixed point 
+            # detect a fixed point
             changed = False
             # loop on unfinished business
             for job in self.jobs:
@@ -185,7 +186,8 @@ class Scheduler:
                 break
             if not changed:
                 # this is wrong
-                raise Exception("scheduler could not be scanned - most likely because of cycles") 
+                raise Exception(
+                    "scheduler could not be scanned - most likely because of cycles")
         # if we still have jobs here it's not good either, although it should not happen
         # on a sanitized scheduler
         if nb_marked != target_marked:
@@ -267,14 +269,14 @@ class Scheduler:
             # don't bother to set a timeout, as this is expected to be immediate
             # since all tasks are canceled
             await asyncio.wait(pending)
-        
+
     async def _tidy_tasks_exception(self, tasks):
         """
         Similar but in order to clear the exceptions, we need to run gather() instead
         """
         # do not use task._job.raised_exception() so we can use this with co_shutdown()
         # tasks as well (these are not attached to a job)
-        exception_tasks = [ task for task in tasks if task._exception ]
+        exception_tasks = [task for task in tasks if task._exception]
         for task in exception_tasks:
             task.cancel()
             # if debug is turned on, provide details on the exceptions
@@ -285,7 +287,7 @@ class Scheduler:
         # don't bother to set a timeout, as this is expected to be immediate
         # since all tasks are canceled
         await asyncio.gather(*exception_tasks, return_exceptions=True)
-        
+
     def _show_task_stack(self, task, msg='STACK', margin=4, limit=None):
         if isinstance(task, AbstractJob):
             task = task._task
@@ -294,7 +296,7 @@ class Scheduler:
         print(sep, 'BEG ' + msg)
         print(sep)
         # naive approach would be like this, but does not support margin:
-        #task.print_stack()
+        # task.print_stack()
         stio = io.StringIO()
         task.print_stack(file=stio, limit=limit)
         stio.seek(0)
@@ -312,15 +314,14 @@ class Scheduler:
         connections down eventually
         """
         await self._feedback(None, "scheduler is shutting down...")
-        tasks = [ asyncio.ensure_future(job.co_shutdown()) for job in self.jobs ]
-        done, pending = await asyncio.wait(tasks, timeout = self._remaining_timeout())
+        tasks = [asyncio.ensure_future(job.co_shutdown()) for job in self.jobs]
+        done, pending = await asyncio.wait(tasks, timeout=self._remaining_timeout())
         if len(pending) != 0:
             print("WARNING: {}/{} co_shutdown() methods have not returned within timeout"
                   .format(len(pending), len(self.jobs)))
             await self._tidy_tasks(pending)
         # xxx should consume any exception as well ?
         # self._tidy_tasks_exception(done)
-
 
     async def _feedback(self, jobs, state, force=False):
         """
@@ -333,7 +334,8 @@ class Scheduler:
             return
         time_format = "%H-%M-%S"
         if jobs is None:
-            print("{}: SCHEDULER: {}".format(time.strftime(time_format), state))
+            print("{}: SCHEDULER: {}".format(
+                time.strftime(time_format), state))
             return
         if not isinstance(jobs, (list, set, tuple)):
             jobs = jobs,
@@ -344,8 +346,7 @@ class Scheduler:
                                       state, job.repr(show_result_or_exception=self.verbose,
                                                       show_requires=self.verbose)))
 
-    
-    async def co_orchestrate(self, timeout=None, jobs_window = None, loop=None):
+    async def co_orchestrate(self, timeout=None, jobs_window=None, loop=None):
         """coroutine: the primary entry point for running an ordered set of jobs.
 
         Runs member jobs (that is, schedule their `co_run()` method) 
@@ -376,7 +377,7 @@ class Scheduler:
         # create a Window no matter what; it will know what to do
         # also if jobs_window is None
         window = Window(jobs_window, loop)
-        
+
         # initialize backlinks - i.e. _s_successors is the reverse of required
         self._backlinks()
         # clear any Task instance
@@ -387,7 +388,8 @@ class Scheduler:
         self._failed_critical = False
         self._failed_timeout = False
 
-        # how many jobs do we expect to complete: the ones that don't run forever
+        # how many jobs do we expect to complete: the ones that don't run
+        # forever
         nb_jobs_finite = len([j for j in self.jobs if not j.forever])
         # the other ones
         nb_jobs_forever = len(self.jobs) - nb_jobs_finite
@@ -395,31 +397,31 @@ class Scheduler:
         nb_jobs_done = 0
 
         # start with the free jobs
-        entry_jobs = [ job for job in self.jobs if not job.required ]
+        entry_jobs = [job for job in self.jobs if not job.required]
 
         if not entry_jobs:
             raise ValueError("No entry points found - cannot orchestrate")
-        
+
         if self.verbose:
             await self._feedback(None, "entering orchestrate with {} jobs"
-                                .format(len(self.jobs)))
+                                 .format(len(self.jobs)))
 
         await self._feedback(entry_jobs, "STARTING")
-        
-        pending = [ self._ensure_future(job, window, loop=loop)
-                    for job in entry_jobs ]
+
+        pending = [self._ensure_future(job, window, loop=loop)
+                   for job in entry_jobs]
 
         while True:
             done, pending \
                 = await asyncio.wait(pending,
-                                     timeout = self._remaining_timeout(),
-                                     return_when = asyncio.FIRST_COMPLETED)
+                                     timeout=self._remaining_timeout(),
+                                     return_when=asyncio.FIRST_COMPLETED)
 
-            done_ok = { t for t in done if not t._exception }
+            done_ok = {t for t in done if not t._exception}
             await self._feedback(done_ok, "DONE")
             done_ko = done - done_ok
             await self._feedback(done_ko, "RAISED EXC.")
-            
+
             # nominally we have exactly one item in done
             # it looks like the only condition where we have nothing in done is
             # because a timeout occurred
@@ -434,7 +436,7 @@ class Scheduler:
                 self._failed_timeout = timeout
                 return False
 
-            # exceptions need to be cleaned up 
+            # exceptions need to be cleaned up
             # clear the exception(s) in done
             await self._tidy_tasks_exception(done)
             # do we have at least one critical job with an exception ?
@@ -444,7 +446,7 @@ class Scheduler:
                 if done_job.raised_exception():
                     critical_failure = critical_failure or done_job.is_critical()
                     await self._feedback(done_job, "EXCEPTION occurred - on {}critical job"
-                                        .format("non-" if not done_job.is_critical() else ""))
+                                         .format("non-" if not done_job.is_critical() else ""))
                     # make sure these ones show up even if not in debug mode
                     if debug:
                         self._show_task_stack(done_task, "DEBUG")
@@ -456,15 +458,16 @@ class Scheduler:
                                      force=True)
                 return False
 
-            ### are we done ?
-            # only account for not forever jobs (that may still finish, one never knows)
-            done_jobs_not_forever = { j for j in done if not j._job.forever }
+            # are we done ?
+            # only account for not forever jobs (that may still finish, one
+            # never knows)
+            done_jobs_not_forever = {j for j in done if not j._job.forever}
             nb_jobs_done += len(done_jobs_not_forever)
 
             if nb_jobs_done == nb_jobs_finite:
                 if debug:
                     print("orchestrate: {} CLEANING UP at iteration {} / {}"
-                          .format(4*'-', nb_jobs_done, nb_jobs_finite))
+                          .format(4 * '-', nb_jobs_done, nb_jobs_finite))
                 if self.verbose and nb_jobs_forever != len(pending):
                     print("WARNING - apparent mismatch - {} forever jobs, {} are pending"
                           .format(nb_jobs_forever, len(pending)))
@@ -474,7 +477,8 @@ class Scheduler:
                 return True
 
             # go on : find out the jobs that can be added to the mix
-            # only consider the ones that are right behind any of the the jobs that just finished
+            # only consider the ones that are right behind any of the the jobs
+            # that just finished
             possible_next_jobs = set()
             for done_task in done:
                 possible_next_jobs.update(done_task._job._s_successors)
@@ -494,7 +498,8 @@ class Scheduler:
                         requirements_ok = False
                 if requirements_ok:
                     await self._feedback(candidate_next, "STARTING")
-                    pending.add(self._ensure_future(candidate_next, window, loop=loop))
+                    pending.add(self._ensure_future(
+                        candidate_next, window, loop=loop))
                     added += 1
 
     def _set_s_labels(self):
@@ -507,7 +512,6 @@ class Scheduler:
         # inject number in each job in their _s_label field
         for i, job in enumerate(self.scan_in_order(), 1):
             job._s_label = format.format(i)
-        
 
     ####################
     def list(self, details=False):
@@ -517,7 +521,8 @@ class Scheduler:
 
         Beware that this might raise an exception if rain_check() has returned False
         """
-        # so now we can refer to other jobs by their id when showing requirements
+        # so now we can refer to other jobs by their id when showing
+        # requirements
         self._set_s_labels()
         for job in self.scan_in_order():
             print(job._s_label, job.repr(show_requires=True))
@@ -525,14 +530,14 @@ class Scheduler:
                 details = job.details()
                 if details is not None:
                     print(details)
-        
+
     def list_safe(self):
         """
         Print jobs in no specific order, works even if scheduler is broken wrt rain_check()
         """
         for i, job in enumerate(self.jobs):
             print(i, job)
-        
+
     def debrief(self, details=False):
         """
         Designed for schedulers that have failed to orchestrate.
@@ -540,33 +545,38 @@ class Scheduler:
         Print a complete report, that includes `list()` but also gives 
         more stats and data.
         """
-        nb_total =   len(self.jobs)
-        done =       { j for j in self.jobs if j.is_done() }
-        nb_done =    len(done)
-        running =    { j for j in self.jobs if j.is_running() }
+        nb_total = len(self.jobs)
+        done = {j for j in self.jobs if j.is_done()}
+        nb_done = len(done)
+        running = {j for j in self.jobs if j.is_running()}
         nb_running = len(running)
-        ongoing =    running - done
+        ongoing = running - done
         nb_ongoing = len(ongoing)
-        idle =       self.jobs - running
-        nb_idle =    len(idle)
-        
-        exceptions = { j for j in self.jobs if j.raised_exception()}
-        criticals =  { j for j in exceptions if j.is_critical()}
+        idle = self.jobs - running
+        nb_idle = len(idle)
+
+        exceptions = {j for j in self.jobs if j.raised_exception()}
+        criticals = {j for j in exceptions if j.is_critical()}
 
         message = "scheduler has a total of {} jobs".format(nb_total)
+
         def legible_message(nb, adj):
-            if nb == 0: return " none is {}".format(adj)
-            elif nb == 1: return " 1 is {}".format(adj)
-            else : return " {} are {}".format(nb, adj)
-        message += ", " + legible_message(nb_done, "done") 
-        message += ", " + legible_message(nb_ongoing, "ongoing") 
-        message += ", " + legible_message(nb_idle, "idle (or scheduled but not running)") 
+            if nb == 0:
+                return " none is {}".format(adj)
+            elif nb == 1:
+                return " 1 is {}".format(adj)
+            else:
+                return " {} are {}".format(nb, adj)
+        message += ", " + legible_message(nb_done, "done")
+        message += ", " + legible_message(nb_ongoing, "ongoing")
+        message += ", " + \
+            legible_message(nb_idle, "idle (or scheduled but not running)")
 
         print(5 * '-', self.why())
         self.list(details)
         #####
         if exceptions:
-            nb_exceptions  = len(exceptions)
+            nb_exceptions = len(exceptions)
             nb_criticals = len(criticals)
             print("===== {} job(s) with an exception, including {} critical"
                   .format(nb_exceptions, nb_criticals))
@@ -581,9 +591,11 @@ class Scheduler:
             for j in self.scan_in_order():
                 if j in non_critical_exceptions:
                     if not self.verbose:
-                        print("non-critical: {}: exception {}".format(j.label(), j.raised_exception()))
+                        print(
+                            "non-critical: {}: exception {}".format(j.label(), j.raised_exception()))
                     if self.verbose:
-                        self._show_task_stack(j, "non-critical job exception stack")
+                        self._show_task_stack(
+                            j, "non-critical job exception stack")
 
     def export_as_dotfile(self, filename):
         """
@@ -598,6 +610,7 @@ class Scheduler:
         tools that support the dot format.
         """
         self._set_s_labels()
+
         def label_to_id(job):
             result = ""
             # add the _s_label so we avoid 2 nodes accidentally
@@ -607,7 +620,7 @@ class Scheduler:
             result += job.label()
             # escape any double quote
             result = result.replace('"', r'\"')
-            # put double quotes around all this 
+            # put double quotes around all this
             return '"' + result + '"'
 
         # need to figure out totally isolated nodes
@@ -619,7 +632,7 @@ class Scheduler:
                     output.write("{} -> {};\n"
                                  .format(label_to_id(r),
                                          label_to_id(job)))
-                    exported.update( (job, r))
+                    exported.update((job, r))
             for isolated in self.jobs - exported:
                 output.write("{};\n".format(label_to_id(isolated)))
             output.write("}\n")
