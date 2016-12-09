@@ -10,6 +10,10 @@ from .job import AbstractJob
 from .sequence import Sequence
 from .window import Window
 
+########
+from typing import Iterable, Union
+Schedulable = Union[AbstractJob, Sequence]
+
 # will hopefully go away some day
 debug = False
 #debug = True
@@ -35,7 +39,8 @@ class Scheduler:
     time, including of course once the orchestration is complete.
     """
 
-    def __init__(self,  *jobs_or_sequences, verbose=False):
+    def __init__(self,  *jobs_or_sequences : Iterable[Schedulable],
+                 verbose=False):
         """
         Initialize from an iterable of jobs or sequences; their order is
         irrelevant.  More of these can be added later on.
@@ -50,14 +55,14 @@ class Scheduler:
         self._failed_timeout = False
 
     # think of an scheduler as a set of jobs
-    def update(self, jobs):
+    def update(self, jobs : Iterable[Schedulable]):
         """
         add a collection of jobs - ditto, after `set.update()`
         """
         jobs = set(Sequence._flatten(jobs))
         self.jobs.update(jobs)
 
-    def add(self, job):
+    def add(self, job : Schedulable):
         """
         add a single job - name is inspired from plain python `set.add()`
         """

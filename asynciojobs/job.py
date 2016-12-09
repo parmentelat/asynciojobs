@@ -116,7 +116,7 @@ class AbstractJob:
                 return "NOLABEL"
 
     ##########
-    _has_support_for_unicode = None
+    _has_support_for_unicode = None # type: bool
 
     @classmethod
     def _detect_support_for_unicode(cls):
