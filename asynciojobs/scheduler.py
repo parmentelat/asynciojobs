@@ -16,10 +16,10 @@ Schedulable = Union[AbstractJob, Sequence]
 
 # will hopefully go away some day
 debug = False
-#debug = True
+# debug = True
 
 """
-An attempt at some plain markdown 
+An attempt at some plain markdown
 """
 
 
@@ -27,10 +27,11 @@ class Scheduler:
     """An Scheduler instance works on a set of Job objects
 
     It will orchestrate them until they are all complete,
-    starting with the ones that have no requirements, 
+    starting with the ones that have no requirements,
     and then starting the othe ones as their requirements are satisfied
 
-    Running a Job means executing its `co_run()` method, which must be a coroutine
+    Running a Job means executing its `co_run()` method,
+    which must be a coroutine
 
     The result of a job's `co_run()` is NOT taken into account, as
     long as it returns without raising an exception. If it does raise
@@ -77,7 +78,7 @@ class Scheduler:
 
     def failed_critical(self):
         """
-        Tells whether `orchestrate` has failed because 
+        Tells whether `orchestrate` has failed because
         a critical job raised an exception
         """
         return self._failed_critical
@@ -100,7 +101,8 @@ class Scheduler:
         """
         if loop is None:
             loop = asyncio.get_event_loop()
-        return loop.run_until_complete(self.co_orchestrate(loop=loop, *args, **kwds))
+        return loop.run_until_complete(
+            self.co_orchestrate(loop=loop, *args, **kwds))
 
     ####################
     def sanitize(self):
@@ -117,7 +119,8 @@ class Scheduler:
             job._s_successors &= self.jobs
             after = len(job.required)
             if self.verbose and before != after:
-                print(20 * '*', "WARNING: job {} has had {} requirements removed"
+                print(20 * '*',
+                      "WARNING: job {} has had {} requirements removed"
                       .format(job, before - after))
 
     ####################
@@ -125,18 +128,18 @@ class Scheduler:
         """
         Performs minimum sanity check
 
-        The purpose of this is primarily to check for cycles, 
+        The purpose of this is primarily to check for cycles,
         and/or missing starting points.
 
         It's not embedded in orchestrate because it's not strictly necessary
-        but it's safer to run this before calling orchestrate if one wants 
+        but it's safer to run this before calling orchestrate if one wants
         to type-check the jobs dependency graph early on.
 
-        It might also help to have a sanitized scheduler, 
+        It might also help to have a sanitized scheduler,
         but here again this is up to the caller
 
         RETURN:
-        a boolean that is True if the topology looks clear 
+        a boolean that is True if the topology looks clear
         """
         try:
             for job in self.scan_in_order():
@@ -187,11 +190,13 @@ class Scheduler:
             if not changed:
                 # this is wrong
                 raise Exception(
-                    "scheduler could not be scanned - most likely because of cycles")
-        # if we still have jobs here it's not good either, although it should not happen
-        # on a sanitized scheduler
+                    "scheduler could not be scanned"
+                    " - most likely because of cycles")
+        # if we still have jobs here it's not good either,
+        # although it should not happen on a sanitized scheduler
         if nb_marked != target_marked:
-            raise Exception("scheduler could not be scanned, {} jobs are not reachable from free jobs"
+            raise Exception("scheduler could not be scanned,"
+                            " {} jobs are not reachable from free jobs"
                             .format(target_marked - nb_marked))
 
     ####################
@@ -222,7 +227,7 @@ class Scheduler:
 
     def _ensure_future(self, job, window, loop):
         """
-        this is the hook that lets us make sure the created Task object have a 
+        this is the hook that lets us make sure the created Task object have a
         backlink pointer to its correponding job
         """
         #
@@ -238,8 +243,8 @@ class Scheduler:
 
     def _record_beginning(self, timeout):
         """
-        Called once at the beginning of orchestrate, this method computes the absolute
-        expiration date when a timeout is defined. 
+        Called once at the beginning of orchestrate, this method
+        computes the absolute expiration date when a timeout is defined.
         """
         if timeout is None:
             self.expiration = None
@@ -248,8 +253,9 @@ class Scheduler:
 
     def _remaining_timeout(self):
         """
-        Called each time orchestrate is about to call asyncio.wait(), this method
-        computes the timeout argument for wait - or None if orchestrate had no timeout
+        Called each time orchestrate is about to call asyncio.wait(),
+        this method computes the timeout argument for wait
+        - or None if orchestrate had no timeout
         """
         if self.expiration is None:
             return None
@@ -258,32 +264,38 @@ class Scheduler:
 
     async def _tidy_tasks(self, pending):
         """
-        Once orchestrate is done with its job, in order to tidy up the underlying 
-        Task objects that have not completed, it is necessary to cancel them and wait for them
-        according to the context, this can be with forever tasks, or because a timeout has occured
+        Once orchestrate is done, in order to tidy up the underlying
+        Task objects that have not completed, it is necessary to cancel
+        them and wait for them.
+
+        According to the context, this can be with forever tasks,
+        or because a timeout has occured.
         """
         if pending:
             for task in pending:
                 task.cancel()
             # wait for the forever tasks for a clean exit
-            # don't bother to set a timeout, as this is expected to be immediate
-            # since all tasks are canceled
+            # don't bother to set a timeout, as this is expected
+            # to be immediate since all tasks are canceled
             await asyncio.wait(pending)
 
     async def _tidy_tasks_exception(self, tasks):
         """
-        Similar but in order to clear the exceptions, we need to run gather() instead
+        Similar but in order to clear the exceptions,
+        we need to run gather() instead
         """
-        # do not use task._job.raised_exception() so we can use this with co_shutdown()
-        # tasks as well (these are not attached to a job)
+        # do not use task._job.raised_exception()
+        # so we can use this with co_shutdown() tasks as well
+        # (these are not attached to a job)
         exception_tasks = [task for task in tasks if task._exception]
         for task in exception_tasks:
             task.cancel()
             # if debug is turned on, provide details on the exceptions
             if debug:
-                self._show_task_stack(task, "TIDYING {}"
-                                      .format(task._job.repr(show_result_or_exception=False,
-                                                             show_requires=False)))
+                self._show_task_stack(
+                    task, "TIDYING {}"
+                    .format(task._job.repr(show_result_or_exception=False,
+                                           show_requires=False)))
         # don't bother to set a timeout, as this is expected to be immediate
         # since all tasks are canceled
         await asyncio.gather(*exception_tasks, return_exceptions=True)
@@ -308,16 +320,19 @@ class Scheduler:
 
     async def co_shutdown(self):
         """
-        The idea here is to send a message to all the jobs once the orchestration is over
-        Typically for example, several jobs sharing the same ssh connection will arrange for 
-        that connection to be kept alive across an scheduler, but there is a need to tear these 
-        connections down eventually
+        The idea here is to send a message to all the jobs once
+        orchestration is over. Typically for example, several jobs
+        sharing the same ssh connection will arrange for that connection
+        to be kept alive across an entire scheduler lifespan, but there is
+        a need to tear these connections down eventually.
         """
         await self._feedback(None, "scheduler is shutting down...")
         tasks = [asyncio.ensure_future(job.co_shutdown()) for job in self.jobs]
-        done, pending = await asyncio.wait(tasks, timeout=self._remaining_timeout())
+        done, pending = await asyncio.wait(tasks,
+                                           timeout=self._remaining_timeout())
         if len(pending) != 0:
-            print("WARNING: {}/{} co_shutdown() methods have not returned within timeout"
+            print("WARNING: {}/{} co_shutdown() methods"
+                  " have not returned within timeout"
                   .format(len(pending), len(self.jobs)))
             await self._tidy_tasks(pending)
         # xxx should consume any exception as well ?
@@ -326,7 +341,7 @@ class Scheduler:
     async def _feedback(self, jobs, state, force=False):
         """
         When self.verbose is set, provide feedback about the mentioned
-        jobs having reached this state 
+        jobs having reached this state
         if jobs is None, then state is a message to be shown as-is
         jobs may be a collection or an individual Job or Task object
         """
@@ -342,14 +357,16 @@ class Scheduler:
         for job in jobs:
             if not isinstance(job, AbstractJob):
                 job = job._job
-            print("{}: {}: {}".format(time.strftime(time_format),
-                                      state, job.repr(show_result_or_exception=self.verbose,
-                                                      show_requires=self.verbose)))
+            print("{}: {}: {}"
+                  .format(time.strftime(time_format),
+                          state,
+                          job.repr(show_result_or_exception=self.verbose,
+                                   show_requires=self.verbose)))
 
     async def co_orchestrate(self, timeout=None, jobs_window=None, loop=None):
         """coroutine: the primary entry point for running an ordered set of jobs.
 
-        Runs member jobs (that is, schedule their `co_run()` method) 
+        Runs member jobs (that is, schedule their `co_run()` method)
         in an order that satisfies their `required` relationsship.
 
         Proceeds to the end no matter what, except if either
@@ -423,12 +440,13 @@ class Scheduler:
             await self._feedback(done_ko, "RAISED EXC.")
 
             # nominally we have exactly one item in done
-            # it looks like the only condition where we have nothing in done is
+            # the only condition where we have nothing in done is
             # because a timeout occurred
-            # a little surprisingly, there are cases where done has more than one entry
+            # there are also cases where done has more than one entry
             # typically when 2 jobs have very similar durations
             if not done or len(done) == 0:
-                await self._feedback(None, "orchestrate: TIMEOUT occurred", force=True)
+                await self._feedback(None, "orchestrate: TIMEOUT occurred",
+                                     force=True)
                 # clean up
                 await self._feedback(pending, "ABORTING")
                 await self._tidy_tasks(pending)
@@ -444,9 +462,11 @@ class Scheduler:
             for done_task in done:
                 done_job = done_task._job
                 if done_job.raised_exception():
-                    critical_failure = critical_failure or done_job.is_critical()
-                    await self._feedback(done_job, "EXCEPTION occurred - on {}critical job"
-                                         .format("non-" if not done_job.is_critical() else ""))
+                    critical_failure = critical_failure \
+                                       or done_job.is_critical()
+                    await self._feedback(
+                        done_job, "EXCEPTION occurred - on {}critical job"
+                        .format("non-" if not done_job.is_critical() else ""))
                     # make sure these ones show up even if not in debug mode
                     if debug:
                         self._show_task_stack(done_task, "DEBUG")
@@ -454,8 +474,9 @@ class Scheduler:
                 await self._tidy_tasks(pending)
                 await self.co_shutdown()
                 self._failed_critical = True
-                await self._feedback(None, "Emergency exit upon exception in critical job",
-                                     force=True)
+                await self._feedback(
+                    None, "Emergency exit upon exception in critical job",
+                    force=True)
                 return False
 
             # are we done ?
@@ -469,7 +490,8 @@ class Scheduler:
                     print("orchestrate: {} CLEANING UP at iteration {} / {}"
                           .format(4 * '-', nb_jobs_done, nb_jobs_finite))
                 if self.verbose and nb_jobs_forever != len(pending):
-                    print("WARNING - apparent mismatch - {} forever jobs, {} are pending"
+                    print("WARNING - apparent mismatch"
+                          " - {} forever jobs, {} are pending"
                           .format(nb_jobs_forever, len(pending)))
                 await self._feedback(pending, "TIDYING forever")
                 await self._tidy_tasks(pending)
@@ -490,8 +512,8 @@ class Scheduler:
                 if candidate_next.is_running():
                     continue
                 # we can start only if all requirements are satisfied
-                # at this point entry points have is_running() -> return True so
-                # they won't run this code
+                # at this point entry points have is_running() -> return True
+                # so they won't run this code
                 requirements_ok = True
                 for req in candidate_next.required:
                     if not req.is_done():
@@ -519,7 +541,8 @@ class Scheduler:
         Print a complete list of jobs in some natural order, with their status
         summarized with a few signs.
 
-        Beware that this might raise an exception if rain_check() has returned False
+        Beware that this might raise an exception
+        if rain_check() has returned False
         """
         # so now we can refer to other jobs by their id when showing
         # requirements
@@ -533,7 +556,8 @@ class Scheduler:
 
     def list_safe(self):
         """
-        Print jobs in no specific order, works even if scheduler is broken wrt rain_check()
+        Print jobs in no specific order;
+        works even if scheduler is broken wrt rain_check()
         """
         for i, job in enumerate(self.jobs):
             print(i, job)
@@ -542,7 +566,7 @@ class Scheduler:
         """
         Designed for schedulers that have failed to orchestrate.
 
-        Print a complete report, that includes `list()` but also gives 
+        Print a complete report, that includes `list()` but also gives
         more stats and data.
         """
         nb_total = len(self.jobs)
@@ -583,16 +607,18 @@ class Scheduler:
             # show critical exceptions first
             for j in self.scan_in_order():
                 if j in criticals:
-                    self._show_task_stack(j, "stack for CRITICAL JOB {}"
-                                          .format(j.repr(show_result_or_exception=False,
-                                                         show_requires=False)))
+                    self._show_task_stack(
+                        j, "stack for CRITICAL JOB {}"
+                        .format(j.repr(show_result_or_exception=False,
+                                       show_requires=False)))
             # then exceptions that were not critical
             non_critical_exceptions = exceptions - criticals
             for j in self.scan_in_order():
                 if j in non_critical_exceptions:
                     if not self.verbose:
                         print(
-                            "non-critical: {}: exception {}".format(j.label(), j.raised_exception()))
+                            "non-critical: {}: exception {}"
+                            .format(j.label(), j.raised_exception()))
                     if self.verbose:
                         self._show_task_stack(
                             j, "non-critical job exception stack")
@@ -602,12 +628,13 @@ class Scheduler:
         Create a graph that depicts the jobs and their requires relationships
         in dot format for graphviz's `dot` utility.
 
-        For example a PNG image can be then obtained by post-processing that dotfile with e.g. 
+        For example a PNG image can be then obtained
+        by post-processing that dotfile with e.g.
 
         `dot -Tpng foo.dot -o foo.png`
 
-        See also https://en.wikipedia.org/wiki/DOT_(graph_description_language) for a list of
-        tools that support the dot format.
+        See also https://en.wikipedia.org/wiki/DOT_(graph_description_language)
+        for a list of tools that support the dot format.
         """
         self._set_s_labels()
 

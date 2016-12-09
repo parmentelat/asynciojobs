@@ -19,44 +19,42 @@ with open(os.path.join(path, "randwait-noarg.sh")) as f:
 # this one accepts one message argument
 bash_script = os.path.join(path, "randwait-arg.sh")
 
+
 ####################
-def two_passes(gateway, node_ids, synchro, debug=False, before=True, after=True):
+def two_passes(gateway, node_ids, synchro, debug=False,
+               before=True, after=True):
 
     """
-    synchro = True : wait for pass1 to complete on all nodes before triggering pass2
+    synchro = True : wait for pass1 to complete
+                     on all nodes before triggering pass2
     synchro = False: run pass2 on node X as soon as pass1 is done on node X
     """
-    
-    gateway_node = SshNode(hostname = gateway, username="root",
-                           client_keys = load_agent_keys())
-    
+
+    gateway_node = SshNode(hostname=gateway, username="root",
+                           client_keys=load_agent_keys())
 
     msg = "synchro={}".format(synchro)
 
-    nodenames = [ "fit{:02d}".format(id) for id in node_ids ]
-    nodes = [ SshNode(gateway=gateway_node,
-                      hostname=nodename, username="root",
-                      formatter=ColonFormatter(),
-                      debug=debug,
-                  )
-                for nodename in nodenames ]
+    nodenames = ["fit{:02d}".format(id) for id in node_ids]
+    nodes = [SshNode(gateway=gateway_node,
+                     hostname=nodename, username="root",
+                     formatter=ColonFormatter(),
+                     debug=debug)
+             for nodename in nodenames]
 
     print(40*'*', msg)
-    jobs1 = [ SshJob(node=node,
-                     command = [ "/bin/bash -c '{}'".format(bash_oneliner)],
-                     label="{} - pass1 on {}".format(msg, node.hostname),
-    )
-              for node in nodes ]
-    
+    jobs1 = [SshJob(node=node,
+                    command=["/bin/bash -c '{}'".format(bash_oneliner)],
+                    label="{} - pass1 on {}".format(msg, node.hostname))
+             for node in nodes]
 
-    middle = Job(aprint( 20*'=' + 'middle'), label='middle')
+    middle = Job(aprint(20*'=' + 'middle'), label='middle')
 
-    jobs2 = [ SshJobScript(node=node,
-                           command = [bash_script, 'pass2'],
-                           label="{} - pass2 on {}".format(msg, node.hostname),
-                       )
-              for node in nodes ]
-    
+    jobs2 = [SshJobScript(node=node,
+                          command=[bash_script, 'pass2'],
+                          label="{} - pass2 on {}".format(msg, node.hostname))
+             for node in nodes]
+
     for j1 in jobs1:
         middle.requires(j1)
 
@@ -95,7 +93,8 @@ if __name__ == '__main__':
     # -2 : second test
     # -3 : both
     parser.add_argument("-s", "--scenarii", type=int, default=3)
-    parser.add_argument("node_ids", nargs="+", type=int, default=[1,2,3])
+    parser.add_argument("node_ids", nargs="+", type=int,
+                        default=[1, 2, 3])
 
     args = parser.parse_args()
     debug = args.debug
@@ -114,4 +113,3 @@ if __name__ == '__main__':
         two_passes(gateway, node_ids, True, debug, before, after)
     if scenarii & 2:
         two_passes(gateway, node_ids, False, debug, before, after)
-    

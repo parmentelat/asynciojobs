@@ -1,17 +1,24 @@
 #!/usr/bin/env python3
 
 """
-A simple tool to define ad-hoc 'jobs' 
+A simple tool to define ad-hoc 'jobs'
 """
 
 import time
 import math
 import asyncio
+import unittest
+
+from asynciojobs import AbstractJob, PrintJob
+from asynciojobs import Job as J
+from asynciojobs import Sequence as Seq
+from asynciojobs import Scheduler
 
 
+##############################
 def ts():
-    """ 
-    a time stamp with millisecond 
+    """
+    a time stamp with millisecond
     """
     # apparently this is not supported by strftime ?!?
     cl = time.time()
@@ -19,23 +26,21 @@ def ts():
     return time.strftime("%M-%S-") + "{:03d}".format(ms)
 
 ##############################
-from asynciojobs import AbstractJob, PrintJob
-
-##############################
 async def _sl(n, middle, emergency):
     """
 _sl(timeout, middle=False) returns a future that specifies an job like this:
 * print incoming `->`
 * wait for the time out
-* print outgoing `<-` 
+* print outgoing `<-`
 * return the timeout
 
 _sl(timeout, middle=True) returns a future that specifies an job like this:
 * print incoming `->`
 * wait for half the time out
-* print inside `==` - and optionnally raise an exception there if `emergency` is set
+* print inside `==` - and optionnally raise an exception there
+  if `emergency` is set
 * wait for the second half of the time out
-* print outgoing `<-` 
+* print outgoing `<-`
 * return the timeout
 
 """
@@ -99,17 +104,11 @@ async def co_exception(n):
     raise ValueError(10**6 * n)
 
 ####################
-from asynciojobs import Job as J
-from asynciojobs import Sequence as Seq
-from asynciojobs import Scheduler
-
 # shortcuts
 SLJ = SleepJob
 TJ = TickJob
 
 sep = 40 * '*' + ' '
-
-import unittest
 
 
 def check_required_types(scheduler, message):
@@ -256,7 +255,6 @@ class Tests(unittest.TestCase):
         a2 = J(sl(0.1), label=2)
         s = Seq(a1, a2)
         a3 = J(sl(0.1), label=3, required=s)
-        #e = Scheduler(s, a3)
         sched = Scheduler()
         sched.update((s, a3))
         list_sep(sched, sep + "sequence3")

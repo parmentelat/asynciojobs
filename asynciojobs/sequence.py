@@ -4,15 +4,15 @@ from .job import AbstractJob
 class Sequence:
     """A Sequence is an object that organizes a set
     of AbstratJobs in a sequence. Its main purpose is to add
-    a single `required` relationship per job in the sequence, 
+    a single `required` relationship per job in the sequence,
     except the first that instead that receives as its `required`
      the sequence's requirements.
 
-    If `scheduler` is passed to the sequence's constructor, 
+    If `scheduler` is passed to the sequence's constructor,
     all the jobs passed to the sequence are added in that scheduler.
 
-    Sequences are not first-class citizens, in the sense that 
-    the scheduler primarily ignores these objects, only the jobs inside 
+    Sequences are not first-class citizens, in the sense that
+    the scheduler primarily ignores these objects, only the jobs inside
     the sequence matter.
 
     However a sequence can be used mostly every place where a job
@@ -24,8 +24,8 @@ class Sequence:
         """
         Expects a list of jobs or sequences as input
 
-        Required jobs can be passed at object-creation time, 
-        and/or extended later on with `requires()` 
+        Required jobs can be passed at object-creation time,
+        and/or extended later on with `requires()`
         """
         self.jobs = self._flatten(sequences_or_jobs)
         # create the chain of requirements in the sequence

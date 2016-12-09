@@ -102,3 +102,10 @@ infra-doc:
 	ssh root@nepi-ng.inria.fr "(cd $(INFRA-PATH); git reset --hard HEAD; git pull; make publish)"
 
 .PHONY: publish infra-doc
+
+##########
+pep8:
+	git ls-files | grep '\.py$$' | grep -v '/conf.py$$' | xargs pep8
+
+.PHONY: pep8
+ 

@@ -1,5 +1,6 @@
 import asyncio
 
+
 class Window:
 
     def __init__(self, jobs_window, loop):
@@ -10,15 +11,15 @@ class Window:
         self.loop = loop
         self.queue = asyncio.Queue(maxsize=jobs_window, loop=loop)
 
-    # a decorator around a coroutine, 
+    # a decorator around a coroutine,
     # that will first get a slot in the queue
-    # 
+    #
     # REMEMBER that this object will need to be CALLED to become
     # a future itself
-    # 
+    #
     def run_job(self, job):
         async def wrapped():
-            # put anything to take a slot in the queue 
+            # put anything to take a slot in the queue
             await self.queue.put(1)
             job._running = True
             value = await job.co_run()
@@ -27,7 +28,7 @@ class Window:
             # return the right thing
             return value
         return wrapped
-            
+
     # for debugging
     async def monitor(self, period=3):
         await asyncio.sleep(period)

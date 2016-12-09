@@ -3,7 +3,7 @@ import sys
 import asyncio
 
 debug = False
-#debug = True
+# debug = True
 
 # my first inclination had been to specialize asyncio.Task
 # it does not work well though, because you want to model
@@ -11,17 +11,19 @@ debug = False
 # but in asyncio, creating a Task object implies scheduling that for execution
 
 # so, let's have it the other way around
-# what we need is a way to attach our own Job instance to the corresp. Task instance
-# (and back) right after Task creation, so that
-# (*) once asyncio.wait is done, we can easily find out wich Jobs are done or pending
-# (*) from one Job, easily know what its status is by looking into its Task obj
-#     (if already scheduled)
+# what we need is a way to attach our own Job instance to the corresp.
+# Task instance (and back) right after Task creation, so that
+# (*) once asyncio.wait is done, we can easily find out
+#     wich Jobs are done or pending
+# (*) from one Job, easily know what its status is by
+#     looking into its Task obj - if already scheduled
 
 # Scheduler == graph
 # Job == node
 
 """
-This module defines `AbstractJob` that is the base class for all the jobs in a Scheduler.
+This module defines `AbstractJob` that is the base class for all the jobs
+in a Scheduler.
 
 It also defines a couple of simple job classes.
 """
@@ -31,17 +33,20 @@ class AbstractJob:
     """AbstractJob is a virtual class:
 
     * it offers some very basic graph-related features to model requirements
-        'a la' makefile
-    * its subclasses are expected to implement a `co_run()` and a `co_shutdown()` methods
-        that specifies the actual behaviour of the job, as coroutines
+      'a la' makefile
+    * its subclasses are expected to implement a `co_run()`
+      and a `co_shutdown()` methods that specifies
+      the actual behaviour of the job, as coroutines
 
-    It's mostly a companion class to the Scheduler class, that triggers these methods
+    It's mostly a companion class to the Scheduler class,
+    that triggers these methods
 
-    In addition, each job can be created with 
+    In addition, each job can be created with
 
-    * boolean flag 'forever', if set, means the job is not returning at all and runs forever
-    in this case Scheduler.orchestrate will not wait for that job, and will terminate it once all
-    the regular i.e. not-forever jobs are done
+    * boolean flag 'forever', if set, means the job is not returning
+    at all and runs forever
+    in this case Scheduler.orchestrate will not wait for that job,
+    and will terminate it once all the regular i.e. not-forever jobs are done
 
     * an optional label - for convenience only
 
@@ -53,13 +58,14 @@ class AbstractJob:
 
     ------
 
-    Besides, if a job instance has a `details()` method, then this is used to produce 
-    additional details for that job when running Scheduler.list(details=True)
+    Besides, if a job instance has a `details()` method,
+    then this is used to produce additional details for that job
+    when running Scheduler.list(details=True)
 
     """
 
-    def __init__(self, forever=False, label=None, critical=False, required=None,
-                 scheduler=None):
+    def __init__(self, forever=False, label=None, critical=False,
+                 required=None, scheduler=None):
         self.forever = forever
         self.critical = critical
         # access label through a method so we can invoke default_label() if
@@ -71,8 +77,9 @@ class AbstractJob:
         # convenience again
         if scheduler is not None:
             scheduler.add(self)
-        # once submitted in the asyncio loop/scheduler, the `co_run()` gets embedded in a
-        # Task object, that is our handle when talking to asyncio.wait
+        # once submitted in the asyncio loop/scheduler,
+        # `co_run()` gets embedded in a Task object,
+        # that is our handle when talking to asyncio.wait
         self._task = None
         # this is updated by the Window class when the job makes it through
         self._running = False
@@ -94,13 +101,15 @@ class AbstractJob:
 
         * first there is a plain label, that may/should be set at creation time
 
-        * second, when showing references (like the jobs that a given job requires), 
-        we show ids like '01' and similar.
-        Except that, the job itself has no idea about that at first, it's the Scheduler
-        instance that decides on that. This is what `_s_label` is for.
+        * second, when showing references (like the jobs that a given job
+          requires), we show ids like '01' and similar.
+        Except that, the job itself has no idea about that at first,
+        it's the Scheduler instance that decides on that.
+        This is what `_s_label` is for.
 
-        * if use_s_label is set, looks in self._s_label that is expected to have been set by
-        companion class Scheduler; if not set returns a warning msg '??'
+        * if use_s_label is set, looks in self._s_label that is expected
+        to have been set by companion class Scheduler;
+        if not set returns a warning msg '??'
 
         * otherwise, looks for the label  used at creation-time, and otherwise
         runs its class's `default_label()` method
@@ -130,8 +139,8 @@ class AbstractJob:
         return cls._has_support_for_unicode
 
     # unicode version
-    #_c_frowning_face = "\u2639" # ☹
-    #_c_smiling_face  = "\u263b" # ☻
+    # _c_frowning_face = "\u2639" # ☹
+    # _c_smiling_face  = "\u263b" # ☻
     _c_saltire = "\u2613"  # ☓
     _c_circle_arrow = "\u21ba"  # ↺
     _c_black_flag = "\u2691"  # ⚑
@@ -201,9 +210,9 @@ class AbstractJob:
         * did it trigger an exception
 
         LifeCycle: see `is_done` for more details; in un-windowed schedulers,
-        there is no distinction between scheduled and running. 
+        there is no distinction between scheduled and running.
 
-        In windowed orchestrations, a job that is scheduled but not running 
+        In windowed orchestrations, a job that is scheduled but not running
         is waiting for a slot in the global window.
         """
         if self._detect_support_for_unicode():
@@ -213,7 +222,8 @@ class AbstractJob:
 
     def repr(self, show_requires=True, show_result_or_exception=True):
         """
-        returns a string that describes this job instance, with details as specified
+        returns a string that describes this job instance,
+        with details as specified
         """
         info = self.short()
         info += " <{} `{}`>".format(type(self).__name__, self.label())
@@ -221,9 +231,11 @@ class AbstractJob:
         if show_result_or_exception:
             exception = self.raised_exception()
             if exception:
-                critical_msg = "CRIT. EXC." if self.is_critical() else "exception"
-                info += "!! {} => {}:{}!!".format(critical_msg,
-                                                  type(exception).__name__, exception)
+                critical_msg = "CRIT. EXC." if self.is_critical() \
+                               else "exception"
+                info += "!! {} => {}:{}!!"\
+                        .format(critical_msg,
+                                type(exception).__name__, exception)
             elif self.is_done():
                 info += "[[ -> {}]]".format(self.result())
 
@@ -280,15 +292,16 @@ class AbstractJob:
         a boolean that is true if the job has not been scheduled
         already, which means that one of its requirements is not fulfilled.
 
-        Implies `not is_scheduled()` and a fortiori `not is_running` and `not is_done()`
+        Implies `not is_scheduled()` and so a fortiori
+        `not is_running` and `not is_done()`
 
         """
         return self._task is None
 
     def is_scheduled(self):
         """
-        boolean that tells if the job has been scheduled; 
-        if True, the job's requirements are met and it has 
+        boolean that tells if the job has been scheduled;
+        if True, the job's requirements are met and it has
         proceeded to the windowing system; equivalent to `not is_idle()`
         """
         return self._task is not None
@@ -305,15 +318,17 @@ class AbstractJob:
         """
         a job lifecycle is idle → scheduled → running → done
 
-        a boolean that tells if the job has completed. 
+        a boolean that tells if the job has completed.
 
         Implies `is_scheduled()` and `is_running()`
         """
-        return self._task is not None and self._task._state == asyncio.futures._FINISHED
+        return self._task is not None \
+            and self._task._state == asyncio.futures._FINISHED
 
     def raised_exception(self):
         """
-        returns an exception if the job has completed by raising an exception, None otherwise
+        returns an exception if the job has completed by raising an exception,
+        None otherwise
         """
         return self._task is not None and self._task._exception
 
@@ -325,8 +340,8 @@ class AbstractJob:
 
     def result(self):
         """
-        when this job is completed and has not raised an exception, this 
-        method lets you retrieve the job's result. i.e. the value returned 
+        when this job is completed and has not raised an exception, this
+        method lets you retrieve the job's result. i.e. the value returned
         by its `co_run()` method
         """
         if not self.is_done():
@@ -349,7 +364,7 @@ class AbstractJob:
 
     def standalone_run(self):
         """
-        A convenience helper that just runs this one job on its own 
+        A convenience helper that just runs this one job on its own
 
         Mostly useful for debugging the internals of that job,
         e.g. for checking for gross mistakes and other exceptions
@@ -400,11 +415,14 @@ class Job(AbstractJob):
 
 class PrintJob(AbstractJob):
     """
-    A job that just  does print on messages, and optionnally sleeps for some time
+    A job that just  does print on messages,
+    and optionnally sleeps for some time
 
-    sleep is an optional float that tells how long to sleep after the messages get printed
+    sleep is an optional float that tells how long
+    to sleep after the messages get printed
 
-    banner is an optional separation line, like 40*'='; it won't make it into details()
+    banner is an optional separation line,
+    like 40*'='; it won't make it into details()
     """
 
     def __init__(self, *messages, sleep=None, banner=None,
