@@ -14,14 +14,6 @@ if not (major == 3 and minor >= 5):
 
 long_description = "See notebook at https://github.com/parmentelat/asynciojobs/blob/master/README.ipynb"
 
-### requirements - used by pip install
-# *NOTE* for ubuntu: also run this beforehand
-# apt-get -y install libffi-dev
-# which is required before pip can install asyncssh
-required_modules = [
-    'asyncssh',
-]
-
 setuptools.setup(
     name             = "asynciojobs",
     version          = version,
@@ -39,6 +31,6 @@ setuptools.setup(
         "Environment :: Console",
         "Intended Audience :: Information Technology",
         "Programming Language :: Python :: 3.5",
-        ],
+    ],
 )
 

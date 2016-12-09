@@ -72,6 +72,9 @@ check:
 
 ########## sphinx
 # Extensions (see sphinx/source/conf.py)
+# * for type hints - this is rather crucial
+# https://github.com/agronholm/sphinx-autodoc-typehints
+# pip3 install sphinx-autodoc-typehints
 # * for coroutines - useful to mark async def's as *coroutine*
 # http://pythonhosted.org/sphinxcontrib-asyncio/
 # pip3 install sphinxcontrib-asyncio
