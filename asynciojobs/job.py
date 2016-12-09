@@ -280,7 +280,7 @@ class AbstractJob:
         Implies `not is_scheduled()` and a fortiori `not is_running` and `not is_done()`
 
         """
-        return self._taask is None
+        return self._task is None
     def is_scheduled(self):
         """
         boolean that tells if the job has been scheduled; 
