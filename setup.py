@@ -16,6 +16,8 @@ long_description = \
                    "See notebook at https://github.com/parmentelat/" \
                    "asynciojobs/blob/master/README.ipynb"
 
+required_modules = []
+
 setuptools.setup(
     name="asynciojobs",
     version=version,
