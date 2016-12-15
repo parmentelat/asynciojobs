@@ -1,5 +1,12 @@
 # ChangeLog
 
+## 0.5.3 - 2016 Dec 15
+
+* only minor changes, essentially PEP8-friendly
+* with a very shy start at type hints
+* but documentation w/ type hints is still unclear
+  (in fact even without them, I can see weird extra '*')
+
 ## 0.5.2 - 2016 Dec 8
 
 * setup uses setuptools and no distutils anymore
