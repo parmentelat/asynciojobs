@@ -1,6 +1,6 @@
 # ChangeLog
 
-## 0.5.3 - 2016 Dec 15
+## 0.5.4 - 2016 Dec 15
 
 * only minor changes, essentially PEP8-friendly
 * with a very shy start at type hints
