@@ -39,7 +39,7 @@ from asynciojobs.version import version as asynciojobs_version
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.viewcode',
-#    'sphinxcontrib.asyncio',
+    'sphinxcontrib.asyncio',
 #    'sphinx_autodoc_typehints',
 ]
 
