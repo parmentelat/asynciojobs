@@ -39,8 +39,8 @@ from asynciojobs.version import version as asynciojobs_version
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.viewcode',
-    'sphinxcontrib.asyncio',
-    'sphinx_autodoc_typehints',
+#    'sphinxcontrib.asyncio',
+#    'sphinx_autodoc_typehints',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
