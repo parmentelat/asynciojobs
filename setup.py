@@ -26,8 +26,6 @@ setuptools.setup(
     description="A simplistic orchestration engine for asyncio-based jobs",
     long_description=long_description,
     license="CC BY-SA 4.0",
-    download_url="http://github/build.onelab.eu/"
-    "asynciojobs/asynciojobs-{v}.tar.gz".format(v=version),
     url="http://nepi-ng.inria.fr/asynciojobs",
     packages=['asynciojobs'],
     install_requires=required_modules,
