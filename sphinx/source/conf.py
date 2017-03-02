@@ -40,6 +40,8 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.viewcode',
     'sphinxcontrib.asyncio',
+# this breaks the build on readthedocs.io,
+# and it does not seem necessary anyways
 #    'sphinx_autodoc_typehints',
 ]
 
