@@ -1,5 +1,9 @@
 
-<span style="float:left;">Licence CC BY-NC-ND</span><span style="float:right;">Thierry Parmentelat - Inria&nbsp;<img src="media/inria-25.png" style="display:inline"></span><br/>
+<style>div.title-slide {    width: 100%;    display: flex;    flex-direction: row;            /* default value; can be omitted */    flex-wrap: nowrap;              /* default value; can be omitted */    justify-content: space-between;}</style><div class="title-slide">
+<span style="float:left;">Licence CC BY-NC-ND</span>
+<span>Thierry Parmentelat - Inria</span>
+<span><img src="media/inria-25.png" style="display:inline" /></span>
+</div>
 
 # README
 
@@ -149,7 +153,7 @@ b1, b2, b3 = (Job(in_out(0.1), label="b1"),
 b2.requires(b1)
 ```
 
-Now `b3` needs `b1` to be finished before it can start. And so only the 2 first coroutines get started at the beginning, and only once b1 has finished does b3 start.
+Now `b2` needs `b1` to be finished before it can start. And so only the 2 first coroutines get started at the beginning, and only once b1 has finished does b2 start.
 
 
 ```python
@@ -347,10 +351,10 @@ Note that `orchestrate` always terminates as soon as all the non-`forever` jobs 
 sc.list()
 ```
 
-    01   ☉ ☓   <Job `c2`>[[ -> 4.0]]
-    02   ☉ ☓   <Job `c1`>[[ -> 2.0]]
-    03   ☉ ↺ ∞ <Job `monitor`>
-    04   ☉ ☓   <Job `c3`>[[ -> 3.0]] - requires {02}
+    01   ☉ ↺ ∞ <Job `monitor`>
+    02   ☉ ☓   <Job `c2`>[[ -> 4.0]]
+    03   ☉ ☓   <Job `c1`>[[ -> 2.0]]
+    04   ☉ ☓   <Job `c3`>[[ -> 3.0]] - requires {03}
 
 
 ### Example D : specifying a global timeout
@@ -371,10 +375,10 @@ sd = Scheduler(j)
 sd.orchestrate(timeout=0.25)
 ```
 
-    19:27:36: forever 0
-    19:27:36: forever 1
-    19:27:36: forever 2
-    19-27-36: SCHEDULER: orchestrate: TIMEOUT occurred
+    14:11:00: forever 0
+    14:11:01: forever 1
+    14:11:01: forever 2
+    14-11-01: SCHEDULER: orchestrate: TIMEOUT occurred
 
 
 
@@ -459,7 +463,7 @@ sf.list()
 
     -> in_out(0.2)
     <- in_out(0.2)
-    19-27-38: SCHEDULER: Emergency exit upon exception in critical job
+    14-11-02: SCHEDULER: Emergency exit upon exception in critical job
     orchestrate: False
     01   ☉ ☓   <Job `NOLABEL`>[[ -> 200.0]]
     02 ⚠ ★ ☓   <Job `boom`>!! CRIT. EXC. => Exception:boom after 0.2s!! - requires {01}
@@ -494,21 +498,21 @@ print("total duration = {}s".format(end-beg))
 
     7-th job
     Sleeping for 0.5s
-    5-th job
-    Sleeping for 0.5s
-    2-th job
-    Sleeping for 0.5s
     3-th job
-    Sleeping for 0.5s
-    6-th job
-    Sleeping for 0.5s
-    4-th job
-    Sleeping for 0.5s
-    8-th job
     Sleeping for 0.5s
     1-th job
     Sleeping for 0.5s
-    total duration = 1.011382818222046s
+    4-th job
+    Sleeping for 0.5s
+    5-th job
+    Sleeping for 0.5s
+    6-th job
+    Sleeping for 0.5s
+    8-th job
+    Sleeping for 0.5s
+    2-th job
+    Sleeping for 0.5s
+    total duration = 1.0105478763580322s
 
 
 ## Customizing jobs

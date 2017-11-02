@@ -2,10 +2,10 @@ CONVERT = jupyter nbconvert --ExecutePreprocessor.enabled=True --ExecutePreproce
 NBNORM = ../flotpython/tools/nbnorm.py
 
 norm:
-	$(NBNORM) --author "Thierry Parmentelat - Inria" README.ipynb
+	$(NBNORM) --author "Thierry Parmentelat - Inria" README.ipynb -l media/inria-25.png
 
 # readme is NOT expected to be redone on a doc-publishing website
-# remember that ReADME.md is part of the git repo
+# remember that README.md is part of the git repo
 all: readme
 readme: README.md
 README.md: README-eval.ipynb
