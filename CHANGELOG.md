@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.5.5 - 2017 Nov 2
+
+* just flushing a pile on harmless cosmetic changes
+
 ## 0.5.4 - 2016 Dec 15
 
 * only minor changes, essentially PEP8-friendly
