@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+
+"""
+This module defines `AbstractJob` that is the base class for all the jobs
+in a Scheduler.
+
+It also defines a couple of simple job classes.
+"""
+
 import sys
 import asyncio
 
@@ -20,13 +28,6 @@ debug = False
 
 # Scheduler == graph
 # Job == node
-
-"""
-This module defines `AbstractJob` that is the base class for all the jobs
-in a Scheduler.
-
-It also defines a couple of simple job classes.
-"""
 
 
 class AbstractJob:
@@ -134,7 +135,7 @@ class AbstractJob:
             try:
                 cls._c_saltire.encode(sys.stdout.encoding)
                 cls._has_support_for_unicode = True
-            except UnicodeEncodeError as e:
+            except UnicodeEncodeError:
                 cls._has_support_for_unicode = False
         return cls._has_support_for_unicode
 
@@ -442,7 +443,7 @@ class PrintJob(AbstractJob):
             if self.sleep:
                 print("Sleeping for {}s".format(self.sleep))
                 await asyncio.sleep(self.sleep)
-        except Exceptin as e:
+        except Exception:
             import traceback
             traceback.print_exc()
 

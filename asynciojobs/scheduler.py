@@ -1,8 +1,15 @@
 #!/usr/bin/env python3
 
+"""
+Implementation of the Scheduler class, that is defined
+from a set of jobs with dependencies between them, and
+will bring them all to their epilogue.
+"""
+
+from typing import Iterable, Union
+
 import time
 import io
-import re
 
 import asyncio
 
@@ -11,17 +18,11 @@ from .sequence import Sequence
 from .window import Window
 
 ########
-from typing import Iterable, Union
 Schedulable = Union[AbstractJob, Sequence]
 
 # will hopefully go away some day
 debug = False
 # debug = True
-
-"""
-An attempt at some plain markdown
-"""
-
 
 class Scheduler:
     """An Scheduler instance works on a set of Job objects
@@ -41,7 +42,7 @@ class Scheduler:
     time, including of course once the orchestration is complete.
     """
 
-    def __init__(self,  *jobs_or_sequences: Iterable[Schedulable],
+    def __init__(self, *jobs_or_sequences: Iterable[Schedulable],
                  verbose=False):
         """
         Initialize from an iterable of jobs or sequences; their order is
@@ -95,7 +96,7 @@ class Scheduler:
             return "FINE"
 
     ####################
-    def orchestrate(self, *args,  loop=None, **kwds):
+    def orchestrate(self, *args, loop=None, **kwds):
         """
         a synchroneous wrapper around `co_orchestrate()`
         """
@@ -142,12 +143,12 @@ class Scheduler:
         a boolean that is True if the topology looks clear
         """
         try:
-            for job in self.scan_in_order():
+            for _ in self.scan_in_order():
                 pass
             return True
-        except Exception as e:
+        except Exception as exc:
             if self.verbose:
-                print("rain_check failed", e)
+                print("rain_check failed", exc)
             return False
 
     ####################
@@ -353,7 +354,7 @@ class Scheduler:
                 time.strftime(time_format), state))
             return
         if not isinstance(jobs, (list, set, tuple)):
-            jobs = jobs,
+            jobs = (jobs,)
         for job in jobs:
             if not isinstance(job, AbstractJob):
                 job = job._job
@@ -573,7 +574,6 @@ class Scheduler:
         done = {j for j in self.jobs if j.is_done()}
         nb_done = len(done)
         running = {j for j in self.jobs if j.is_running()}
-        nb_running = len(running)
         ongoing = running - done
         nb_ongoing = len(ongoing)
         idle = self.jobs - running
