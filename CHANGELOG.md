@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.5.6 - 2017 Dec 18
+
+* bugfix, remove one occurrence of Exceptin instead of Exception
+
 ## 0.5.5 - 2017 Nov 2
 
 * just flushing a pile on harmless cosmetic changes
