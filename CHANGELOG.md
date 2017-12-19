@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.5.7 - 2017 Dec 19
+
+* minor tweaks suggested by pylint
+
 ## 0.5.6 - 2017 Dec 18
 
 * bugfix, remove one occurrence of Exceptin instead of Exception
