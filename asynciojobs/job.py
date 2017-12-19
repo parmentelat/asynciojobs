@@ -281,8 +281,8 @@ class AbstractJob:
                 if requirement.jobs:
                     self.required.add(requirement.jobs[-1])
             elif isinstance(requirement, (tuple, list)):
-                for r in requirement:
-                    self.requires(r)
+                for req in requirement:
+                    self.requires(req)
             # not quite sure about what do to here in fact
             else:
                 print("WARNING: fishy requirement in AbstractJob.requires")

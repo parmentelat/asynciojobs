@@ -331,7 +331,7 @@ class Scheduler:
         tasks = [asyncio.ensure_future(job.co_shutdown()) for job in self.jobs]
         done, pending = await asyncio.wait(tasks,
                                            timeout=self._remaining_timeout())
-        if len(pending) != 0:
+        if pending:
             print("WARNING: {}/{} co_shutdown() methods"
                   " have not returned within timeout"
                   .format(len(pending), len(self.jobs)))
@@ -445,7 +445,7 @@ class Scheduler:
             # because a timeout occurred
             # there are also cases where done has more than one entry
             # typically when 2 jobs have very similar durations
-            if not done or len(done) == 0:
+            if not done:
                 await self._feedback(None, "orchestrate: TIMEOUT occurred",
                                      force=True)
                 # clean up
@@ -655,11 +655,11 @@ class Scheduler:
         with open(filename, 'w') as output:
             output.write("digraph G {\n")
             for job in self.scan_in_order():
-                for r in job.required:
+                for req in job.required:
                     output.write("{} -> {};\n"
-                                 .format(label_to_id(r),
+                                 .format(label_to_id(req),
                                          label_to_id(job)))
-                    exported.update((job, r))
+                    exported.update((job, req))
             for isolated in self.jobs - exported:
                 output.write("{};\n".format(label_to_id(isolated)))
             output.write("}\n")
