@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.5.8 - 2018 Jan 16
+
+* introduce dot_label() on jobs as a means
+  to override label() when producing a dotfile
+
 ## 0.5.7 - 2017 Dec 19
 
 * minor tweaks suggested by pylint
