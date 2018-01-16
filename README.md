@@ -105,8 +105,8 @@ sa.orchestrate()
 ```
 
     -> in_out(0.2)
-    -> in_out(0.25)
     -> in_out(0.1)
+    -> in_out(0.25)
     <- in_out(0.1)
     <- in_out(0.2)
     <- in_out(0.25)
@@ -329,8 +329,8 @@ sc = Scheduler(c1, c2, c3, c4)
 sc.orchestrate()
 ```
 
-    BUS: -> in_out(0.4)
     BUS: -> in_out(0.2)
+    BUS: -> in_out(0.4)
     BUS: <- in_out(0.2)
     BUS: -> in_out(0.3)
     BUS: <- in_out(0.4)
@@ -351,10 +351,10 @@ Note that `orchestrate` always terminates as soon as all the non-`forever` jobs 
 sc.list()
 ```
 
-    01   ☉ ↺ ∞ <Job `monitor`>
-    02   ☉ ☓   <Job `c2`>[[ -> 4.0]]
-    03   ☉ ☓   <Job `c1`>[[ -> 2.0]]
-    04   ☉ ☓   <Job `c3`>[[ -> 3.0]] - requires {03}
+    01   ☉ ☓   <Job `c1`>[[ -> 2.0]]
+    02   ☉ ↺ ∞ <Job `monitor`>
+    03   ☉ ☓   <Job `c2`>[[ -> 4.0]]
+    04   ☉ ☓   <Job `c3`>[[ -> 3.0]] - requires {01}
 
 
 ### Example D : specifying a global timeout
@@ -375,10 +375,10 @@ sd = Scheduler(j)
 sd.orchestrate(timeout=0.25)
 ```
 
-    14:11:00: forever 0
-    14:11:01: forever 1
-    14:11:01: forever 2
-    14-11-01: SCHEDULER: orchestrate: TIMEOUT occurred
+    20:41:08: forever 0
+    20:41:08: forever 1
+    20:41:08: forever 2
+    20-41-08: SCHEDULER: orchestrate: TIMEOUT occurred
 
 
 
@@ -463,7 +463,7 @@ sf.list()
 
     -> in_out(0.2)
     <- in_out(0.2)
-    14-11-02: SCHEDULER: Emergency exit upon exception in critical job
+    20-41-09: SCHEDULER: Emergency exit upon exception in critical job
     orchestrate: False
     01   ☉ ☓   <Job `NOLABEL`>[[ -> 200.0]]
     02 ⚠ ★ ☓   <Job `boom`>!! CRIT. EXC. => Exception:boom after 0.2s!! - requires {01}
@@ -496,23 +496,23 @@ print("total duration = {}s".format(end-beg))
 
 ```
 
-    7-th job
-    Sleeping for 0.5s
-    3-th job
-    Sleeping for 0.5s
     1-th job
     Sleeping for 0.5s
-    4-th job
+    2-th job
     Sleeping for 0.5s
-    5-th job
+    3-th job
     Sleeping for 0.5s
     6-th job
     Sleeping for 0.5s
     8-th job
     Sleeping for 0.5s
-    2-th job
+    4-th job
     Sleeping for 0.5s
-    total duration = 1.0105478763580322s
+    7-th job
+    Sleeping for 0.5s
+    5-th job
+    Sleeping for 0.5s
+    total duration = 1.0054750442504883s
 
 
 ## Customizing jobs
