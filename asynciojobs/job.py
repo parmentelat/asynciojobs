@@ -106,14 +106,16 @@ class AbstractJob:
           requires), we show ids like '01' and similar.
         Except that, the job itself has no idea about that at first,
         it's the Scheduler instance that decides on that.
-        This is what `_s_label` is for.
 
-        * if use_s_label is set, looks in self._s_label that is expected
+        So:
+
+        * if use_s_label is True, looks in self._s_label that is expected
         to have been set by companion class Scheduler;
         if not set returns a warning msg '??'
 
-        * otherwise, looks for the label  used at creation-time, and otherwise
-        runs its class's `default_label()` method
+        * otherwise, i.e. if use_s_label is False, looks for the label
+          used at creation-time, and otherwise runs its class's
+          `default_label()` method
 
         """
         if use_s_label:
@@ -125,6 +127,18 @@ class AbstractJob:
                 return self.default_label()
             else:
                 return "NOLABEL"
+
+    def dot_label(self):
+        """
+        The method used by `Scheduler.export_as_dotfile`
+        
+        Because that goes in a dot file, it can have 
+        "\n" inserted, that will render as newlines in the output png
+
+        If this method is not defined on a concrete class, 
+        just use label() instead
+        """
+        return self.label()
 
     ##########
     _has_support_for_unicode = None  # type: bool

@@ -641,10 +641,10 @@ class Scheduler:
         def label_to_id(job):
             result = ""
             # add the _s_label so we avoid 2 nodes accidentally
-            # merged into one because they chare the same label
+            # merged into one because they share the same label
             if job._s_label:
                 result += "{}: ".format(job._s_label)
-            result += job.label()
+            result += job.dot_label()
             # escape any double quote
             result = result.replace('"', r'\"')
             # put double quotes around all this
