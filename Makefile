@@ -88,24 +88,8 @@ all-sphinx: readme-clean readme sphinx
 
 .PHONY: sphinx sphinx-clean all-sphinx
 
-########## on r2lab.inria.fr a.k.a. nepi-ng.inria.fr
-INFRA-PATH = /root/asynciojobs
-PUBLISH-PATH = /var/www/nepi-ng/asynciojobs
-EXCLUDES = .git
-RSYNC-EXCLUDES = $(foreach exc,$(EXCLUDES), --exclude $(exc))
-
-# invoked by restart-website.sh on r2lab
-publish: sphinx
-	rsync -av $(RSYNC-EXCLUDES) --delete --delete-excluded ./ $(PUBLISH-PATH)/
-
-infra-doc:
-	ssh root@nepi-ng.inria.fr "(cd $(INFRA-PATH); git reset --hard HEAD; git pull; make publish)"
-
-.PHONY: publish infra-doc
-
 ##########
 pep8:
 	git ls-files | grep '\.py$$' | grep -v '/conf.py$$' | xargs pep8
 
 .PHONY: pep8
- 
