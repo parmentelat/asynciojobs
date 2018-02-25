@@ -641,18 +641,26 @@ class Scheduler:
                         self._show_task_stack(
                             j, "non-critical job exception stack")
 
+
+    ####################
     def export_as_dotfile(self, filename):
         """
-        Create a graph that depicts the jobs and their requires relationships
-        in dot format for graphviz's `dot` utility.
+        Creates a graph that depicts the jobs and their requires
+        relationships. 
 
-        For example a PNG image can be then obtained
-        by post-processing that dotfile with e.g.
+        This method does not require `graphviz` to be installed, it
+        writes a file in dot format for post-processing with
+        e.g. graphviz's `dot` utility. See also the `graph()` method that 
+        serves the same purpose but natively as a `graphviz` object.
+
+        For example a PNG image can be then obtained from that dotfile
+        with e.g.
 
         `dot -Tpng foo.dot -o foo.png`
 
         See also https://en.wikipedia.org/wiki/DOT_(graph_description_language)
         for a list of tools that support the dot format.
+
         """
         self._set_s_labels()
 
@@ -682,3 +690,40 @@ class Scheduler:
                 output.write("{};\n".format(label_to_id(isolated)))
             output.write("}\n")
         print("(Over)wrote {}".format(filename))
+
+
+    def graph(self):
+        """This method serves the same purpose as export_to_dotfile, 
+        but it natively returns a `graphviz.Digraph` instance.
+
+        For that reason, its usage requires the installation 
+        of the `graphviz` package.
+
+        This is typically useful in a Jupyter notebook, 
+        so as to visualize a scheduler in graph format  - see 
+        http://graphviz.readthedocs.io/en/stable/manual.html#jupyter-notebooks
+        for how this works.
+
+        The dependency to graphviz is limited to this method, as it
+        is the only place that needs it, and installing graphviz can
+        be cumbersome
+
+        For example, on MacOS I had to do both:
+        * brew install graphviz 
+        * pip3 install graphviz
+        """
+
+        from graphviz import Digraph
+        dot = Digraph()
+
+        # write numbering in the jobs in _s_label
+        self._set_s_labels()
+
+        # we use job._s_label as the key and job.dot_label() as the label
+        for job in self.scan_in_order():
+            dot.node(job._s_label, job.dot_label())
+            for req in job.required:
+                dot.edge(req._s_label, job._s_label)
+
+        return dot
+        
