@@ -658,7 +658,7 @@ class Scheduler:
 
         `dot -Tpng foo.dot -o foo.png`
 
-        See also https://en.wikipedia.org/wiki/DOT_(graph_description_language)
+        See also https://en.wikipedia.org/wiki/DOT_%28graph_description_language%29
         for a list of tools that support the dot format.
 
         """

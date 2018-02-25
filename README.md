@@ -104,9 +104,9 @@ sa = Scheduler(a1, a2, a3)
 sa.orchestrate()
 ```
 
+    -> in_out(0.1)
     -> in_out(0.2)
     -> in_out(0.25)
-    -> in_out(0.1)
     <- in_out(0.1)
     <- in_out(0.2)
     <- in_out(0.25)
@@ -192,8 +192,8 @@ sb2 = Scheduler(Sequence(Job(in_out(0.1), label="bp1"),
 sb2.orchestrate()
 ```
 
-    -> in_out(0.1)
     -> in_out(0.25)
+    -> in_out(0.1)
     <- in_out(0.1)
     -> in_out(0.2)
     <- in_out(0.25)
@@ -375,10 +375,10 @@ sd = Scheduler(j)
 sd.orchestrate(timeout=0.25)
 ```
 
-    15:33:07: forever 0
-    15:33:07: forever 1
-    15:33:07: forever 2
-    15-33-07: SCHEDULER: orchestrate: TIMEOUT occurred
+    17:36:00: forever 0
+    17:36:00: forever 1
+    17:36:00: forever 2
+    17-36-00: SCHEDULER: orchestrate: TIMEOUT occurred
 
 
 
@@ -463,7 +463,7 @@ sf.list()
 
     -> in_out(0.2)
     <- in_out(0.2)
-    15-33-08: SCHEDULER: Emergency exit upon exception in critical job
+    17-36-01: SCHEDULER: Emergency exit upon exception in critical job
     orchestrate: False
     01   ☉ ☓   <Job `NOLABEL`>[[ -> 200.0]]
     02 ⚠ ★ ☓   <Job `boom`>!! CRIT. EXC. => Exception:boom after 0.2s!! - requires {01}
@@ -498,13 +498,9 @@ print("total duration = {}s".format(end-beg))
 
     7-th job
     Sleeping for 0.5s
-    8-th job
-    Sleeping for 0.5s
-    3-th job
-    Sleeping for 0.5s
     5-th job
     Sleeping for 0.5s
-    4-th job
+    3-th job
     Sleeping for 0.5s
     1-th job
     Sleeping for 0.5s
@@ -512,7 +508,11 @@ print("total duration = {}s".format(end-beg))
     Sleeping for 0.5s
     2-th job
     Sleeping for 0.5s
-    total duration = 1.0042188167572021s
+    8-th job
+    Sleeping for 0.5s
+    4-th job
+    Sleeping for 0.5s
+    total duration = 1.0093181133270264s
 
 
 ## Customizing jobs
@@ -562,7 +562,7 @@ For creating graphical outputs, a `Scheduler` object can be exported as a dotfil
 
 ### `Scheduler.graph()`
 
-If you also have the `graphviz` package installed, you can inspect a scheduler instance in a Jupyter notebook by using the `graph()` method, that is similar to `export_as_dotfile` in its purpose, but it returns a `graphviz.Digraph` instance natively instead, so that the scheduler graph can be displayed interactively in a notebook - see also http://graphviz.readthedocs.io/en/stable/manual.html#jupyter-notebooks.
+If you also have the `graphviz` package installed, you can inspect a scheduler instance in a Jupyter notebook by using the `graph()` method, that is similar to `export_as_dotfile` in its purpose, but it returns a `graphviz.Digraph` instance natively instead, so that the scheduler graph can be displayed interactively in a notebook - see also <http://graphviz.readthedocs.io/en/stable/manual.html#jupyter-notebooks.>
 
 Here's a simple example:
 
