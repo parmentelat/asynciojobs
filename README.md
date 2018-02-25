@@ -105,8 +105,8 @@ sa.orchestrate()
 ```
 
     -> in_out(0.2)
-    -> in_out(0.1)
     -> in_out(0.25)
+    -> in_out(0.1)
     <- in_out(0.1)
     <- in_out(0.2)
     <- in_out(0.25)
@@ -192,8 +192,8 @@ sb2 = Scheduler(Sequence(Job(in_out(0.1), label="bp1"),
 sb2.orchestrate()
 ```
 
-    -> in_out(0.25)
     -> in_out(0.1)
+    -> in_out(0.25)
     <- in_out(0.1)
     -> in_out(0.2)
     <- in_out(0.25)
@@ -375,10 +375,10 @@ sd = Scheduler(j)
 sd.orchestrate(timeout=0.25)
 ```
 
-    20:41:08: forever 0
-    20:41:08: forever 1
-    20:41:08: forever 2
-    20-41-08: SCHEDULER: orchestrate: TIMEOUT occurred
+    15:33:07: forever 0
+    15:33:07: forever 1
+    15:33:07: forever 2
+    15-33-07: SCHEDULER: orchestrate: TIMEOUT occurred
 
 
 
@@ -463,7 +463,7 @@ sf.list()
 
     -> in_out(0.2)
     <- in_out(0.2)
-    20-41-09: SCHEDULER: Emergency exit upon exception in critical job
+    15-33-08: SCHEDULER: Emergency exit upon exception in critical job
     orchestrate: False
     01   ☉ ☓   <Job `NOLABEL`>[[ -> 200.0]]
     02 ⚠ ★ ☓   <Job `boom`>!! CRIT. EXC. => Exception:boom after 0.2s!! - requires {01}
@@ -496,23 +496,23 @@ print("total duration = {}s".format(end-beg))
 
 ```
 
-    1-th job
-    Sleeping for 0.5s
-    2-th job
-    Sleeping for 0.5s
-    3-th job
-    Sleeping for 0.5s
-    6-th job
+    7-th job
     Sleeping for 0.5s
     8-th job
     Sleeping for 0.5s
-    4-th job
-    Sleeping for 0.5s
-    7-th job
+    3-th job
     Sleeping for 0.5s
     5-th job
     Sleeping for 0.5s
-    total duration = 1.0054750442504883s
+    4-th job
+    Sleeping for 0.5s
+    1-th job
+    Sleeping for 0.5s
+    6-th job
+    Sleeping for 0.5s
+    2-th job
+    Sleeping for 0.5s
+    total duration = 1.0042188167572021s
 
 
 ## Customizing jobs
@@ -543,14 +543,6 @@ In some cases like esp. test scenarios, it can be helpful to add requirements to
 
 `rain_check` will check for cycles in the requirements graph. It returns a boolean. It's a good idea to call it before running an orchestration.
 
-### `Scheduler.export_as_dotfile()`
-
-An scheduler can be exported as a dotfile for feeding `graphviz` and producing visual diagrams. Provided that you have the `dot` program (which is part of `graphviz`) installed, you could do something like
-
-    e.save_as_dotfile('foo.dot')
-    os.system("dot -Tpng foo.dot -o foo.png")
-
-
 ### `Scheduler.co_orchestrate()` 
 
 `orchestrate` is a regular `def` function (i.e. not an `async def`), but in fact just a wrapper around the native coroutine called `co_orchestrate`.
@@ -559,3 +551,56 @@ An scheduler can be exported as a dotfile for feeding `graphviz` and producing v
         if loop is None:
             loop = asyncio.get_event_loop()
         return loop.run_until_complete(self.co_orchestrate(loop=loop, *args, **kwds))
+
+### `Scheduler.export_as_dotfile()`
+
+For creating graphical outputs, a `Scheduler` object can be exported as a dotfile for feeding `graphviz` and producing visual diagrams. Provided that you have the `dot` program (which is part of `graphviz`) installed, you could do something like
+
+    e.save_as_dotfile('foo.dot')
+    os.system("dot -Tpng foo.dot -o foo.png")
+
+
+### `Scheduler.graph()`
+
+If you also have the `graphviz` package installed, you can inspect a scheduler instance in a Jupyter notebook by using the `graph()` method, that is similar to `export_as_dotfile` in its purpose, but it returns a `graphviz.Digraph` instance natively instead, so that the scheduler graph can be displayed interactively in a notebook - see also http://graphviz.readthedocs.io/en/stable/manual.html#jupyter-notebooks.
+
+Here's a simple example:
+
+
+```python
+# let's define a simple coroutine
+async def aprint(message, delay=0.5):
+     print(message)
+     await asyncio.sleep(delay)
+```
+
+
+```python
+# and a simple scheduler with an initialization and 2 concurrent tasks
+s = Scheduler()
+j1 = Job(aprint("j1"), label="init", scheduler=s)
+j2 = Job(aprint("j2"), label="part1", scheduler=s, required=j1)
+j3 = Job(aprint("j3"), label="part2", scheduler=s, required=j1)
+s.graph()
+```
+
+
+
+
+![svg](README-eval_files/README-eval_82_0.svg)
+
+
+
+
+```python
+# we can go on like this
+j4 = Job(aprint("j4"), label="conclusion", scheduler=s, required=(j2, j3))
+s.graph()
+```
+
+
+
+
+![svg](README-eval_files/README-eval_83_0.svg)
+
+
