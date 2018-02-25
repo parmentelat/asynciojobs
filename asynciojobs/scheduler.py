@@ -568,6 +568,19 @@ class Scheduler:
         for i, job in enumerate(self.jobs):
             print(i, job)
 
+    def __repr__(self):
+        nb_total = len(self.jobs)
+        done = {j for j in self.jobs if j.is_done()}
+        nb_done = len(done)
+        running = {j for j in self.jobs if j.is_running()}
+        ongoing = running - done
+        nb_ongoing = len(ongoing)
+        idle = self.jobs - running
+        nb_idle = len(idle)
+        return "Scheduler with {nb_done} done + {nb_ongoing} ongoing" \
+               " + {nb_idle} idle = {nb_total} job(s)" \
+            .format(**locals())
+
     def debrief(self, details=False):
         """
         Designed for schedulers that have failed to orchestrate.
