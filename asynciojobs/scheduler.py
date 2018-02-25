@@ -99,12 +99,17 @@ class Scheduler:
     def orchestrate(self, *args, loop=None, **kwds):
         """
         a synchroneous wrapper around `co_orchestrate()`
+
+        you can also use the alias method `run()` 
         """
         if loop is None:
             loop = asyncio.get_event_loop()
         return loop.run_until_complete(
             self.co_orchestrate(loop=loop, *args, **kwds))
 
+    # an alias that is shorter to type
+    run = orchestrate
+    
     ####################
     def sanitize(self):
         """
