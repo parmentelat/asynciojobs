@@ -1,5 +1,12 @@
 # ChangeLog
 
+## 0.6.0 - 2018 Feb 25
+
+* Scheduler.graph() can natively visualize in a notebook
+* Scheduler.run() an alias for orchestrate
+* printing a scheduler shows number of jobs
+* doc uses new sphinx theme
+
 ## 0.5.8 - 2018 Jan 16
 
 * introduce dot_label() on jobs as a means
