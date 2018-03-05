@@ -104,9 +104,9 @@ sa = Scheduler(a1, a2, a3)
 sa.orchestrate()
 ```
 
+    -> in_out(0.25)
     -> in_out(0.1)
     -> in_out(0.2)
-    -> in_out(0.25)
     <- in_out(0.1)
     <- in_out(0.2)
     <- in_out(0.25)
@@ -329,8 +329,8 @@ sc = Scheduler(c1, c2, c3, c4)
 sc.orchestrate()
 ```
 
-    BUS: -> in_out(0.2)
     BUS: -> in_out(0.4)
+    BUS: -> in_out(0.2)
     BUS: <- in_out(0.2)
     BUS: -> in_out(0.3)
     BUS: <- in_out(0.4)
@@ -351,10 +351,10 @@ Note that `orchestrate` always terminates as soon as all the non-`forever` jobs 
 sc.list()
 ```
 
-    01   ☉ ☓   <Job `c1`>[[ -> 2.0]]
-    02   ☉ ↺ ∞ <Job `monitor`>
-    03   ☉ ☓   <Job `c2`>[[ -> 4.0]]
-    04   ☉ ☓   <Job `c3`>[[ -> 3.0]] - requires {01}
+    01   ☉ ↺ ∞ <Job `monitor`>
+    02   ☉ ☓   <Job `c2`>[[ -> 4.0]]
+    03   ☉ ☓   <Job `c1`>[[ -> 2.0]]
+    04   ☉ ☓   <Job `c3`>[[ -> 3.0]] - requires {03}
 
 
 ### Example D : specifying a global timeout
@@ -375,10 +375,10 @@ sd = Scheduler(j)
 sd.orchestrate(timeout=0.25)
 ```
 
-    17:36:00: forever 0
-    17:36:00: forever 1
-    17:36:00: forever 2
-    17-36-00: SCHEDULER: orchestrate: TIMEOUT occurred
+    10:06:39: forever 0
+    10:06:39: forever 1
+    10:06:39: forever 2
+    10-06-40: SCHEDULER: orchestrate: TIMEOUT occurred
 
 
 
@@ -463,7 +463,7 @@ sf.list()
 
     -> in_out(0.2)
     <- in_out(0.2)
-    17-36-01: SCHEDULER: Emergency exit upon exception in critical job
+    10-06-41: SCHEDULER: Emergency exit upon exception in critical job
     orchestrate: False
     01   ☉ ☓   <Job `NOLABEL`>[[ -> 200.0]]
     02 ⚠ ★ ☓   <Job `boom`>!! CRIT. EXC. => Exception:boom after 0.2s!! - requires {01}
@@ -496,23 +496,23 @@ print("total duration = {}s".format(end-beg))
 
 ```
 
-    7-th job
-    Sleeping for 0.5s
-    5-th job
+    1-th job
     Sleeping for 0.5s
     3-th job
     Sleeping for 0.5s
-    1-th job
-    Sleeping for 0.5s
     6-th job
     Sleeping for 0.5s
-    2-th job
+    5-th job
     Sleeping for 0.5s
     8-th job
     Sleeping for 0.5s
     4-th job
     Sleeping for 0.5s
-    total duration = 1.0093181133270264s
+    7-th job
+    Sleeping for 0.5s
+    2-th job
+    Sleeping for 0.5s
+    total duration = 1.0065279006958008s
 
 
 ## Customizing jobs
@@ -531,19 +531,19 @@ You can easily define your own `Job` class by specializing `job.AbstractJob`. As
 
 ## Other useful features on the `Scheduler`class
 
-### `Scheduler.debrief()`
+###  Inspect / troubleshoot : `Scheduler.debrief()`
 
 `Scheduler.debrief()` is designed for schedulers that have run and returned `False`, it does output the same listing as `list()` but with additional statistics on the number of jobs, and, most importantly, on the stacks of jobs that have raised an exception.
 
-### `Scheduler.sanitize()`
+### Cleanup : `Scheduler.sanitize()`
 
 In some cases like esp. test scenarios, it can be helpful to add requirements to jobs that are not in the scheduler. The `sanitize` method removes such extra requirements, and unless you are certain it is not your case, it might be a good idea to call it explcitly before an orchestration.
 
-### `Scheduler.rain_check()`
+### Early checks : `Scheduler.rain_check()`
 
 `rain_check` will check for cycles in the requirements graph. It returns a boolean. It's a good idea to call it before running an orchestration.
 
-### `Scheduler.co_orchestrate()` 
+### Need a coroutine instead ? : `Scheduler.co_orchestrate()` 
 
 `orchestrate` is a regular `def` function (i.e. not an `async def`), but in fact just a wrapper around the native coroutine called `co_orchestrate`.
 
@@ -552,17 +552,9 @@ In some cases like esp. test scenarios, it can be helpful to add requirements to
             loop = asyncio.get_event_loop()
         return loop.run_until_complete(self.co_orchestrate(loop=loop, *args, **kwds))
 
-### `Scheduler.export_as_dotfile()`
+### Visualization - in a notebook : `Scheduler.graph()`
 
-For creating graphical outputs, a `Scheduler` object can be exported as a dotfile for feeding `graphviz` and producing visual diagrams. Provided that you have the `dot` program (which is part of `graphviz`) installed, you could do something like
-
-    e.save_as_dotfile('foo.dot')
-    os.system("dot -Tpng foo.dot -o foo.png")
-
-
-### `Scheduler.graph()`
-
-If you also have the `graphviz` package installed, you can inspect a scheduler instance in a Jupyter notebook by using the `graph()` method, that is similar to `export_as_dotfile` in its purpose, but it returns a `graphviz.Digraph` instance natively instead, so that the scheduler graph can be displayed interactively in a notebook - see also <http://graphviz.readthedocs.io/en/stable/manual.html#jupyter-notebooks.>
+If you have the `graphviz` package installed, you can inspect a scheduler instance in a Jupyter notebook by using the `graph()` method, that returns a `graphviz.Digraph` instance; this way the scheduler graph can be displayed interactively in a notebook - see also <http://graphviz.readthedocs.io/en/stable/manual.html#jupyter-notebooks>.
 
 Here's a simple example:
 
@@ -587,7 +579,7 @@ s.graph()
 
 
 
-![svg](README-eval_files/README-eval_82_0.svg)
+![svg](README-eval_files/README-eval_81_0.svg)
 
 
 
@@ -601,6 +593,31 @@ s.graph()
 
 
 
+![svg](README-eval_files/README-eval_82_0.svg)
+
+
+
+
+```python
+foo=Job(aprint('foo'), label='foo', scheduler=s, required=j2)
+s.graph()        
+```
+
+
+
+
 ![svg](README-eval_files/README-eval_83_0.svg)
 
+
+
+### Visualization - the long way : `Scheduler.export_as_dotfile()`
+
+If visualizing in a notebook is not an option, or if you do not have graphviz installed, you can still produce a dotfile from a scheduler object:
+
+    e.save_as_dotfile('foo.dot')
+
+Then later on - and possibly on another host - you can use this dot file as an input to produce a `.png` graphics, using the `dot` program (which is part of `graphviz`), like e.g.:
+
+
+    os.system("dot -Tpng foo.dot -o foo.png")
 
