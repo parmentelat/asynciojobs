@@ -26,7 +26,7 @@ setuptools.setup(
     description="A simplistic orchestration engine for asyncio-based jobs",
     long_description=long_description,
     license="CC BY-SA 4.0",
-    url="http://nepi-ng.inria.fr/asynciojobs",
+    url="http://asynciojobs.readthedocs.io/",
     packages=['asynciojobs'],
     install_requires=required_modules,
     classifiers=[
