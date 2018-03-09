@@ -57,10 +57,9 @@ tags:
 .PHONY: tags
 
 ##########
-tests:
-	python3 tests/tests.py
-.PHONY: tests
-
+tests test:
+	python3 -m unittest
+.PHONY: tests test
 
 ########## actually install
 infra:
