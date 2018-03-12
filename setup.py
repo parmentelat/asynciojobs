@@ -3,7 +3,7 @@
 import sys
 import setuptools
 
-from asynciojobs.version import version as version
+from asynciojobs import __version__
 
 # check python version
 from sys import version_info
@@ -20,7 +20,7 @@ required_modules = []
 
 setuptools.setup(
     name="asynciojobs",
-    version=version,
+    version=__version__,
     author="Thierry Parmentelat",
     author_email="thierry.parmentelat@inria.fr",
     description="A simplistic orchestration engine for asyncio-based jobs",

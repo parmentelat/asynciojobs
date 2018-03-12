@@ -77,7 +77,7 @@ check:
 # * for coroutines - useful to mark async def's as *coroutine*
 # http://pythonhosted.org/sphinxcontrib-asyncio/
 # pip3 install sphinxcontrib-asyncio
-sphinx:
+sphinx html doc:
 	$(MAKE) -C sphinx html
 
 sphinx-clean:
@@ -85,7 +85,7 @@ sphinx-clean:
 
 all-sphinx: readme-clean readme sphinx
 
-.PHONY: sphinx sphinx-clean all-sphinx
+.PHONY: sphinx html doc sphinx-clean all-sphinx
 
 ##########
 pep8:

@@ -34,7 +34,7 @@ As a convenience, the `Sequence` class is mostly a helper class that can free yo
 
 ## Full documentation
 
-This document, along with API reference doc, and changelog, is available at http://nepi-ng.inria.fr/asynciojobs/
+This document, along with API reference doc, and changelog, is available at <http://asynciojobs.readthedocs.io>
 
 Contact author : *thierry dot parmentelat at inria dot fr*
 
@@ -162,8 +162,8 @@ sb = Scheduler(b1, b2, b3)
 sb.orchestrate()
 ```
 
-    -> in_out(0.25)
     -> in_out(0.1)
+    -> in_out(0.25)
     <- in_out(0.1)
     -> in_out(0.2)
     <- in_out(0.25)
@@ -244,9 +244,9 @@ To see an overview of a scheduler, just use the `list()` method that will give y
 sb.list()
 ```
 
-    01   ☉ ☓   <Job `NOLABEL`>[[ -> 250.0]]
-    02   ☉ ☓   <Job `b1`>[[ -> 100.0]]
-    03   ☉ ☓   <Job `b2`>[[ -> 200.0]] - requires {02}
+    01   ☉ ☓   <Job `b1`>[[ -> 100.0]]
+    02   ☉ ☓   <Job `b2`>[[ -> 200.0]] - requires {01}
+    03   ☉ ☓   <Job `NOLABEL`>[[ -> 250.0]]
 
 
 Here is a complete list of the symbols used, with their meaning 
@@ -329,8 +329,8 @@ sc = Scheduler(c1, c2, c3, c4)
 sc.orchestrate()
 ```
 
-    BUS: -> in_out(0.4)
     BUS: -> in_out(0.2)
+    BUS: -> in_out(0.4)
     BUS: <- in_out(0.2)
     BUS: -> in_out(0.3)
     BUS: <- in_out(0.4)
@@ -351,10 +351,10 @@ Note that `orchestrate` always terminates as soon as all the non-`forever` jobs 
 sc.list()
 ```
 
-    01   ☉ ↺ ∞ <Job `monitor`>
-    02   ☉ ☓   <Job `c2`>[[ -> 4.0]]
-    03   ☉ ☓   <Job `c1`>[[ -> 2.0]]
-    04   ☉ ☓   <Job `c3`>[[ -> 3.0]] - requires {03}
+    01   ☉ ☓   <Job `c1`>[[ -> 2.0]]
+    02   ☉ ↺ ∞ <Job `monitor`>
+    03   ☉ ☓   <Job `c2`>[[ -> 4.0]]
+    04   ☉ ☓   <Job `c3`>[[ -> 3.0]] - requires {01}
 
 
 ### Example D : specifying a global timeout
@@ -375,10 +375,10 @@ sd = Scheduler(j)
 sd.orchestrate(timeout=0.25)
 ```
 
-    10:06:39: forever 0
-    10:06:39: forever 1
-    10:06:39: forever 2
-    10-06-40: SCHEDULER: orchestrate: TIMEOUT occurred
+    21:05:55: forever 0
+    21:05:55: forever 1
+    21:05:55: forever 2
+    21-05-55: SCHEDULER: orchestrate: TIMEOUT occurred
 
 
 
@@ -463,7 +463,7 @@ sf.list()
 
     -> in_out(0.2)
     <- in_out(0.2)
-    10-06-41: SCHEDULER: Emergency exit upon exception in critical job
+    21-05-56: SCHEDULER: Emergency exit upon exception in critical job
     orchestrate: False
     01   ☉ ☓   <Job `NOLABEL`>[[ -> 200.0]]
     02 ⚠ ★ ☓   <Job `boom`>!! CRIT. EXC. => Exception:boom after 0.2s!! - requires {01}
@@ -496,23 +496,23 @@ print("total duration = {}s".format(end-beg))
 
 ```
 
-    1-th job
-    Sleeping for 0.5s
     3-th job
-    Sleeping for 0.5s
-    6-th job
-    Sleeping for 0.5s
-    5-th job
-    Sleeping for 0.5s
-    8-th job
-    Sleeping for 0.5s
-    4-th job
     Sleeping for 0.5s
     7-th job
     Sleeping for 0.5s
+    8-th job
+    Sleeping for 0.5s
+    6-th job
+    Sleeping for 0.5s
     2-th job
     Sleeping for 0.5s
-    total duration = 1.0065279006958008s
+    1-th job
+    Sleeping for 0.5s
+    4-th job
+    Sleeping for 0.5s
+    5-th job
+    Sleeping for 0.5s
+    total duration = 1.0083529949188232s
 
 
 ## Customizing jobs
@@ -529,7 +529,7 @@ Before returning, `orchestrate` sends the `co_shutdown()` method on all jobs. Th
 
 You can easily define your own `Job` class by specializing `job.AbstractJob`. As an example, which was the primary target when developping `asynciojobs`, you can find [in the `apssh` library](https://github.com/parmentelat/apssh) a `SshJob` class, with which you can easily orchestrate scenarios involving several hosts that you interact with using ssh.
 
-## Other useful features on the `Scheduler`class
+## Other useful features on the `Scheduler` class
 
 ###  Inspect / troubleshoot : `Scheduler.debrief()`
 
