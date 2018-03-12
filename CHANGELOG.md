@@ -1,5 +1,11 @@
 # ChangeLog
 
+## 0.6.1 - 2018 Mar 12
+
+* adopt new layout for the doc - no source/ subdir under sphinx
+* from asynciojobs import __version__
+* cosmetic micro changes in the doc
+
 ## 0.6.0 - 2018 Feb 25
 
 * Scheduler.graph() can natively visualize in a notebook
