@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-A simple tool to define ad-hoc 'jobs'
+tests for the asynciojobs package
 """
 
 import time
@@ -14,6 +14,9 @@ from asynciojobs import Job as J
 from asynciojobs import Sequence as Seq
 from asynciojobs import Scheduler
 
+# pylint: disable=R0904, R0914, R0903, R1710
+# pylint: disable=W0106, W0212, W0201, C0103, C0111, C0321
+
 
 ##############################
 def ts():
@@ -24,6 +27,7 @@ def ts():
     cl = time.time()
     ms = int(1000 * (cl - math.floor(cl)))
     return time.strftime("%M-%S-") + "{:03d}".format(ms)
+
 
 ##############################
 async def _sl(n, middle, emergency):
@@ -108,15 +112,15 @@ async def co_exception(n):
 SLJ = SleepJob
 TJ = TickJob
 
-sep = 40 * '*' + ' '
+common_sep = 40 * '*' + ' '
 
 
 def check_required_types(scheduler, message):
     wrong = [j for j in scheduler.jobs if not isinstance(
         j, AbstractJob) or not hasattr(j, 'required')]
-    if len(wrong) != 0:
-        print("Scheduler {} has {}/{} ill-typed jobs"
-              .format(len(len(wrong), scheduler.jobs)))
+    if wrong:
+        print("in {} : Scheduler {} has {}/{} ill-typed jobs"
+              .format(message, scheduler, len(wrong), len(scheduler.jobs)))
         return False
     return True
 
@@ -160,17 +164,17 @@ class Tests(unittest.TestCase):
         a7.requires(a6)
 
         sched = Scheduler(*jobs)
-        list_sep(sched, sep + "LIST BEFORE")
+        list_sep(sched, common_sep + "LIST BEFORE")
         self.assertTrue(sched.rain_check())
         self.assertTrue(sched.orchestrate(loop=asyncio.get_event_loop()))
         for j in jobs:
             self.assertFalse(j.raised_exception())
-        list_sep(sched, sep + "LIST AFTER")
-        print(sep + "DEBRIEF")
+        list_sep(sched, common_sep + "LIST AFTER")
+        print(common_sep + "DEBRIEF")
         sched.debrief()
 
     ####################
-    def test_forever(self):
+    def test_forever1(self):
         a1, a2, t1 = SLJ(1), SLJ(1.5), TJ(.6)
         a2.requires(a1)
         sched = Scheduler(a1, a2, t1)
@@ -179,7 +183,7 @@ class Tests(unittest.TestCase):
         sched.list()
 
     ####################
-    def test_timeout(self):
+    def test_timeout1(self):
         a1, a2, a3 = [SLJ(x) for x in (0.5, 0.6, 0.7)]
         a2.requires(a1)
         a3.requires(a2)
@@ -195,7 +199,7 @@ class Tests(unittest.TestCase):
         a1, a2 = SLJ(1), J(co_exception(0.5), label='non critical boom')
         sched = Scheduler(a1, a2, verbose=verbose)
         self.assertTrue(sched.orchestrate())
-        print(sep + 'debrief()')
+        print(common_sep + 'debrief()')
         sched.debrief()
 
     def test_exc_non_critical_f(
@@ -211,7 +215,7 @@ class Tests(unittest.TestCase):
                            label='critical boom', critical=True)
         sched = Scheduler(a1, a2, verbose=verbose)
         self.assertFalse(sched.orchestrate())
-        print(sep + 'debrief()')
+        print(common_sep + 'debrief()')
         sched.debrief()
 
     def test_exc_critical_f(self): return self._test_exc_critical(False)
@@ -226,7 +230,7 @@ class Tests(unittest.TestCase):
         a3 = J(sl(0.1), label=3)
         s = Seq(a1, a2, a3)
         sched = Scheduler(s)
-        list_sep(sched, sep + "sequence1")
+        list_sep(sched, common_sep + "sequence1")
         self.assertEqual(len(a1.required), 0)
         self.assertEqual(len(a2.required), 1)
         self.assertEqual(len(a3.required), 1)
@@ -241,7 +245,7 @@ class Tests(unittest.TestCase):
         a3 = J(sl(0.1), label=3)
         s = Seq(a2, a3, required=a1)
         sched = Scheduler(a1, s)
-        list_sep(sched, sep + "sequence2")
+        list_sep(sched, common_sep + "sequence2")
         self.assertEqual(len(a1.required), 0)
         self.assertEqual(len(a2.required), 1)
         self.assertEqual(len(a3.required), 1)
@@ -257,7 +261,7 @@ class Tests(unittest.TestCase):
         a3 = J(sl(0.1), label=3, required=s)
         sched = Scheduler()
         sched.update((s, a3))
-        list_sep(sched, sep + "sequence3")
+        list_sep(sched, common_sep + "sequence3")
         self.assertEqual(len(a1.required), 0)
         self.assertEqual(len(a2.required), 1)
         self.assertEqual(len(a3.required), 1)
@@ -274,7 +278,7 @@ class Tests(unittest.TestCase):
         s1 = Seq(a1, a2)
         s2 = Seq(a3, a4)
         sched = Scheduler(Seq(s1, s2))
-        list_sep(sched, sep + "sequence4")
+        list_sep(sched, common_sep + "sequence4")
         self.assertEqual(len(a1.required), 0)
         self.assertEqual(len(a2.required), 1)
         self.assertEqual(len(a3.required), 1)
@@ -295,7 +299,7 @@ class Tests(unittest.TestCase):
         s2 = Seq(a3, a4, required=s1)
         s3 = Seq(a5, a6, required=s2)
         sched = Scheduler(s1, s2, s3)
-        list_sep(sched, sep + "sequence5")
+        list_sep(sched, common_sep + "sequence5")
         self.assertEqual(len(a1.required), 0)
         self.assertEqual(len(a2.required), 1)
         self.assertEqual(len(a3.required), 1)
@@ -350,9 +354,9 @@ class Tests(unittest.TestCase):
         # we leave these untouched (no req. added)
         a1 = J(sl(0.1), label="a1")
         a2 = J(sl(0.1), label="a2")
-        a3 = J(sl(0.1), label="a3")
-        a4 = J(sl(0.1), label="a4")
-        a5 = J(sl(0.1), label="a5")
+#        a3 = J(sl(0.1), label="a3")
+#        a4 = J(sl(0.1), label="a4")
+#        a5 = J(sl(0.1), label="a5")
 
         # re-create these each time to have fresh data
         def bs():
@@ -373,7 +377,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(len(b2.required), 1)
 
     ##########
-    def test_timeout(self):
+    def test_timeout2(self):
         a1 = J(sl(1), label="a1")
         a2 = J(sl(2), label="a2")
         a3 = J(sl(10), label="a3")
@@ -386,7 +390,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(a3.is_done(), False)
 
     ##########
-    def test_forever(self):
+    def test_forever2(self):
         async def tick(n):
             while True:
                 print('tick {}'.format(n))
@@ -404,7 +408,7 @@ class Tests(unittest.TestCase):
     def test_creation_scheduler(self):
         sched = Scheduler()
         s = Seq(J(sl(1)), J(sl(2)), scheduler=sched)
-        j = J(sl(3), required=s, scheduler=sched)
+        J(sl(3), required=s, scheduler=sched)
         # make sure that jobs appended in the sequence
         # even later on are also added to the scheduler
         s.append(J(sl(.5)))
@@ -424,9 +428,10 @@ class Tests(unittest.TestCase):
         atom = .1
         tolerance = 8  # more or less % in terms of overall time
         s = Scheduler()
-        jobs = [PrintJob("{}-th {}s job".format(i, atom),
-                         sleep=atom, scheduler=s) for i in range(1, total + 1)]
-        import time
+        for i in range(1, total + 1):
+            s.add(PrintJob("{}-th {}s job".
+                           format(i, atom),
+                           sleep=atom))
         beg = time.time()
         ok = s.orchestrate(jobs_window=window)
         ok or s.debrief(details=True)
@@ -492,7 +497,7 @@ class Tests(unittest.TestCase):
                     job._task._exception = True
             return job
 
-        class J(AbstractJob):
+        class AJ(AbstractJob):
             pass
 
         sched = Scheduler()
@@ -501,12 +506,11 @@ class Tests(unittest.TestCase):
             for boom in True, False:
                 for critical in True, False:
                     for forever in True, False:
-                        j = J(critical=critical,
-                              forever=forever,
-                              label="forever={} crit.={} status={} boom={}"
-                              .format(forever, critical, state, boom),
-                              required=previous
-                              )
+                        j = AJ(critical=critical,
+                               forever=forever,
+                               label="forever={} crit.={} status={} boom={}"
+                               .format(forever, critical, state, boom),
+                               required=previous)
                         if annotate_job_with_fake_task(j, state, boom):
                             sched.add(j)
                             previous = j
@@ -516,7 +520,7 @@ class Tests(unittest.TestCase):
 if __name__ == '__main__':
     import sys
     if '-v' in sys.argv:
-        import scheduler
-        scheduler.debug = True
+        # set module flag
+        Scheduler.debug = True
         sys.argv.remove('-v')
     unittest.main()

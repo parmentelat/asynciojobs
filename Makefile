@@ -43,11 +43,11 @@ pypi:
 
 # it can be convenient to define a test entry, say testpypi, in your .pypirc
 # that points at the testpypi public site
-# no upload to build.onelab.eu is done in this case 
+# no upload to build.onelab.eu is done in this case
 # try it out with
 # pip install -i https://testpypi.python.org/pypi $(LIBRARY)
 # dependencies need to be managed manually though
-testpypi: 
+testpypi:
 	./setup.py sdist upload -r testpypi
 
 ##############################
@@ -60,14 +60,6 @@ tags:
 tests test:
 	python3 -m unittest
 .PHONY: tests test
-
-########## actually install
-infra:
-	apssh -t r2lab.infra pip3 install --upgrade asynciojobs
-check:
-	apssh -t r2lab.infra python3 -c '"import asynciojobs.version as version; print(version.version)"'
-
-.PHONY: infra check
 
 ########## sphinx
 # Extensions (see sphinx/source/conf.py)
@@ -88,7 +80,21 @@ all-sphinx: readme-clean readme sphinx
 .PHONY: sphinx html doc sphinx-clean all-sphinx
 
 ##########
-pep8:
-	git ls-files | grep '\.py$$' | grep -v '/conf.py$$' | xargs pep8
+pyfiles:
+	@git ls-files | grep '\.py$$' | grep -v '/conf.py$$'
 
-.PHONY: pep8
+pep8:
+	$(MAKE) pyfiles | xargs flake8 --max-line-length=80 --exclude=__init__.py
+
+pylint:
+	$(MAKE) pyfiles | xargs pylint
+
+
+.PHONY: pep8 pylint pyfiles
+
+########## actually install
+infra:
+	apssh -t r2lab.infra pip3 install --upgrade asynciojobs
+check:
+	apssh -t r2lab.infra python3 -c '"import asynciojobs.version as version; print(version.version)"'
+.PHONY: infra check

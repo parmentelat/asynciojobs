@@ -10,8 +10,14 @@ It also defines a couple of simple job classes.
 import sys
 import asyncio
 
-debug = False
-# debug = True
+debug = False                               # pylint: disable=C0103
+debug = True                                # pylint: disable=C0103
+
+# pylint settings
+# W0212: we have a lot of accesses to protected members of other classes
+# R0914 Too many local variables
+# pylint: disable=W0212
+
 
 # my first inclination had been to specialize asyncio.Task
 # it does not work well though, because you want to model
@@ -30,7 +36,7 @@ debug = False
 # Job == node
 
 
-class AbstractJob:
+class AbstractJob:                                      # pylint: disable=R0902
     """AbstractJob is a virtual class:
 
     * it offers some very basic graph-related features to model requirements
@@ -65,14 +71,16 @@ class AbstractJob:
 
     """
 
-    def __init__(self, forever=False, label=None, critical=False,
+    def __init__(self, *,                               # pylint: disable=R0913
+                 forever=False, label=None, critical=False,
                  required=None, scheduler=None):
         self.forever = forever
         self.critical = critical
-        # access label through a method so we can invoke default_label() if
-        # missing
+        # access label through a method
+        # so we can invoke default_label() if missing
         self._label = label
-        # for convenience, one can mention only one AbstractJob
+        # for convenience, one can mention
+        # only one, or a collection of, AbstractJobs
         self.required = set()
         self.requires(required)
         # convenience again
@@ -89,7 +97,10 @@ class AbstractJob:
         self._s_mark = None
         # the reverse of required
         self._s_successors = set()
-        # if this is set by the scheduler, we use it for listing relationships
+        # this attribute is reserved for use by the scheduler
+        # that will for example store there an ordering information,
+        # which in turn can be used for printing relationships
+        # by Scheduler.list() and similar
         self._s_label = None
 
     def label(self, use_s_label=False):
@@ -120,22 +131,22 @@ class AbstractJob:
         """
         if use_s_label:
             return self._s_label or '??'
-        else:
-            if self._label is not None:
-                return str(self._label)
-            elif hasattr(self, 'default_label'):
-                return self.default_label()
-            else:
-                return "NOLABEL"
+        if self._label is not None:
+            return str(self._label)
+        if hasattr(self, 'default_label'):
+            return self.default_label()                 # pylint: disable=E1101
+        return "NOLABEL"
 
     def dot_label(self):
         """
-        The method used by `Scheduler.export_as_dotfile`
-        
-        Because that goes in a dot file, it can have 
+        The method used by the Scheduler methods
+        that produce a graph, such as `Scheduler.graph` and
+        `Scheduler.export_as_dotfile`
+
+        Because that goes in a dot file, it can have
         "\n" inserted, that will render as newlines in the output png
 
-        If this method is not defined on a concrete class, 
+        If this method is not defined on a concrete class,
         just use label() instead
         """
         return self.label()
@@ -156,14 +167,14 @@ class AbstractJob:
     # unicode version
     # _c_frowning_face = "\u2639" # ☹
     # _c_smiling_face  = "\u263b" # ☻
-    _c_saltire = "\u2613"  # ☓
+    _c_saltire = "\u2613"       # ☓
     _c_circle_arrow = "\u21ba"  # ↺
-    _c_black_flag = "\u2691"  # ⚑
-    _c_white_flag = "\u2690"  # ⚐
-    _c_warning = "\u26a0"  # ⚠
-    _c_black_star = "\u2605"  # ★
-    _c_sun = "\u2609"  # ☉
-    _c_infinity = "\u221e"  # ∞
+    _c_black_flag = "\u2691"    # ⚑
+    _c_white_flag = "\u2690"    # ⚐
+    _c_warning = "\u26a0"       # ⚠
+    _c_black_star = "\u2605"    # ★
+    _c_sun = "\u2609"           # ☉
+    _c_infinity = "\u221e"      # ∞
 
     def _short_unicode(self):
         """
@@ -232,8 +243,7 @@ class AbstractJob:
         """
         if self._detect_support_for_unicode():
             return self._short_unicode()
-        else:
-            return self._short_ascii()
+        return self._short_ascii()
 
     def repr(self, show_requires=True, show_result_or_exception=True):
         """
@@ -256,8 +266,11 @@ class AbstractJob:
 
         # show dependencies in both directions
         if show_requires and self.required:
-            info += " - requires {" + ", ".join(a.label(use_s_label=True)
-                                                for a in self.required) + "}"
+            info += " - requires {"
+            info += ", ".join(req.label(                # pylint: disable=E1101
+                                  use_s_label=True)     # pylint: disable=C0330
+                              for req in self.required)
+            info += "}"
         return info
 
     def __repr__(self):
@@ -389,8 +402,6 @@ class AbstractJob:
 
     # if subclass redefines details(), then that will show up in list()
 
-####################
-
 
 class Job(AbstractJob):
 
@@ -398,7 +409,7 @@ class Job(AbstractJob):
     Most mundane form: built from a coroutine
     """
 
-    def __init__(self, corun, coshutdown=None, *args, **kwds):
+    def __init__(self, corun, *args, coshutdown=None, **kwds):
         """
         Create a job from a coroutine
 
@@ -422,7 +433,7 @@ class Job(AbstractJob):
             result = await self.coshutdown
             return result
 
-    def details(self):
+    def details(self):                                  # pylint: disable=C0111
         return repr(self.corun)
 
 ####################
@@ -457,14 +468,15 @@ class PrintJob(AbstractJob):
             if self.sleep:
                 print("Sleeping for {}s".format(self.sleep))
                 await asyncio.sleep(self.sleep)
-        except Exception:
+        except Exception:                               # pylint: disable=W0703
+            # should not happen, but if it does we need to know why
             import traceback
             traceback.print_exc()
 
     async def co_shutdown(self):
         pass
 
-    def details(self):
+    def details(self):                                  # pylint: disable=C0111
         result = ""
         if self.sleep:
             result += "[+ sleep {}s] ".format(self.sleep)
@@ -473,5 +485,5 @@ class PrintJob(AbstractJob):
         result += "..." if len(self.messages) > 1 else ""
         return result
 
-    def default_label(self):
+    def default_label(self):                            # pylint: disable=C0111
         return self.details()

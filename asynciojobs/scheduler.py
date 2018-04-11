@@ -18,11 +18,17 @@ from .sequence import Sequence
 from .window import Window
 
 ########
-Schedulable = Union[AbstractJob, Sequence]
+Schedulable = Union[AbstractJob, Sequence]  # pylint: disable=C0103
 
 # will hopefully go away some day
-debug = False
-# debug = True
+debug = False                               # pylint: disable=C0103
+# debug = True                                # pylint: disable=C0103
+
+# pylint settings
+# W0212: we have a lot of accesses to protected members of other classes
+# R0914 Too many local variables
+# pylint: disable=R0914
+
 
 class Scheduler:
     """An Scheduler instance works on a set of Job objects
@@ -49,20 +55,23 @@ class Scheduler:
         irrelevant.  More of these can be added later on.
 
         """
-        self.jobs = set(Sequence._flatten(jobs_or_sequences))
+        self.jobs = set(Sequence._flatten(          # pylint: disable=W0212
+            jobs_or_sequences))
         self.verbose = verbose
         # why does it fail ?
         # bool
         self._failed_critical = False
         # False, or the intial timeout
         self._failed_timeout = False
+        # see also _record_beginning
+        self._expiration = None
 
     # think of an scheduler as a set of jobs
     def update(self, jobs: Iterable[Schedulable]):
         """
         add a collection of jobs - ditto, after `set.update()`
         """
-        jobs = set(Sequence._flatten(jobs))
+        jobs = set(Sequence._flatten(jobs))         # pylint: disable=W0212
         self.jobs.update(jobs)
 
     def add(self, job: Schedulable):
@@ -90,17 +99,16 @@ class Scheduler:
         """
         if self._failed_timeout:
             return "TIMED OUT after {}s".format(self._failed_timeout)
-        elif self._failed_critical:
+        if self._failed_critical:
             return "at least one CRITICAL job has raised an exception"
-        else:
-            return "FINE"
+        return "FINE"
 
     ####################
     def orchestrate(self, *args, loop=None, **kwds):
         """
         a synchroneous wrapper around `co_orchestrate()`
 
-        you can also use the alias method `run()` 
+        you can also use the alias method `run()`
         """
         if loop is None:
             loop = asyncio.get_event_loop()
@@ -109,7 +117,7 @@ class Scheduler:
 
     # an alias that is shorter to type
     run = orchestrate
-    
+
     ####################
     def sanitize(self):
         """
@@ -151,7 +159,7 @@ class Scheduler:
             for _ in self.scan_in_order():
                 pass
             return True
-        except Exception as exc:
+        except Exception as exc:                    # pylint: disable=W0703
             if self.verbose:
                 print("rain_check failed", exc)
             return False
@@ -175,17 +183,17 @@ class Scheduler:
             # loop on unfinished business
             for job in self.jobs:
                 # ignore jobs already marked
-                if job._s_mark:
+                if job._s_mark:                     # pylint: disable=W0212
                     continue
                 # if there's no requirement (first pass),
                 # or later on if all requirements have already been marked,
                 # then we can mark this one
                 has_unmarked_requirements = False
                 for required_job in job.required:
-                    if required_job._s_mark is None:
+                    if required_job._s_mark is None:  # pylint: disable=W0212
                         has_unmarked_requirements = True
                 if not has_unmarked_requirements:
-                    job._s_mark = True
+                    job._s_mark = True              # pylint: disable=W0212
                     nb_marked += 1
                     changed = True
                     yield job
@@ -211,14 +219,14 @@ class Scheduler:
         reset Job._s_mark on all jobs
         """
         for job in self.jobs:
-            job._s_mark = None
+            job._s_mark = None                      # pylint: disable=W0212
 
     def _reset_tasks(self):
         """
         In case one tries to run the same scheduler twice
         """
         for job in self.jobs:
-            job._task = None
+            job._task = None                        # pylint: disable=W0212
 
     def _backlinks(self):
         """
@@ -226,15 +234,15 @@ class Scheduler:
         as the reverse of Job.required
         """
         for job in self.jobs:
-            job._s_successors = set()
+            job._s_successors = set()               # pylint: disable=W0212
         for job in self.jobs:
             for req in job.required:
-                req._s_successors.add(job)
+                req._s_successors.add(job)          # pylint: disable=W0212
 
-    def _ensure_future(self, job, window, loop):
+    def _ensure_future(self, job, window, loop):    # pylint: disable=R0201
         """
-        this is the hook that lets us make sure the created Task object have a
-        backlink pointer to its correponding job
+        this is the hook that lets us make sure the created Task objects
+        have a backlink pointer to their corresponding job
         """
         #
         # this is where we call co_run()
@@ -243,8 +251,8 @@ class Scheduler:
         #                                               vv
         task = asyncio.ensure_future(window.run_job(job)(), loop=loop)
         # create references back and forth between Job and asyncio.Task
-        task._job = job
-        job._task = task
+        task._job = job                             # pylint: disable=W0212
+        job._task = task                            # pylint: disable=W0212
         return task
 
     def _record_beginning(self, timeout):
@@ -252,10 +260,9 @@ class Scheduler:
         Called once at the beginning of orchestrate, this method
         computes the absolute expiration date when a timeout is defined.
         """
-        if timeout is None:
-            self.expiration = None
-        else:
-            self.expiration = time.time() + timeout
+        self._expiration = \
+            None if timeout is None \
+            else time.time() + timeout
 
     def _remaining_timeout(self):
         """
@@ -263,10 +270,9 @@ class Scheduler:
         this method computes the timeout argument for wait
         - or None if orchestrate had no timeout
         """
-        if self.expiration is None:
-            return None
-        else:
-            return self.expiration - time.time()
+        return \
+            None if self._expiration is None \
+            else self._expiration - time.time()
 
     async def _tidy_tasks(self, pending):
         """
@@ -293,22 +299,26 @@ class Scheduler:
         # do not use task._job.raised_exception()
         # so we can use this with co_shutdown() tasks as well
         # (these are not attached to a job)
-        exception_tasks = [task for task in tasks if task._exception]
+        exception_tasks = [task for task in tasks
+                           if task._exception]      # pylint: disable=W0212
         for task in exception_tasks:
             task.cancel()
             # if debug is turned on, provide details on the exceptions
             if debug:
                 self._show_task_stack(
                     task, "TIDYING {}"
-                    .format(task._job.repr(show_result_or_exception=False,
-                                           show_requires=False)))
-        # don't bother to set a timeout, as this is expected to be immediate
+                    .format(task._job.repr(         # pylint: disable=W0212
+                        show_result_or_exception=False,
+                        show_requires=False)))
+        # don't bother to set a timeout,
+        # this is expected to be immediate
         # since all tasks are canceled
         await asyncio.gather(*exception_tasks, return_exceptions=True)
 
-    def _show_task_stack(self, task, msg='STACK', margin=4, limit=None):
+    @staticmethod
+    def _show_task_stack(task, msg='STACK', margin=4, limit=None):
         if isinstance(task, AbstractJob):
-            task = task._task
+            task = task._task                       # pylint: disable=W0212
         sep = margin * ' ' + 20 * '*'
         print(sep)
         print(sep, 'BEG ' + msg)
@@ -333,9 +343,11 @@ class Scheduler:
         a need to tear these connections down eventually.
         """
         await self._feedback(None, "scheduler is shutting down...")
-        tasks = [asyncio.ensure_future(job.co_shutdown()) for job in self.jobs]
-        done, pending = await asyncio.wait(tasks,
-                                           timeout=self._remaining_timeout())
+        tasks = [asyncio.ensure_future(job.co_shutdown())
+                 for job in self.jobs]
+        # the done part is of no use here
+        _, pending = await asyncio.wait(
+            tasks, timeout=self._remaining_timeout())
         if pending:
             print("WARNING: {}/{} co_shutdown() methods"
                   " have not returned within timeout"
@@ -362,14 +374,15 @@ class Scheduler:
             jobs = (jobs,)
         for job in jobs:
             if not isinstance(job, AbstractJob):
-                job = job._job
+                job = job._job                          # pylint: disable=W0212
             print("{}: {}: {}"
                   .format(time.strftime(time_format),
                           state,
                           job.repr(show_result_or_exception=self.verbose,
                                    show_requires=self.verbose)))
 
-    async def co_orchestrate(self, timeout=None, jobs_window=None, loop=None):
+    async def co_orchestrate(                     # pylint: disable=R0912,R0915
+            self, timeout=None, jobs_window=None, loop=None):
         """coroutine: the primary entry point for running an ordered set of jobs.
 
         Runs member jobs (that is, schedule their `co_run()` method)
@@ -440,7 +453,8 @@ class Scheduler:
                                      timeout=self._remaining_timeout(),
                                      return_when=asyncio.FIRST_COMPLETED)
 
-            done_ok = {t for t in done if not t._exception}
+            done_ok = {t for t in done
+                       if not t._exception}         # pylint: disable=W0212
             await self._feedback(done_ok, "DONE")
             done_ko = done - done_ok
             await self._feedback(done_ko, "RAISED EXC.")
@@ -466,10 +480,10 @@ class Scheduler:
             # do we have at least one critical job with an exception ?
             critical_failure = False
             for done_task in done:
-                done_job = done_task._job
+                done_job = done_task._job           # pylint: disable=W0212
                 if done_job.raised_exception():
                     critical_failure = critical_failure \
-                                       or done_job.is_critical()
+                        or done_job.is_critical()
                     await self._feedback(
                         done_job, "EXCEPTION occurred - on {}critical job"
                         .format("non-" if not done_job.is_critical() else ""))
@@ -488,7 +502,9 @@ class Scheduler:
             # are we done ?
             # only account for not forever jobs (that may still finish, one
             # never knows)
-            done_jobs_not_forever = {j for j in done if not j._job.forever}
+            done_jobs_not_forever = {
+                j for j in done
+                if not j._job.forever}                  # pylint: disable=W0212
             nb_jobs_done += len(done_jobs_not_forever)
 
             if nb_jobs_done == nb_jobs_finite:
@@ -509,7 +525,8 @@ class Scheduler:
             # that just finished
             possible_next_jobs = set()
             for done_task in done:
-                possible_next_jobs.update(done_task._job._s_successors)
+                possible_next_jobs.update(
+                    done_task._job._s_successors)       # pylint: disable=W0212
 
             # find out which ones really can be added
             added = 0
@@ -535,11 +552,10 @@ class Scheduler:
         write into each job._s_label an id compliant
         with topological order
         """
-        l = len(self.jobs)
-        format = "{:02}" if l < 100 else "{:04}"
+        label_format = "{:02}" if len(self.jobs) < 100 else "{:04}"
         # inject number in each job in their _s_label field
         for i, job in enumerate(self.scan_in_order(), 1):
-            job._s_label = format.format(i)
+            job._s_label = label_format.format(i)       # pylint: disable=W0212
 
     ####################
     def list(self, details=False):
@@ -554,7 +570,8 @@ class Scheduler:
         # requirements
         self._set_s_labels()
         for job in self.scan_in_order():
-            print(job._s_label, job.repr(show_requires=True))
+            print(job._s_label,                         # pylint: disable=W0212
+                  job.repr(show_requires=True))
             if details and hasattr(job, 'details'):
                 details = job.details()
                 if details is not None:
@@ -569,14 +586,15 @@ class Scheduler:
             print(i, job)
 
     def __repr__(self):
-        nb_total = len(self.jobs)
+        # linter says unused variable but it is indeed used in f-string
+        nb_total = len(self.jobs)                       # pylint: disable=W0612
         done = {j for j in self.jobs if j.is_done()}
-        nb_done = len(done)
+        nb_done = len(done)                             # pylint: disable=W0612
         running = {j for j in self.jobs if j.is_running()}
         ongoing = running - done
-        nb_ongoing = len(ongoing)
+        nb_ongoing = len(ongoing)                       # pylint: disable=W0612
         idle = self.jobs - running
-        nb_idle = len(idle)
+        nb_idle = len(idle)                             # pylint: disable=W0612
         return "Scheduler with {nb_done} done + {nb_ongoing} ongoing" \
                " + {nb_idle} idle = {nb_total} job(s)" \
             .format(**locals())
@@ -602,13 +620,12 @@ class Scheduler:
 
         message = "scheduler has a total of {} jobs".format(nb_total)
 
-        def legible_message(nb, adj):
-            if nb == 0:
+        def legible_message(number, adj):               # pylint: disable=C0111
+            if number == 0:
                 return " none is {}".format(adj)
-            elif nb == 1:
+            if number == 1:
                 return " 1 is {}".format(adj)
-            else:
-                return " {} are {}".format(nb, adj)
+            return " {} are {}".format(number, adj)
         message += ", " + legible_message(nb_done, "done")
         message += ", " + legible_message(nb_ongoing, "ongoing")
         message += ", " + \
@@ -641,16 +658,15 @@ class Scheduler:
                         self._show_task_stack(
                             j, "non-critical job exception stack")
 
-
     ####################
     def export_as_dotfile(self, filename):
         """
         Creates a graph that depicts the jobs and their requires
-        relationships. 
+        relationships.
 
         This method does not require `graphviz` to be installed, it
         writes a file in dot format for post-processing with
-        e.g. graphviz's `dot` utility. See also the `graph()` method that 
+        e.g. graphviz's `dot` utility. See also the `graph()` method that
         serves the same purpose but natively as a `graphviz` object.
 
         For example a PNG image can be then obtained from that dotfile
@@ -658,18 +674,19 @@ class Scheduler:
 
         `dot -Tpng foo.dot -o foo.png`
 
-        See also https://en.wikipedia.org/wiki/DOT_%28graph_description_language%29
+        See also
+        https://en.wikipedia.org/wiki/DOT_%28graph_description_language%29
         for a list of tools that support the dot format.
 
         """
         self._set_s_labels()
 
-        def label_to_id(job):
+        def label_to_id(job):                           # pylint: disable=C0111
             result = ""
             # add the _s_label so we avoid 2 nodes accidentally
             # merged into one because they share the same label
-            if job._s_label:
-                result += "{}: ".format(job._s_label)
+            if job._s_label:                            # pylint: disable=W0212
+                result += "{}: ".format(job._s_label)   # pylint: disable=W0212
             result += job.dot_label()
             # escape any double quote
             result = result.replace('"', r'\"')
@@ -691,16 +708,16 @@ class Scheduler:
             output.write("}\n")
         print("(Over)wrote {}".format(filename))
 
-
     def graph(self):
-        """This method serves the same purpose as export_to_dotfile, 
+        """
+        This method serves the same purpose as export_to_dotfile,
         but it natively returns a `graphviz.Digraph` instance.
 
-        For that reason, its usage requires the installation 
+        For that reason, its usage requires the installation
         of the `graphviz` package.
 
-        This is typically useful in a Jupyter notebook, 
-        so as to visualize a scheduler in graph format  - see 
+        This is typically useful in a Jupyter notebook,
+        so as to visualize a scheduler in graph format  - see
         http://graphviz.readthedocs.io/en/stable/manual.html#jupyter-notebooks
         for how this works.
 
@@ -709,7 +726,7 @@ class Scheduler:
         be cumbersome
 
         For example, on MacOS I had to do both:
-        * brew install graphviz 
+        * brew install graphviz
         * pip3 install graphviz
         """
 
@@ -721,9 +738,8 @@ class Scheduler:
 
         # we use job._s_label as the key and job.dot_label() as the label
         for job in self.scan_in_order():
-            dot.node(job._s_label, job.dot_label())
+            dot.node(job._s_label, job.dot_label())     # pylint: disable=W0212
             for req in job.required:
-                dot.edge(req._s_label, job._s_label)
+                dot.edge(req._s_label, job._s_label)    # pylint: disable=W0212
 
         return dot
-        

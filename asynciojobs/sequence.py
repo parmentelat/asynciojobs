@@ -1,3 +1,9 @@
+"""
+This module defines the `Sequence` class, that is designed
+to ease the building of schedulers
+"""
+
+
 from .job import AbstractJob
 
 
@@ -29,8 +35,8 @@ class Sequence:
         """
         self.jobs = self._flatten(sequences_or_jobs)
         # create the chain of requirements in the sequence
-        for previous, next in zip(self.jobs, self.jobs[1:]):
-            next.requires(previous)
+        for job1, job2 in zip(self.jobs, self.jobs[1:]):
+            job2.requires(job1)
         # any requirements specified in the constructor
         # actually apply to the first item
         if self.jobs:
@@ -47,13 +53,13 @@ class Sequence:
         returns an ordered list of jobs
         """
         result = []
-        for x in sequences_or_jobs:
-            if x is None:
+        for joblike in sequences_or_jobs:
+            if joblike is None:
                 continue
-            if isinstance(x, AbstractJob):
-                result.append(x)
-            elif isinstance(x, Sequence):
-                result += x.jobs
+            if isinstance(joblike, AbstractJob):
+                result.append(joblike)
+            elif isinstance(joblike, Sequence):
+                result += joblike.jobs
         return result
 
     def append(self, *sequences_or_jobs):
