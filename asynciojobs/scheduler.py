@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 
 """
-Implementation of the Scheduler class, that is defined
-from a set of jobs with dependencies between them, and
-will bring them all to their epilogue.
+The Scheduler class is a set of AbstractJobs, that together with their
+*required* relationship, form an execution graph.
 """
 
 from typing import Iterable, Union
@@ -31,11 +30,20 @@ debug = False                               # pylint: disable=C0103
 
 
 class Scheduler:
-    """An Scheduler instance works on a set of Job objects
+    """
+    A Scheduler instance is made of a set of AbstractJob objects.
 
-    It will orchestrate them until they are all complete,
-    starting with the ones that have no requirements,
-    and then starting the othe ones as their requirements are satisfied
+    The purpose of the scheduler object is to orchestrate the (co)execution of
+    these jobs that respects the *required* relationships,
+    until they are all complete. It starts with the ones that have no
+    requirement, and then triggers the other ones
+    as their requirements are done.
+
+    For this reason, the dependency/requirements graph must be acyclic.
+
+    Optionnally a scheduler orchestration can be confined to a finite number
+    of concurrent jobs (see the *jobs_window* parameter below).
+
 
     Running a Job means executing its `co_run()` method,
     which must be a coroutine
@@ -46,15 +54,42 @@ class Scheduler:
     critical. In all cases, the result and/or exception of each
     individual job can be inspected and retrieved individually at any
     time, including of course once the orchestration is complete.
+
+    Parameters:
+      jobs_or_sequences: instances of `AbstractJob` or `Sequence`.
+        The order in which they are mentioned is irrelevant.
+      verbose (bool): flag that says if execution should be verbose.
+
+    Examples:
+      Creating an empty scheduler::
+
+        s = Scheduler()
+
+      A scheduler with a single job::
+
+        s = Scheduler(Job(asyncio.sleep(1)))
+
+      A scheduler with 2 jobs in parallel::
+
+        s = Scheduler(Job(asyncio.sleep(1)),
+                      Job(asyncio.sleep(2)))
+
+      A scheduler with 2 jobs in sequence::
+
+        s = Scheduler(
+                Sequence(
+                    Job(asyncio.sleep(1)),
+                    Job(asyncio.sleep(2))
+                ))
+
+    In this document, the ``Schedulable`` name refers to a type hint, that
+    encompasses instances of either the `AbstractJob` or `Sequence` classes.
+
     """
 
     def __init__(self, *jobs_or_sequences: Iterable[Schedulable],
                  verbose=False):
-        """
-        Initialize from an iterable of jobs or sequences; their order is
-        irrelevant.  More of these can be added later on.
 
-        """
         self.jobs = set(Sequence._flatten(          # pylint: disable=W0212
             jobs_or_sequences))
         self.verbose = verbose
@@ -69,94 +104,115 @@ class Scheduler:
     # think of an scheduler as a set of jobs
     def update(self, jobs: Iterable[Schedulable]):
         """
-        add a collection of jobs - ditto, after `set.update()`
+        Adds a collection of ``Schedulable`` objects;
+        this method is named after ``set.update()``.
         """
         jobs = set(Sequence._flatten(jobs))         # pylint: disable=W0212
         self.jobs.update(jobs)
 
     def add(self, job: Schedulable):
         """
-        add a single job - name is inspired from plain python `set.add()`
+        Adds a single ``Schedulable`` object;
+        this method name is inspired from plain python ``set.add()``
         """
         self.update([job])
 
     def failed_time_out(self):
         """
-        Tells whether `orchestrate` has failed because of a time out
+        Returns:
+           bool: whether (co_)orchestrate has failed because of a time out.
         """
         return self._failed_timeout
 
     def failed_critical(self):
         """
-        Tells whether `orchestrate` has failed because
-        a critical job raised an exception
+        Returns:
+          bool: whether (co_)orchestrate has failed because
+          a critical job has raised an exception
         """
         return self._failed_critical
 
     def why(self):
         """
-        a string message explaining why orchestrate has failed
+        Returns:
+          str: a message explaining why orchestrate has failed, or ``FINE``
+          if it has not failed.
         """
         if self._failed_timeout:
             return "TIMED OUT after {}s".format(self._failed_timeout)
         if self._failed_critical:
-            return "at least one CRITICAL job has raised an exception"
+            return "a CRITICAL job has raised an exception"
         return "FINE"
 
     ####################
     def orchestrate(self, *args, loop=None, **kwds):
         """
-        a synchroneous wrapper around `co_orchestrate()`
+        A synchroneous wrapper around :meth:`co_orchestrate()`
 
-        you can also use the alias method `run()`
+        you can also use the alias method `orchestrate()`
         """
         if loop is None:
             loop = asyncio.get_event_loop()
         return loop.run_until_complete(
             self.co_orchestrate(loop=loop, *args, **kwds))
 
+    # xxx this should be the main name,
+    # and orchestrate should be the alias
     # an alias that is shorter to type
     run = orchestrate
 
     ####################
     def sanitize(self):
         """
-        Removes requirements that are not part of the scheduler
-        This is mostly convenient in test scenarios
+        This method ensures that the requirements relationship is closed within
+        the scheduler. In other words, it removes any requirement attached to a
+        job in this scheduler, but that is not itself part of the scheduler.
+
+        This can come in handy in some scheduler whose composition depends on
+        external conditions.
+
         In any case it is crucial that this property holds
         for orchestrate to perform properly.
+
+        Returns:
+          bool: returns True if scheduler object was fine,
+            and False if at least one removal was needed.
         """
 
+        changes = False
         for job in self.jobs:
             before = len(job.required)
             job.required &= self.jobs
             job._s_successors &= self.jobs
             after = len(job.required)
-            if self.verbose and before != after:
-                print(20 * '*',
-                      "WARNING: job {} has had {} requirements removed"
-                      .format(job, before - after))
+            if before != after:
+                changes = True
+                if self.verbose:
+                    print(20 * '*',
+                          "WARNING: job {} has had {} requirements removed"
+                          .format(job, before - after))
+        return not changes
 
     ####################
     def rain_check(self):
         """
-        Performs minimum sanity check
-
+        Performs a minimal sanity check.
         The purpose of this is primarily to check for cycles,
         and/or missing starting points.
 
-        It's not embedded in orchestrate because it's not strictly necessary
-        but it's safer to run this before calling orchestrate if one wants
-        to type-check the jobs dependency graph early on.
+        It's not embedded in :meth:`co_orchestrate()` because
+        it is not strictly necessary, but it is safer to call this
+        before running the scheduler if one wants to double-check the
+        jobs dependency graph early on.
 
         It might also help to have a sanitized scheduler,
-        but here again this is up to the caller
+        but here again this is up to the caller.
 
-        RETURN:
-        a boolean that is True if the topology looks clear
+        Returns:
+            bool: True if the topology is fine
         """
         try:
-            for _ in self.scan_in_order():
+            for _ in self.topological_order():
                 pass
             return True
         except Exception as exc:                    # pylint: disable=W0703
@@ -165,13 +221,21 @@ class Scheduler:
             return False
 
     ####################
-    def scan_in_order(self):
+    def topological_order(self):
         """
-        a generator function that scans the graph in the "right" order,
+        A generator function that scans the graph in topological order,
+        in the same order as the orchestration,
         i.e. starting from jobs that have no dependencies, and moving forward.
 
-        Beware that this is not a separate iterator, so it can't be nested
+        Beware that this is not a separate iterator, so it can't be nested,
         which in practice should not be a problem.
+
+        Examples:
+
+          Assuming all jobs have a label, print them in the "right" order::
+
+            for job in scheduler.topological_order():
+                print(job.label)
         """
         self._reset_marks()
         nb_marked = 0
@@ -300,14 +364,14 @@ class Scheduler:
         # so we can use this with co_shutdown() tasks as well
         # (these are not attached to a job)
         exception_tasks = [task for task in tasks
-                           if task._exception]      # pylint: disable=W0212
+                           if task._exception]          # pylint: disable=W0212
         for task in exception_tasks:
             task.cancel()
             # if debug is turned on, provide details on the exceptions
             if debug:
                 self._show_task_stack(
                     task, "TIDYING {}"
-                    .format(task._job.repr(         # pylint: disable=W0212
+                    .format(task._job._repr(            # pylint: disable=W0212
                         show_result_or_exception=False,
                         show_requires=False)))
         # don't bother to set a timeout,
@@ -318,7 +382,7 @@ class Scheduler:
     @staticmethod
     def _show_task_stack(task, msg='STACK', margin=4, limit=None):
         if isinstance(task, AbstractJob):
-            task = task._task                       # pylint: disable=W0212
+            task = task._task                           # pylint: disable=W0212
         sep = margin * ' ' + 20 * '*'
         print(sep)
         print(sep, 'BEG ' + msg)
@@ -336,12 +400,18 @@ class Scheduler:
 
     async def co_shutdown(self):
         """
-        The idea here is to send a message to all the jobs once
-        orchestration is over. Typically for example, several jobs
-        sharing the same ssh connection will arrange for that connection
-        to be kept alive across an entire scheduler lifespan, but there is
-        a need to tear these connections down eventually.
+        Shut down the scheduler, by sending a message to all the jobs when
+        orchestration is over.
+
+        Typically for example, several jobs sharing the same ssh connection
+        will arrange for that connection to be kept alive across an entire
+        scheduler lifespan, but there is a need to tear these connections
+        down eventually.
+
+        Returns:
+          None
         """
+
         await self._feedback(None, "scheduler is shutting down...")
         tasks = [asyncio.ensure_future(job.co_shutdown())
                  for job in self.jobs]
@@ -378,34 +448,44 @@ class Scheduler:
             print("{}: {}: {}"
                   .format(time.strftime(time_format),
                           state,
-                          job.repr(show_result_or_exception=self.verbose,
-                                   show_requires=self.verbose)))
+                          job._repr(                    # pylint: disable=W0212
+                              show_result_or_exception=self.verbose,
+                              show_requires=self.verbose)))
 
     async def co_orchestrate(                     # pylint: disable=R0912,R0915
             self, timeout=None, jobs_window=None, loop=None):
-        """coroutine: the primary entry point for running an ordered set of jobs.
+        """
+        The primary entry point for running a scheduler.
+        See also :meth:`run()` for a synchronous wrapper around this coroutine.
 
         Runs member jobs (that is, schedule their `co_run()` method)
         in an order that satisfies their `required` relationsship.
 
-        Proceeds to the end no matter what, except if either
-        (1) one critical job raises an exception, or (2) a timeout occurs.
-        Returns `True` if none of these 2 conditions occur, `False` otherwise.
+        Proceeds to the end no matter what, except if either:
 
-        Jobs marked as forever are not waited for. All jobs get
+        1. one critical job raises an exception, or
+
+        2. a timeout occurs.
+
+        Returns:
+          bool: `True` if none of these 2 conditions occur, `False` otherwise.
+
+        Jobs marked as ``forever`` are not waited forself. All jobs get
         terminated through their `co_shutdown()` method.
 
         ---
 
-        Optional `timeout` can be an `int` or `float` and is expressed
-        in seconds; it applies to the overall orchestration, not to
-        any individual job.
+        Parameters:
+          timeout: can be an `int` or `float` and is expressed
+           in seconds; it applies to the overall orchestration, not to
+           any individual job.
 
-        Optional `jobs_window` is an integer that says how many jobs
-        can be run simultaneously. None or 0 means no limit.
+          jobs_window: is an integer that specifies how many jobs
+            can be run simultaneously. None or 0 means no limit.
 
-        Optional `loop` is an asyncio events loop, defaults to
-        `asyncio.get_event_loop()`
+          loop: is an asyncio events loop, it defaults to
+            ``asyncio.get_event_loop()``, which is almost certainly
+            the right value to use.
 
         """
         if loop is None:
@@ -554,24 +634,24 @@ class Scheduler:
         """
         label_format = "{:02}" if len(self.jobs) < 100 else "{:04}"
         # inject number in each job in their _s_label field
-        for i, job in enumerate(self.scan_in_order(), 1):
+        for i, job in enumerate(self.topological_order(), 1):
             job._s_label = label_format.format(i)       # pylint: disable=W0212
 
     ####################
     def list(self, details=False):
         """
-        Print a complete list of jobs in some natural order, with their status
-        summarized with a few signs.
+        Prints a complete list of jobs in topological order, with their status
+        summarized with a few signs. See the README for examples and a legend.
 
-        Beware that this might raise an exception
-        if rain_check() has returned False
+        Beware that this might raise an exception if :meth:`rain_check()`
+        would return ``False``, i.e. if the graph is not acyclic.
         """
         # so now we can refer to other jobs by their id when showing
         # requirements
         self._set_s_labels()
-        for job in self.scan_in_order():
+        for job in self.topological_order():
             print(job._s_label,                         # pylint: disable=W0212
-                  job.repr(show_requires=True))
+                  job._repr(show_requires=True))        # pylint: disable=W0212
             if details and hasattr(job, 'details'):
                 details = job.details()
                 if details is not None:
@@ -579,8 +659,8 @@ class Scheduler:
 
     def list_safe(self):
         """
-        Print jobs in no specific order;
-        works even if scheduler is broken wrt rain_check()
+        Print jobs in no specific order, the advantage being that it
+        works even if scheduler is broken wrt :meth:`rain_check()`
         """
         for i, job in enumerate(self.jobs):
             print(i, job)
@@ -640,20 +720,21 @@ class Scheduler:
             print("===== {} job(s) with an exception, including {} critical"
                   .format(nb_exceptions, nb_criticals))
             # show critical exceptions first
-            for j in self.scan_in_order():
+            for j in self.topological_order():
                 if j in criticals:
                     self._show_task_stack(
                         j, "stack for CRITICAL JOB {}"
-                        .format(j.repr(show_result_or_exception=False,
-                                       show_requires=False)))
+                        .format(j._repr(                # pylint: disable=W0212
+                            show_result_or_exception=False,
+                            show_requires=False)))
             # then exceptions that were not critical
             non_critical_exceptions = exceptions - criticals
-            for j in self.scan_in_order():
+            for j in self.topological_order():
                 if j in non_critical_exceptions:
                     if not self.verbose:
                         print(
                             "non-critical: {}: exception {}"
-                            .format(j.label(), j.raised_exception()))
+                            .format(j.text_label(), j.raised_exception()))
                     if self.verbose:
                         self._show_task_stack(
                             j, "non-critical job exception stack")
@@ -664,19 +745,21 @@ class Scheduler:
         Creates a graph that depicts the jobs and their requires
         relationships.
 
-        This method does not require `graphviz` to be installed, it
+        This method does not require ``graphviz`` to be installed, it
         writes a file in dot format for post-processing with
-        e.g. graphviz's `dot` utility. See also the `graph()` method that
-        serves the same purpose but natively as a `graphviz` object.
+        e.g. graphviz's ``dot`` utility.
+
+        See also the :meth:`graph()` method that
+        serves the same purpose but natively as a ``graphviz`` object.
 
         For example a PNG image can be then obtained from that dotfile
-        with e.g.
+        with e.g.::
 
-        `dot -Tpng foo.dot -o foo.png`
+          dot -Tpng foo.dot -o foo.png
 
         See also
         https://en.wikipedia.org/wiki/DOT_%28graph_description_language%29
-        for a list of tools that support the dot format.
+        for a list of tools that support the ``dot`` format.
 
         """
         self._set_s_labels()
@@ -697,7 +780,7 @@ class Scheduler:
         exported = set()
         with open(filename, 'w') as output:
             output.write("digraph G {\n")
-            for job in self.scan_in_order():
+            for job in self.topological_order():
                 for req in job.required:
                     output.write("{} -> {};\n"
                                  .format(label_to_id(req),
@@ -710,36 +793,38 @@ class Scheduler:
 
     def graph(self):
         """
-        This method serves the same purpose as export_to_dotfile,
-        but it natively returns a `graphviz.Digraph` instance.
+        Returns:
+          graphviz.Digraph: a native graph instance.
 
-        For that reason, its usage requires the installation
-        of the `graphviz` package.
+        This method serves the same purpose as :meth:`export_to_dotfile()`,
+        but it natively returns a graph instance. For that reason,
+        its usage requires the installation of the ``graphviz`` package.
 
         This is typically useful in a Jupyter notebook,
         so as to visualize a scheduler in graph format  - see
         http://graphviz.readthedocs.io/en/stable/manual.html#jupyter-notebooks
         for how this works.
 
-        The dependency to graphviz is limited to this method, as it
-        is the only place that needs it, and installing graphviz can
-        be cumbersome
+        The dependency to from ``asynciojobs`` to ``graphviz`` is limited
+        to this method, as it is the only place that needs it,
+        and as installing ``graphviz`` can be cumbersome.
 
-        For example, on MacOS I had to do both:
-        * brew install graphviz
-        * pip3 install graphviz
+        For example, on MacOS I had to do both::
+
+          brew install graphviz     # for the C/C++ binary stuff
+          pip3 install graphviz     # for the python bindings
         """
 
         from graphviz import Digraph
-        dot = Digraph()
+        graph = Digraph()
 
         # write numbering in the jobs in _s_label
         self._set_s_labels()
 
         # we use job._s_label as the key and job.dot_label() as the label
-        for job in self.scan_in_order():
-            dot.node(job._s_label, job.dot_label())     # pylint: disable=W0212
+        for job in self.topological_order():
+            graph.node(job._s_label, job.dot_label())   # pylint: disable=W0212
             for req in job.required:
-                dot.edge(req._s_label, job._s_label)    # pylint: disable=W0212
+                graph.edge(req._s_label, job._s_label)  # pylint: disable=W0212
 
-        return dot
+        return graph

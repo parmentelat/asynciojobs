@@ -8,10 +8,11 @@ from .job import AbstractJob
 
 
 class Sequence:
-    """A Sequence is an object that organizes a set
+    """
+    A Sequence is an object that organizes a set
     of AbstratJobs in a sequence. Its main purpose is to add
     a single `required` relationship per job in the sequence,
-    except the first that instead that receives as its `required`
+    except the for first one, that instead receives as its `required`
     the sequence's requirements.
 
     If `scheduler` is passed to the sequence's constructor,
@@ -21,18 +22,20 @@ class Sequence:
     the scheduler primarily ignores these objects, only the jobs inside
     the sequence matter.
 
-    However a sequence can be used mostly every place where a job
+    However a sequence can be used essentially in every place where a job
     could be, either being inserted in an scheduler, added as a
-    requirement, and it can have requirements too
+    requirement, and it can have requirements too.
+
+    Parameters:
+      sequences_or_jobs: each must be a ``Schedulable`` object,
+        the order of course is important here
+      required: one, or a collection of, ``Schedulable`` objects that
+        will become the requirements for the first job in the sequence
+      scheduler: if provided, the jobs in the sequence will be inserted
+        in that scheduler.
     """
 
     def __init__(self, *sequences_or_jobs, required=None, scheduler=None):
-        """
-        Expects a list of jobs or sequences as input
-
-        Required jobs can be passed at object-creation time,
-        and/or extended later on with `requires()`
-        """
         self.jobs = self._flatten(sequences_or_jobs)
         # create the chain of requirements in the sequence
         for job1, job2 in zip(self.jobs, self.jobs[1:]):
@@ -64,7 +67,10 @@ class Sequence:
 
     def append(self, *sequences_or_jobs):
         """
-        add these jobs or sequences at the end of the present sequence
+        Add these jobs or sequences at the end of the present sequence.
+
+        Parameters:
+          sequences_or_jobs: each must be a ``Schedulable`` object.
         """
         if not sequences_or_jobs:
             return
@@ -77,8 +83,12 @@ class Sequence:
 
     def requires(self, *requirements):
         """
-        Adds requirements to the sequence, that is to say,
-        so to the first job in the sequence
+        Adds requirements to the sequence, so that is to say,
+        to the first job in the sequence.
+
+        Parameters:
+          requirements: each must be a ``Schedulable`` object.
+
         """
         if not self.jobs:
             # warning ?

@@ -104,8 +104,8 @@ sa = Scheduler(a1, a2, a3)
 sa.orchestrate()
 ```
 
-    -> in_out(0.25)
     -> in_out(0.1)
+    -> in_out(0.25)
     -> in_out(0.2)
     <- in_out(0.1)
     <- in_out(0.2)
@@ -162,8 +162,8 @@ sb = Scheduler(b1, b2, b3)
 sb.orchestrate()
 ```
 
-    -> in_out(0.1)
     -> in_out(0.25)
+    -> in_out(0.1)
     <- in_out(0.1)
     -> in_out(0.2)
     <- in_out(0.25)
@@ -192,8 +192,8 @@ sb2 = Scheduler(Sequence(Job(in_out(0.1), label="bp1"),
 sb2.orchestrate()
 ```
 
-    -> in_out(0.25)
     -> in_out(0.1)
+    -> in_out(0.25)
     <- in_out(0.1)
     -> in_out(0.2)
     <- in_out(0.25)
@@ -244,9 +244,9 @@ To see an overview of a scheduler, just use the `list()` method that will give y
 sb.list()
 ```
 
-    01   ☉ ☓   <Job `b1`>[[ -> 100.0]]
-    02   ☉ ☓   <Job `b2`>[[ -> 200.0]] - requires {01}
-    03   ☉ ☓   <Job `NOLABEL`>[[ -> 250.0]]
+    01   ☉ ☓   <Job `NOLABEL`>[[ -> 250.0]]
+    02   ☉ ☓   <Job `b1`>[[ -> 100.0]]
+    03   ☉ ☓   <Job `b2`>[[ -> 200.0]] - requires {02}
 
 
 Here is a complete list of the symbols used, with their meaning 
@@ -329,8 +329,8 @@ sc = Scheduler(c1, c2, c3, c4)
 sc.orchestrate()
 ```
 
-    BUS: -> in_out(0.2)
     BUS: -> in_out(0.4)
+    BUS: -> in_out(0.2)
     BUS: <- in_out(0.2)
     BUS: -> in_out(0.3)
     BUS: <- in_out(0.4)
@@ -351,10 +351,10 @@ Note that `orchestrate` always terminates as soon as all the non-`forever` jobs 
 sc.list()
 ```
 
-    01   ☉ ☓   <Job `c1`>[[ -> 2.0]]
-    02   ☉ ↺ ∞ <Job `monitor`>
-    03   ☉ ☓   <Job `c2`>[[ -> 4.0]]
-    04   ☉ ☓   <Job `c3`>[[ -> 3.0]] - requires {01}
+    01   ☉ ↺ ∞ <Job `monitor`>
+    02   ☉ ☓   <Job `c2`>[[ -> 4.0]]
+    03   ☉ ☓   <Job `c1`>[[ -> 2.0]]
+    04   ☉ ☓   <Job `c3`>[[ -> 3.0]] - requires {03}
 
 
 ### Example D : specifying a global timeout
@@ -375,10 +375,10 @@ sd = Scheduler(j)
 sd.orchestrate(timeout=0.25)
 ```
 
-    21:05:55: forever 0
-    21:05:55: forever 1
-    21:05:55: forever 2
-    21-05-55: SCHEDULER: orchestrate: TIMEOUT occurred
+    05:02:08: forever 0
+    05:02:08: forever 1
+    05:02:08: forever 2
+    05-02-08: SCHEDULER: orchestrate: TIMEOUT occurred
 
 
 
@@ -463,7 +463,7 @@ sf.list()
 
     -> in_out(0.2)
     <- in_out(0.2)
-    21-05-56: SCHEDULER: Emergency exit upon exception in critical job
+    05-02-09: SCHEDULER: Emergency exit upon exception in critical job
     orchestrate: False
     01   ☉ ☓   <Job `NOLABEL`>[[ -> 200.0]]
     02 ⚠ ★ ☓   <Job `boom`>!! CRIT. EXC. => Exception:boom after 0.2s!! - requires {01}
@@ -478,14 +478,24 @@ When `jobs_windows` is not specified or `0`, it means no limit is imposed on the
 
 
 ```python
-from asynciojobs import PrintJob
+# let's define a simple coroutine
+async def aprint(message, delay=0.5):
+     print(message)
+     await asyncio.sleep(delay)
+```
 
+
+```python
+# let us now add 8 jobs that take 0.5 second each
 s = Scheduler()
-# each of these jobs takes 0.5 second
-for i in range(1, 9):
-    PrintJob("{}-th job".format(i), sleep=0.5, scheduler=s)
 
-# so running them with a window of 4 means 1 approx. 1 second
+for i in range(1, 9):
+    s.add(Job(aprint("{}-th job".format(i), 0.5)))
+```
+
+
+```python
+# so running them with a window of 4 means approx. 1 second
 import time
 beg = time.time()
 s.orchestrate(jobs_window = 4)
@@ -493,33 +503,24 @@ end = time.time()
 
 # expect around 1 second
 print("total duration = {}s".format(end-beg))
-
 ```
 
-    3-th job
-    Sleeping for 0.5s
     7-th job
-    Sleeping for 0.5s
+    3-th job
     8-th job
-    Sleeping for 0.5s
-    6-th job
-    Sleeping for 0.5s
-    2-th job
-    Sleeping for 0.5s
-    1-th job
-    Sleeping for 0.5s
-    4-th job
-    Sleeping for 0.5s
     5-th job
-    Sleeping for 0.5s
-    total duration = 1.0083529949188232s
+    1-th job
+    6-th job
+    4-th job
+    2-th job
+    total duration = 1.0090370178222656s
 
 
 ## Customizing jobs
 
 ### Customizing the `Job` class
 
-`Job` actually is a specializtion of `AbstractJob`, and the specification is that the `co_run()` method should denote a coroutine itself, as that is what is triggered by `Scheduler` for running said job.
+`Job` actually is a specializtion of `AbstractJob`, and the specification is that the `co_run()` method should denote a coroutine itself, as that is what is triggered by `Scheduler` when running said job.
 
 ### `AbstractJob.co_shutdown()`
 
@@ -560,14 +561,6 @@ Here's a simple example:
 
 
 ```python
-# let's define a simple coroutine
-async def aprint(message, delay=0.5):
-     print(message)
-     await asyncio.sleep(delay)
-```
-
-
-```python
 # and a simple scheduler with an initialization and 2 concurrent tasks
 s = Scheduler()
 j1 = Job(aprint("j1"), label="init", scheduler=s)
@@ -579,45 +572,40 @@ s.graph()
 
 
 
-![svg](README-eval_files/README-eval_81_0.svg)
-
-
-
-
-```python
-# we can go on like this
-j4 = Job(aprint("j4"), label="conclusion", scheduler=s, required=(j2, j3))
-s.graph()
-```
-
-
-
-
 ![svg](README-eval_files/README-eval_82_0.svg)
 
 
 
-
-```python
-foo=Job(aprint('foo'), label='foo', scheduler=s, required=j2)
-s.graph()        
-```
-
-
-
-
-![svg](README-eval_files/README-eval_83_0.svg)
-
-
+In a regular notebook, that is all you need to do to see the scheduler's graph.
+In the case of this README though, once rendered on `readthedocs.io` the graph has got lost in translation, so please read on to see that graph.
 
 ### Visualization - the long way : `Scheduler.export_as_dotfile()`
 
 If visualizing in a notebook is not an option, or if you do not have graphviz installed, you can still produce a dotfile from a scheduler object:
 
-    e.save_as_dotfile('foo.dot')
+
+```python
+s.export_as_dotfile('readme.dot')
+```
+
+    (Over)wrote readme.dot
+
 
 Then later on - and possibly on another host - you can use this dot file as an input to produce a `.png` graphics, using the `dot` program (which is part of `graphviz`), like e.g.:
 
 
-    os.system("dot -Tpng foo.dot -o foo.png")
+```python
+import os
+os.system("dot -Tpng readme.dot -o readme.png")
+```
 
+
+
+
+    0
+
+
+
+Which now allows us to render the graph for our last scheduler as a png file:
+
+![manually inserted readme](readme.png)

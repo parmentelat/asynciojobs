@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-This module defines `AbstractJob` that is the base class for all the jobs
-in a Scheduler.
+This module defines :class:`AbstractJob`, that is the base class
+for all the jobs in a Scheduler, as well as a basic concrete subclass
+:class:`Job` for creating a job from a coroutine.
 
 It also defines a couple of simple job classes.
 """
@@ -37,38 +38,71 @@ debug = True                                # pylint: disable=C0103
 
 
 class AbstractJob:                                      # pylint: disable=R0902
-    """AbstractJob is a virtual class:
+    """
+    AbstractJob is a virtual class:
 
-    * it offers some very basic graph-related features to model requirements
-      'a la' makefile
+    * it offers some very basic graph-related features
+      to model requirements *a la* Makefile;
     * its subclasses are expected to implement a `co_run()`
-      and a `co_shutdown()` methods that specifies
-      the actual behaviour of the job, as coroutines
+      and a `co_shutdown()` methods that specify
+      the actual behaviour of the job, as coroutines.
+    * AbstractJob is mostly a companion class to the
+      :class:`~asynciojobs.scheduler.Scheduler` class,
+      that triggers these co_* methods.
 
-    It's mostly a companion class to the Scheduler class,
-    that triggers these methods
+    **Life Cycle**: AbstractJob is also aware of a common life cycle
+    for all jobs, which can be summarized as follows:
 
-    In addition, each job can be created with
+      **idle** → **scheduled** → **running** → **done**
 
-    * boolean flag 'forever', if set, means the job is not returning
-    at all and runs forever
-    in this case Scheduler.orchestrate will not wait for that job,
-    and will terminate it once all the regular i.e. not-forever jobs are done
+    In un-windowed schedulers, there is no distinction between
+    scheduled and running. In other words, in this case a job goes directly
+    from **idle** to **running**.a
 
-    * an optional label - for convenience only
+    On the other hand, in windowed orchestrations - see the ``jobs_window``
+    parameter to :meth:`asynciojobs.scheduler.Scheduler.co_orchestrate` -
+    a job can be scheduled but not yet running, because it is waiting
+    for a slot in the global window.
 
-    -----
+    Args:
 
-    As far as labelling, each subclass of `AbstractJob` implements a
-    default labelling scheme, so it is not mandatory to set a specific
-    label on each job instance, however it is sometimes useful.
+        forever (bool): if set, means the job
+          is not returning at all and runs forever;
+          in this case ``Scheduler.orchestrate()``
+          will not wait for that job, and will terminate it
+          once all the regular - i.e. not-forever - jobs are done.
 
-    ------
+        critical (bool): if set,
+          this flag indicates that any exception raised during the
+          execution of that job should result in the scheduler
+          aborting its run immediately. The default behaviour
+          is to let the scheduler finish its jobs, at which point
+          the jobs can be inspected for exceptions or results.
 
-    Besides, if a job instance has a `details()` method,
-    then this is used to produce additional details for that job
-    when running Scheduler.list(details=True)
+        required: this can be one, or a collection of, jobs that will
+          make the job's requirements;
+          requirements can be added later on as well.
 
+        label (str): for convenience mostly, allows to specify
+          the way that particular job should be displayed by the scheduler,
+          either in textual form by ``Scheduler.list()``, or in graphical form
+          by ``Scheduler.graph()``. See also :meth:`dot_label()`
+          and :meth:`graph_label()` for how this is used.
+
+          As far as labelling, each subclass of `AbstractJob` implements a
+          default labelling scheme, so it is not mandatory to set a specific
+          label on each job instance, however it is sometimes useful.
+
+          Labels must not be confused with details, see :meth:`details()`
+
+        scheduler: this can be an instance of a
+          :class:`~asynciojobs.scheduler.Scheduler` object, in which
+          the newly created job instance is immediately added.
+          A job instance can also be inserted in a scheduler instance later on.
+
+    **Note**: a Job instance must only be added in **one Scheduler instance**
+    at most - be aware that the code makes no control on this property,
+    but be aware that odd behaviours can be observed if it is not fulfilled.
     """
 
     def __init__(self, *,                               # pylint: disable=R0913
@@ -103,9 +137,12 @@ class AbstractJob:                                      # pylint: disable=R0902
         # by Scheduler.list() and similar
         self._s_label = None
 
-    def label(self, use_s_label=False):
+    def text_label(self, use_s_label=False):
         """
-        The logic for finding a job's label
+        The logic for finding a job's textual label.
+
+        Returns:
+          a one-line string used for describing this job.
 
         In terms of labelling, things have become a little tricky over
         time. When listing an instance of Scheduler, there are 2 ways
@@ -139,17 +176,19 @@ class AbstractJob:                                      # pylint: disable=R0902
 
     def dot_label(self):
         """
-        The method used by the Scheduler methods
-        that produce a graph, such as `Scheduler.graph` and
-        `Scheduler.export_as_dotfile`
+        Returns:
+          a string used by the Scheduler methods
+          that produce a graph, such as
+          :meth:`~asynciojobs.scheduler.Scheduler.graph` and
+          :meth:`~asynciojobs.scheduler.Scheduler.export_as_dotfile`.
 
-        Because that goes in a dot file, it can have
-        "\n" inserted, that will render as newlines in the output png
+        Because of the way graphs are presented, it can have contain "newline"
+        characters, that will render as line breaks in the output graph.
 
         If this method is not defined on a concrete class,
-        just use label() instead
+        then the :meth:`text_label()` method is used instead.
         """
-        return self.label()
+        return self.text_label()
 
     ##########
     _has_support_for_unicode = None  # type: bool
@@ -178,7 +217,7 @@ class AbstractJob:                                      # pylint: disable=R0902
 
     def _short_unicode(self):
         """
-        a small (7 chars) badge that summarizes the job's internal attributes
+        A small (7 chars) badge that summarizes the job's internal attributes
         uses non-ASCII characters
         """
         # where is it in the lifecycle
@@ -201,7 +240,7 @@ class AbstractJob:                                      # pylint: disable=R0902
 
     def _short_ascii(self):
         """
-        a small (7 chars) badge that summarizes the job's internal attributes
+        A small (7 chars) badge that summarizes the job's internal attributes
         uses ASCII-only characters
         """
         # where is it in the lifecycle
@@ -224,10 +263,11 @@ class AbstractJob:                                      # pylint: disable=R0902
 
     def short(self):
         """
-        return a 4 characters string (in fact 7 with interspaces)
-        that summarizes the 4 dimensions of the job, that is
+        Returns:
+          a 4 characters string (in fact 7 with interspaces)
+          that summarizes the 4 dimensions of the job, that is to say
 
-        * its point in the lifecycle: idle → scheduled → running → done
+        * its point in the lifecycle (idle → scheduled → running → done)
 
         * is it declared as forever
 
@@ -235,23 +275,18 @@ class AbstractJob:                                      # pylint: disable=R0902
 
         * did it trigger an exception
 
-        LifeCycle: see `is_done` for more details; in un-windowed schedulers,
-        there is no distinction between scheduled and running.
-
-        In windowed orchestrations, a job that is scheduled but not running
-        is waiting for a slot in the global window.
         """
         if self._detect_support_for_unicode():
             return self._short_unicode()
         return self._short_ascii()
 
-    def repr(self, show_requires=True, show_result_or_exception=True):
+    def _repr(self, show_requires=True, show_result_or_exception=True):
         """
         returns a string that describes this job instance,
-        with details as specified
+        with contents as specified
         """
         info = self.short()
-        info += " <{} `{}`>".format(type(self).__name__, self.label())
+        info += " <{} `{}`>".format(type(self).__name__, self.text_label())
 
         if show_result_or_exception:
             exception = self.raised_exception()
@@ -267,36 +302,35 @@ class AbstractJob:                                      # pylint: disable=R0902
         # show dependencies in both directions
         if show_requires and self.required:
             info += " - requires {"
-            info += ", ".join(req.label(                # pylint: disable=E1101
+            info += ", ".join(req.text_label(           # pylint: disable=E1101
                                   use_s_label=True)     # pylint: disable=C0330
                               for req in self.required)
             info += "}"
         return info
 
     def __repr__(self):
-        return self.repr(show_requires=False)
+        return self._repr(show_requires=False)
 
     def requires(self, *requirements):
         """
-        add requirements to a given job
+        Arguments:
+          requirements: an iterable of `AbstractJob`
+            instances that are added to the requirements.
 
-        with `j{1,2,3}` being jobs or sequences, one can call:
+        For convenience, any nested structure made of job instances
+        can be provided, and if None objects are found, they are silently
+        ignored. For example, with `j{1,2,3,4}` being jobs or sequences,
+        all the following calls are legitimate:
 
-        * j1.requires(None)
-
-        * j1.requires([None])
-
-        * j1.requires((None,))
-
-        * j1.requires(j2)
-
-        * j1.requires(j2, j3)
-
-        * j1.requires([j2, j3])
-
-        * j1.requires((j2, j3))
-
-        * j1.requires(([j2], [[[j3]]]))
+        * ``j1.requires(None)``
+        * ``j1.requires([None])``
+        * ``j1.requires((None,))``
+        * ``j1.requires(j2)``
+        * ``j1.requires(j2, j3)``
+        * ``j1.requires([j2, j3])``
+        * ``j1.requires(j2, [j3, j4])``
+        * ``j1.requires((j2, j3))``
+        * ``j1.requires(([j2], [[[j3]]]))``
         """
         from .sequence import Sequence
         for requirement in requirements:
@@ -317,60 +351,70 @@ class AbstractJob:                                      # pylint: disable=R0902
 
     def is_idle(self):
         """
-        a boolean that is true if the job has not been scheduled
-        already, which means that one of its requirements is not fulfilled.
+        Returns:
+          bool: ``True`` if the job has not been scheduled already, which
+          in other words means that at least one of its requirements
+          is not fulfilled.
 
-        Implies `not is_scheduled()` and so a fortiori
-        `not is_running` and `not is_done()`
+        Implies `not is_scheduled()`, and so *a fortiori*
+        `not is_running` and `not is_done()`.
 
         """
         return self._task is None
 
     def is_scheduled(self):
         """
-        boolean that tells if the job has been scheduled;
-        if True, the job's requirements are met and it has
-        proceeded to the windowing system; equivalent to `not is_idle()`
+        Returns:
+          bool: ``True`` if the job has been scheduled.
+
+        If True, it means that the job's requirements are met, and it has
+        proceeded to the windowing system; equivalent to `not is_idle()`.
         """
         return self._task is not None
 
     def is_running(self):
         """
-        Once a job starts, it tries to get a slot in the windowing sytem.
-        This method returns True if the job has received the green
-        light from the windowing system. Implies `is_scheduled()`
+        Returns:
+          bool: once a job starts, it tries to get a slot
+          in the windowing sytem. This method returns ``True`` if the job
+          has received the green light from the windowing system.
+          Implies `is_scheduled()`.
         """
         return self._running
 
     def is_done(self):
         """
-        a job lifecycle is idle → scheduled → running → done
+        Returns:
+          bool: ``True`` if the job has completed.
 
-        a boolean that tells if the job has completed.
-
-        Implies `is_scheduled()` and `is_running()`
+        If this method returns ``True``, it implies that
+        `is_scheduled()` and `is_running()`
+        would also return ``True`` at that time.
         """
         return self._task is not None \
             and self._task._state == asyncio.futures._FINISHED
 
     def raised_exception(self):
         """
-        returns an exception if the job has completed by raising an exception,
-        None otherwise
+        Returns:
+          an exception if the job has completed by raising an exception,
+          and None otherwise.
         """
         return self._task is not None and self._task._exception
 
     def is_critical(self):
         """
-        a boolean that tells whether this job is a critical job or not
+        Returns:
+          bool: whether this job is a critical job or not.
         """
         return self.critical
 
     def result(self):
         """
-        when this job is completed and has not raised an exception, this
-        method lets you retrieve the job's result. i.e. the value returned
-        by its `co_run()` method
+        Returns:
+          When this job is completed and has not raised an exception, this
+          method lets you retrieve the job's result. i.e. the value returned
+          by its `co_run()` method.
         """
         if not self.is_done():
             raise ValueError("job not finished")
@@ -378,77 +422,109 @@ class AbstractJob:                                      # pylint: disable=R0902
 
     async def co_run(self):
         """
-        abstract virtual - needs to be implemented
+        Abstract virtual - needs to be implemented
         """
         print("AbstractJob.co_run() needs to be implemented on class {}"
               .format(self.__class__.__name__))
 
     async def co_shutdown(self):
         """
-        abstract virtual - needs to be implemented
+        Abstract virtual - needs to be implemented
         """
         print("AbstractJob.co_shutdown() needs to be implemented on class {}"
               .format(self.__class__.__name__))
 
     def standalone_run(self):
         """
-        A convenience helper that just runs this one job on its own
+        A convenience helper that just runs this one job on its own.
 
         Mostly useful for debugging the internals of that job,
-        e.g. for checking for gross mistakes and other exceptions
+        e.g. for checking for gross mistakes and other exceptions.
         """
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.co_run())
+        return loop.run_until_complete(self.co_run())
 
-    # if subclass redefines details(), then that will show up in list()
+    def details(self):
+        """
+        An optional method to implement on concrete job classes; if it
+        returns a non None value, these additional details about that job
+        will get printed by
+        :meth:`asynciojobs.scheduler.Scheduler.list()` and
+        :meth:`asynciojobs.scheduler.Scheduler.debrief()`
+        when called with `details=True`.
+        """
+        pass
 
 
 class Job(AbstractJob):
 
     """
-    Most mundane form: built from a coroutine
-    """
+    The simplest concrete job class, for building an instance of AbstractJob
+    from of a python coroutine.
 
-    def __init__(self, corun, *args, coshutdown=None, **kwds):
-        """
-        Create a job from a coroutine
+    Parameters:
 
-        Example:
+      corun: a coroutine to be evaluated when the job runs
+      coshutdown: an optional coroutine to be evaluated when the scheduler
+        is done running
+      scheduler: passed to :class:`AbstractJob`
+      required: passed to :class:`AbstractJob`
+      label: passed to :class:`AbstractJob`
+
+    Example:
+      To create a job that prints a message and waits for a fixed delay::
+
         async def aprint(message, delay):
             print(message)
             await asyncio.sleep(delay)
 
         j = Job(aprint("Welcome - idling for 3 seconds", 3))
-        """
+    """
+
+    def __init__(self, corun, *args, coshutdown=None, **kwds):
         self.corun = corun
         self.coshutdown = coshutdown
         super().__init__(*args, **kwds)
 
     async def co_run(self):
+        """
+        Implementation of the method expected by :class:`AbstractJob`
+        """
         result = await self.corun
         return result
 
     async def co_shutdown(self):
+        """
+        Implementation of the method expected by :class:`AbstractJob`,
+        or more exactly by :meth:`asynciojobs.scheduler.Scheduler.list`
+        """
         if self.coshutdown:
             result = await self.coshutdown
             return result
 
     def details(self):                                  # pylint: disable=C0111
+        """
+        Implementation of the method expected by :class:`AbstractJob`
+        """
         return repr(self.corun)
 
 ####################
 
 
-class PrintJob(AbstractJob):
+class _PrintJob(AbstractJob):
     """
-    A job that just  does print on messages,
-    and optionnally sleeps for some time
+    A job that just prints messages, and optionnally sleeps for some time.
 
-    sleep is an optional float that tells how long
-    to sleep after the messages get printed
+    Parameters:
 
-    banner is an optional separation line,
-    like 40*'='; it won't make it into details()
+      messages: passed to ``print`` as-is
+      sleep: optional, an int or float describing in seconds
+        how long to sleep after the messages get printed
+      banner: optional, a fixed text printed out before the messages
+       like e.g. ``40*'='``; it won't make it into ``details()``
+      scheduler: passed to :class:``AbstractJob``
+      required: passed to :class:``AbstractJob``
+      label: passed to :class:``AbstractJob``
     """
 
     def __init__(self, *messages, sleep=None, banner=None,
@@ -461,6 +537,9 @@ class PrintJob(AbstractJob):
         super().__init__(label=label, required=required, scheduler=scheduler)
 
     async def co_run(self):
+        """
+        Implementation of the method expected by :class:`AbstractJob`
+        """
         try:
             if self.banner:
                 print(self.banner + " ", end="")
@@ -474,9 +553,16 @@ class PrintJob(AbstractJob):
             traceback.print_exc()
 
     async def co_shutdown(self):
+        """
+        Implementation of the method expected by :class:`AbstractJob`;
+        does nothing.
+        """
         pass
 
     def details(self):                                  # pylint: disable=C0111
+        """
+        Implementation of the method expected by :class:`AbstractJob`
+        """
         result = ""
         if self.sleep:
             result += "[+ sleep {}s] ".format(self.sleep)

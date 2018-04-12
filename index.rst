@@ -1,1 +1,1 @@
-sphinx/source/index.rst
+sphinx/index.rst

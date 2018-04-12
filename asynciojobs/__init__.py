@@ -9,5 +9,5 @@ https://asynciojobs.readthedocs.io/
 from .version import __version__
 
 from .scheduler import Scheduler
-from .job import AbstractJob, Job, PrintJob
+from .job import AbstractJob, Job
 from .sequence import Sequence

@@ -9,10 +9,12 @@ import math
 import asyncio
 import unittest
 
-from asynciojobs import AbstractJob, PrintJob
+from asynciojobs import AbstractJob
 from asynciojobs import Job as J
 from asynciojobs import Sequence as Seq
 from asynciojobs import Scheduler
+
+from asynciojobs.job import _PrintJob as PrintJob
 
 # pylint: disable=R0904, R0914, R0903, R1710
 # pylint: disable=W0106, W0212, W0201, C0103, C0111, C0321
@@ -95,7 +97,8 @@ class TickJob(AbstractJob):
     async def co_run(self):
         counter = 1
         while True:
-            print("{} -- Tick {} from {}".format(ts(), counter, self.label))
+            print("{} -- Tick {} from {}"
+                  .format(ts(), counter, self.text_label))
             counter += 1
             await asyncio.sleep(self.cycle)
 
