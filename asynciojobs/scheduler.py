@@ -117,6 +117,9 @@ class Scheduler:
         """
         self.update([job])
 
+    def __len__(self):
+        return len(self.jobs)
+
     def failed_time_out(self):
         """
         Returns:
@@ -232,7 +235,8 @@ class Scheduler:
 
         Examples:
 
-          Assuming all jobs have a label, print them in the "right" order::
+          Assuming all jobs have a ``label`` attribute,
+          print them in the "right" order::
 
             for job in scheduler.topological_order():
                 print(job.label)
@@ -627,15 +631,19 @@ class Scheduler:
                         candidate_next, window, loop=loop))
                     added += 1
 
-    def _set_s_labels(self):
+    def _set_sched_ids(self):
         """
-        write into each job._s_label an id compliant
+        write into each job._sched_id an id compliant
         with topological order
         """
-        label_format = "{:02}" if len(self.jobs) < 100 else "{:04}"
-        # inject number in each job in their _s_label field
+        import math
+        width = 1 if len(self.jobs) <= 9 \
+            else int(math.log(len(self.jobs)-1, 10) + 1)
+        # label_format is intended to be e.g. {:02d}
+        label_format = "{{:0{w}d}}".format(w=width)     # pylint: disable=w1303
+        # inject number in each job in their _sched_id field
         for i, job in enumerate(self.topological_order(), 1):
-            job._s_label = label_format.format(i)       # pylint: disable=W0212
+            job._sched_id = label_format.format(i)      # pylint: disable=W0212
 
     ####################
     def list(self, details=False):
@@ -648,9 +656,9 @@ class Scheduler:
         """
         # so now we can refer to other jobs by their id when showing
         # requirements
-        self._set_s_labels()
+        self._set_sched_ids()
         for job in self.topological_order():
-            print(job._s_label,                         # pylint: disable=W0212
+            print(job._sched_id,                        # pylint: disable=W0212
                   job._repr(show_requires=True))        # pylint: disable=W0212
             if details and hasattr(job, 'details'):
                 details = job.details()
@@ -730,11 +738,12 @@ class Scheduler:
             # then exceptions that were not critical
             non_critical_exceptions = exceptions - criticals
             for j in self.topological_order():
-                if j in non_critical_exceptions:
-                    if not self.verbose:
-                        print(
-                            "non-critical: {}: exception {}"
-                            .format(j.text_label(), j.raised_exception()))
+                if j not in non_critical_exceptions:
+                    continue
+                if not self.verbose:
+                    print("non-critical: {}: exception {}"
+                          .format(j._get_text_label(),  # pylint: disable=W0212
+                                  j.raised_exception()))
                     if self.verbose:
                         self._show_task_stack(
                             j, "non-critical job exception stack")
@@ -762,15 +771,15 @@ class Scheduler:
         for a list of tools that support the ``dot`` format.
 
         """
-        self._set_s_labels()
+        self._set_sched_ids()
 
         def label_to_id(job):                           # pylint: disable=C0111
             result = ""
-            # add the _s_label so we avoid 2 nodes accidentally
+            # add the _sched_id so we avoid 2 nodes accidentally
             # merged into one because they share the same label
-            if job._s_label:                            # pylint: disable=W0212
-                result += "{}: ".format(job._s_label)   # pylint: disable=W0212
-            result += job.dot_label()
+            if job._sched_id:                           # pylint: disable=W0212
+                result += "{}: ".format(job._sched_id)  # pylint: disable=W0212
+            result += job._get_graph_label()
             # escape any double quote
             result = result.replace('"', r'\"')
             # put double quotes around all this
@@ -818,13 +827,15 @@ class Scheduler:
         from graphviz import Digraph
         graph = Digraph()
 
-        # write numbering in the jobs in _s_label
-        self._set_s_labels()
+        # write numbering in the jobs in _sched_id
+        self._set_sched_ids()
 
-        # we use job._s_label as the key and job.dot_label() as the label
+        # we use job._sched_id as the key, graph_label() as the label
         for job in self.topological_order():
-            graph.node(job._s_label, job.dot_label())   # pylint: disable=W0212
+            graph.node(job._sched_id,                   # pylint: disable=W0212
+                       job._get_graph_label())
             for req in job.required:
-                graph.edge(req._s_label, job._s_label)  # pylint: disable=W0212
+                graph.edge(req._sched_id,               # pylint: disable=W0212
+                           job._sched_id)               # pylint: disable=W0212
 
         return graph

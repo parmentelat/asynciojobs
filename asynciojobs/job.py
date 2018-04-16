@@ -86,12 +86,13 @@ class AbstractJob:                                      # pylint: disable=R0902
         label (str): for convenience mostly, allows to specify
           the way that particular job should be displayed by the scheduler,
           either in textual form by ``Scheduler.list()``, or in graphical form
-          by ``Scheduler.graph()``. See also :meth:`dot_label()`
+          by ``Scheduler.graph()``. See also :meth:`text_label()`
           and :meth:`graph_label()` for how this is used.
 
-          As far as labelling, each subclass of `AbstractJob` implements a
-          default labelling scheme, so it is not mandatory to set a specific
-          label on each job instance, however it is sometimes useful.
+          As far as labelling, each subclass of :class:`AbstractJob`
+          implements a default labelling scheme, so it is not mandatory
+          to set a specific label on each job instance, however it is
+          sometimes useful.
 
           Labels must not be confused with details, see :meth:`details()`
 
@@ -106,13 +107,12 @@ class AbstractJob:                                      # pylint: disable=R0902
     """
 
     def __init__(self, *,                               # pylint: disable=R0913
-                 forever=False, label=None, critical=False,
+                 forever=False, critical=False, label=None,
                  required=None, scheduler=None):
         self.forever = forever
         self.critical = critical
-        # access label through a method
-        # so we can invoke default_label() if missing
-        self._label = label
+        # access to labelling is done through methods
+        self.label = label
         # for convenience, one can mention
         # only one, or a collection of, AbstractJobs
         self.required = set()
@@ -135,47 +135,75 @@ class AbstractJob:                                      # pylint: disable=R0902
         # that will for example store there an ordering information,
         # which in turn can be used for printing relationships
         # by Scheduler.list() and similar
-        self._s_label = None
+        self._sched_id = None
 
-    def text_label(self, use_s_label=False):
-        """
-        The logic for finding a job's textual label.
+    def _get_sched_id(self):
+        return self._sched_id or '??'
 
-        Returns:
-          a one-line string used for describing this job.
+    def _get_text_label(self):
+        # In terms of labelling, things have become a little tricky over
+        # time. When listing an instance of Scheduler, there are 2 ways
+        # we need to show a job
+        #
+        # * first there is a plain label, that may be set at creation time
+        #
+        # * second, when showing references (like the jobs that a given job
+        #  requires), we show ids like '01' and similar.
+        # Except that, the job itself has no idea about that at first,
+        # it's the Scheduler instance that decides on that.
+        #
+        # so:
+        # * if use_sched_id is True, looks in self._sched_id that is expected
+        # to have been set by companion class Scheduler;
+        # if not set returns a warning msg '??'
+        #
+        # * otherwise, i.e. if use_sched_id is False, looks for the label
+        #  used at creation-time, and otherwise runs its class's
+        #  `text_label()` method
 
-        In terms of labelling, things have become a little tricky over
-        time. When listing an instance of Scheduler, there are 2 ways
-        we need to show a job
-
-        * first there is a plain label, that may/should be set at creation time
-
-        * second, when showing references (like the jobs that a given job
-          requires), we show ids like '01' and similar.
-        Except that, the job itself has no idea about that at first,
-        it's the Scheduler instance that decides on that.
-
-        So:
-
-        * if use_s_label is True, looks in self._s_label that is expected
-        to have been set by companion class Scheduler;
-        if not set returns a warning msg '??'
-
-        * otherwise, i.e. if use_s_label is False, looks for the label
-          used at creation-time, and otherwise runs its class's
-          `default_label()` method
-
-        """
-        if use_s_label:
-            return self._s_label or '??'
-        if self._label is not None:
-            return str(self._label)
-        if hasattr(self, 'default_label'):
-            return self.default_label()                 # pylint: disable=E1101
+        # use instance-specific label if set
+        attempt = self.label
+        if attempt is not None:
+            return attempt
+        # otherwise, try self.text_label() and use that
+        attempt = self.text_label()
+        if attempt is not None:
+            return attempt
+        # otherwise
         return "NOLABEL"
 
-    def dot_label(self):
+    def _get_graph_label(self):
+        # a similar logic for a graphical label
+        # we don't need to bother about _sched_id here though
+        # also we try graph_label() first, and resort to text_label()
+        # if it's not redefined on the object
+        attempt = self.graph_label()
+        if attempt is not None:
+            return attempt
+        return self._get_text_label()
+
+    def text_label(self):
         """
+        This method is intended to be redefined by daughter classes.
+
+        Returns:
+          a one-line string that describes this job.
+
+        This representation for the job is used by the Scheduler object
+        through its :meth:`~asynciojobs.scheduler.Scheduler.list()` and
+        :meth:`~asynciojobs.scheduler.Scheduler.debrief()` methods, i.e.
+        when a scheduler is printed out in textual format.
+
+        The overall logic is to always use the instance's ``label`` attribute
+        if set, or to use this method otherwise. If none of this returns
+        anything useful, the textual label used is ``NOLABEL``.
+        """
+        pass
+
+    def graph_label(self):
+        """
+        This method is intended to be redefined by daughter classes.
+
         Returns:
           a string used by the Scheduler methods
           that produce a graph, such as
@@ -188,7 +216,7 @@ class AbstractJob:                                      # pylint: disable=R0902
         If this method is not defined on a concrete class,
         then the :meth:`text_label()` method is used instead.
         """
-        return self.text_label()
+        pass
 
     ##########
     _has_support_for_unicode = None  # type: bool
@@ -286,7 +314,8 @@ class AbstractJob:                                      # pylint: disable=R0902
         with contents as specified
         """
         info = self.short()
-        info += " <{} `{}`>".format(type(self).__name__, self.text_label())
+        info += " <{} `{}`>".format(type(self).__name__,
+                                    self._get_text_label())
 
         if show_result_or_exception:
             exception = self.raised_exception()
@@ -302,8 +331,7 @@ class AbstractJob:                                      # pylint: disable=R0902
         # show dependencies in both directions
         if show_requires and self.required:
             info += " - requires {"
-            info += ", ".join(req.text_label(           # pylint: disable=E1101
-                                  use_s_label=True)     # pylint: disable=C0330
+            info += ", ".join(req._get_sched_id()
                               for req in self.required)
             info += "}"
         return info
@@ -486,6 +514,15 @@ class Job(AbstractJob):
         self.coshutdown = coshutdown
         super().__init__(*args, **kwds)
 
+    def text_label(self):
+        """
+        Implementation of the method expected by :class:`AbstractJob`
+        """
+        try:
+            return "Job[{name} (...)]".format(name=self.corun.__name__)
+        except Exception:                                # pylint:disable=w0703
+            return "Job instance"
+
     async def co_run(self):
         """
         Implementation of the method expected by :class:`AbstractJob`
@@ -501,12 +538,6 @@ class Job(AbstractJob):
         if self.coshutdown:
             result = await self.coshutdown
             return result
-
-    def details(self):                                  # pylint: disable=C0111
-        """
-        Implementation of the method expected by :class:`AbstractJob`
-        """
-        return repr(self.corun)
 
 ####################
 
@@ -570,6 +601,3 @@ class _PrintJob(AbstractJob):
         result += self.messages[0]
         result += "..." if len(self.messages) > 1 else ""
         return result
-
-    def default_label(self):                            # pylint: disable=C0111
-        return self.details()

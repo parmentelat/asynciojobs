@@ -68,16 +68,23 @@ def sl(n): return _sl(n, middle=False, emergency=False)
 
 def slm(n): return _sl(n, middle=True, emergency=False)
 
+
+async def co_print_sleep(message, duration=0.5):
+    print(message)
+    await asyncio.sleep(duration)
+
 ##############################
 
 
 class SleepJob(AbstractJob):
 
     def __init__(self, timeout, middle=False):
-        AbstractJob.__init__(self, forever=False,
-                             label="sleep for {}s".format(timeout))
+        AbstractJob.__init__(self, forever=False)
         self.timeout = timeout
         self.middle = middle
+
+    def text_label(self):
+        return "Sleep for {}s".format(self.timeout)
 
     async def co_run(self):
         result = await _sl(self.timeout, middle=self.middle, emergency=False)
@@ -90,15 +97,17 @@ class SleepJob(AbstractJob):
 class TickJob(AbstractJob):
 
     def __init__(self, cycle):
-        AbstractJob.__init__(self, forever=True,
-                             label="Cyclic tick every {}s".format(cycle))
+        AbstractJob.__init__(self, forever=True)
         self.cycle = cycle
+
+    def graph_label(self):
+        return "Cyclic tick every {}s".format(self.cycle)
 
     async def co_run(self):
         counter = 1
         while True:
             print("{} -- Tick {} from {}"
-                  .format(ts(), counter, self.text_label))
+                  .format(ts(), counter, self.text_label()))
             counter += 1
             await asyncio.sleep(self.cycle)
 
@@ -135,6 +144,11 @@ def list_sep(scheduler, sep):
 
 
 class Tests(unittest.TestCase):
+
+    def test_empty(self):
+        s = Scheduler()
+        s.list()
+        s.list(details=True)
 
     ####################
     def test_cycle(self):
@@ -518,6 +532,65 @@ class Tests(unittest.TestCase):
                             sched.add(j)
                             previous = j
         sched.list()
+
+    def test_graph1(self):
+
+        s = Scheduler()
+        s.add(Seq(
+            J(co_print_sleep('begin')),
+            J(co_print_sleep('middle', 1), label='middle'),
+            J(co_print_sleep('end', .25)),
+        ))
+        print("NO DETAILS")
+        s.list()
+        print("WITH DETAILS")
+        s.list(details=True)
+        print("GRAPH")
+        self.assertEqual(len(s), 3)
+        g = s.graph()
+        g.format = 'png'
+        g.render('tests/test_graph1')
+        print("(over)wrote tests/test_graph1.png")
+
+    def test_graph2(self):
+
+        class TextJob(J):
+            def __init__(self, text, *args, **kwds):
+                self.text = text
+                super().__init__(*args, **kwds)
+            def text_label(self):
+                return "[[TextJob {}]]".format(self.text[::-1])
+
+        class GraphJob(J):
+            def __init__(self, graph, *args, **kwds):
+                self.graph = graph
+                super().__init__(*args, **kwds)
+            def graph_label(self):
+                return "[[GraphJob\n{}]]".format(self.graph[::-1])
+
+        s = Scheduler()
+        s.add(Seq(
+            TextJob('textjob-with',
+                    co_print_sleep('textjob, no label ')),
+            TextJob('textjob-without',
+                    co_print_sleep('textjob, with label '),
+                    label='TextLabel'),
+            GraphJob('graphjob-with',
+                    co_print_sleep('graphjob, no label ')),
+            GraphJob('graphjob-without',
+                    co_print_sleep('graphjob, with label '),
+                    label='GraphLabel'),
+        ))
+        print("NO DETAILS")
+        s.list()
+        print("WITH DETAILS")
+        s.list(details=True)
+        print("GRAPH")
+        self.assertEqual(len(s), 4)
+        g = s.graph()
+        g.format = 'png'
+        g.render('tests/test_graph2')
+        print("(over)wrote tests/test_graph2.png")
 
 
 if __name__ == '__main__':
