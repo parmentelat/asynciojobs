@@ -9,7 +9,7 @@
 * major overhaul on the documentation
   * using the numpy style in docstrings
   * examples of nested schedulers
-  * section on ttroubleshooting
+  * section on troubleshooting
 * code is now totally pep8/flake8- and pylint- clean
 
 ## 0.6.1 - 2018 Mar 12
