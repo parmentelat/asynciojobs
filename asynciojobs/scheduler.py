@@ -782,7 +782,7 @@ class Scheduler:
             result += job._get_graph_label()            # pylint: disable=W0212
             # escape any double quote
             result = result.replace('"', r'\"')
-            # put double quotes around all this
+            # and put double quotes around all this
             return '"' + result + '"'
 
         # need to figure out totally isolated nodes

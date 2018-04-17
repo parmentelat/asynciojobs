@@ -192,8 +192,8 @@ sb2 = Scheduler(Sequence(Job(in_out(0.1), label="bp1"),
 sb2.orchestrate()
 ```
 
-    -> in_out(0.1)
     -> in_out(0.25)
+    -> in_out(0.1)
     <- in_out(0.1)
     -> in_out(0.2)
     <- in_out(0.25)
@@ -244,9 +244,9 @@ To see an overview of a scheduler, just use the `list()` method that will give y
 sb.list()
 ```
 
-    01   ☉ ☓   <Job `NOLABEL`>[[ -> 250.0]]
-    02   ☉ ☓   <Job `b1`>[[ -> 100.0]]
-    03   ☉ ☓   <Job `b2`>[[ -> 200.0]] - requires {02}
+    1   ☉ ☓   <Job `Job[in_out (...)]`>[[ -> 250.0]]
+    2   ☉ ☓   <Job `b1`>[[ -> 100.0]]
+    3   ☉ ☓   <Job `b2`>[[ -> 200.0]] - requires {2}
 
 
 Here is a complete list of the symbols used, with their meaning 
@@ -329,8 +329,8 @@ sc = Scheduler(c1, c2, c3, c4)
 sc.orchestrate()
 ```
 
-    BUS: -> in_out(0.4)
     BUS: -> in_out(0.2)
+    BUS: -> in_out(0.4)
     BUS: <- in_out(0.2)
     BUS: -> in_out(0.3)
     BUS: <- in_out(0.4)
@@ -351,10 +351,10 @@ Note that `orchestrate` always terminates as soon as all the non-`forever` jobs 
 sc.list()
 ```
 
-    01   ☉ ↺ ∞ <Job `monitor`>
-    02   ☉ ☓   <Job `c2`>[[ -> 4.0]]
-    03   ☉ ☓   <Job `c1`>[[ -> 2.0]]
-    04   ☉ ☓   <Job `c3`>[[ -> 3.0]] - requires {03}
+    1   ☉ ☓   <Job `c1`>[[ -> 2.0]]
+    2   ☉ ↺ ∞ <Job `monitor`>
+    3   ☉ ☓   <Job `c2`>[[ -> 4.0]]
+    4   ☉ ☓   <Job `c3`>[[ -> 3.0]] - requires {1}
 
 
 ### Example D : specifying a global timeout
@@ -375,10 +375,10 @@ sd = Scheduler(j)
 sd.orchestrate(timeout=0.25)
 ```
 
-    05:02:08: forever 0
-    05:02:08: forever 1
-    05:02:08: forever 2
-    05-02-08: SCHEDULER: orchestrate: TIMEOUT occurred
+    11:29:29: forever 0
+    11:29:30: forever 1
+    11:29:30: forever 2
+    11-29-30: SCHEDULER: orchestrate: TIMEOUT occurred
 
 
 
@@ -398,7 +398,7 @@ j
 
 
 
-      ☉ ↺ ∞ <Job `NOLABEL`>
+      ☉ ↺ ∞ <Job `Job[forever (...)]`>
 
 
 
@@ -441,9 +441,9 @@ se.list()
     -> in_out(0.3)
     <- in_out(0.3)
     orch: True
-    01   ☉ ☓   <Job `NOLABEL`>[[ -> 200.0]]
-    02   ★ ☓   <Job `boom`>!! exception => Exception:boom after 0.2s!! - requires {01}
-    03   ☉ ☓   <Job `NOLABEL`>[[ -> 300.0]] - requires {02}
+    1   ☉ ☓   <Job `Job[in_out (...)]`>[[ -> 200.0]]
+    2   ★ ☓   <Job `boom`>!! exception => Exception:boom after 0.2s!! - requires {1}
+    3   ☉ ☓   <Job `Job[in_out (...)]`>[[ -> 300.0]] - requires {2}
 
 
 ### Example F : critical jobs
@@ -463,11 +463,11 @@ sf.list()
 
     -> in_out(0.2)
     <- in_out(0.2)
-    05-02-09: SCHEDULER: Emergency exit upon exception in critical job
+    11-29-31: SCHEDULER: Emergency exit upon exception in critical job
     orchestrate: False
-    01   ☉ ☓   <Job `NOLABEL`>[[ -> 200.0]]
-    02 ⚠ ★ ☓   <Job `boom`>!! CRIT. EXC. => Exception:boom after 0.2s!! - requires {01}
-    03     ⚐   <Job `NOLABEL`> - requires {02}
+    1   ☉ ☓   <Job `Job[in_out (...)]`>[[ -> 200.0]]
+    2 ⚠ ★ ☓   <Job `boom`>!! CRIT. EXC. => Exception:boom after 0.2s!! - requires {1}
+    3     ⚐   <Job `Job[in_out (...)]`> - requires {2}
 
 
 ### Limiting the number of simultaneous jobs
@@ -505,15 +505,15 @@ end = time.time()
 print("total duration = {}s".format(end-beg))
 ```
 
-    7-th job
     3-th job
-    8-th job
-    5-th job
     1-th job
-    6-th job
+    8-th job
     4-th job
+    5-th job
+    6-th job
     2-th job
-    total duration = 1.0090370178222656s
+    7-th job
+    total duration = 1.0052709579467773s
 
 
 ## Customizing jobs
@@ -609,3 +609,116 @@ os.system("dot -Tpng readme.dot -o readme.png")
 Which now allows us to render the graph for our last scheduler as a png file:
 
 ![manually inserted readme](readme.png)
+
+Note that if you do have `graphviz` available, you can produce a png file more simply, i.e. without the need for creating the dot file, as shown below:
+
+
+```python
+# a trick to produce a png file on a box that has pygraphviz installed
+g = s.graph()
+g.format = 'png'
+g.render('readme')
+```
+
+
+
+
+    'readme.png'
+
+
+
+## Nesting schedulers
+
+By simply taking advantage of the fact that:
+* a `Job` can be created from any coroutine, and that
+* `co_orchestrate` is a coroutine, 
+it is super-easy to nest schedulers.
+
+Let us consider the following example; we start with creating a simple diamond-shaped scheduler:
+
+
+```python
+# the sub-scheduler
+subs = Scheduler()
+subj1 = Job(aprint("subj1"), label='subj1', scheduler=subs)
+subj2 = Job(aprint("subj2"), label='subj2', required=subj1, scheduler=subs)
+subj3 = Job(aprint("subj3"), label='subj3', required=subj1, scheduler=subs)
+subj4 = Job(aprint("subj4"), label='subj4', required=(subj2, subj3), scheduler=subs)
+```
+
+We can now easily create a main scheduler, in which one of the jobs will run this low-level scheduler:
+
+
+```python
+# the main scheduler
+mains = Scheduler()
+Sequence(
+    Job(aprint("main-start"), label="main-start"),
+    # this is where we graft the subscheduler into its upper-level scheduler
+    Job(subs.co_orchestrate(), label="sub-scheduler"),
+    Job(aprint("main-end"), label="main-end"),
+    scheduler = mains,
+)
+```
+
+
+
+
+    <asynciojobs.sequence.Sequence at 0x1094095c0>
+
+
+
+Although the graphical presentation would not explicitly render that nesting, the semantics is what you'd expect:
+
+
+```python
+mains.run()
+```
+
+    main-start
+    subj1
+    subj3
+    subj2
+    subj4
+    main-end
+
+
+
+
+
+    True
+
+
+
+### What for ?
+
+This feature is admittedly not widely used, mostly because the graphical representation does not reflect nesting.
+
+There is one usage where this can be of interest though; when adding `forever` jobs to a scheduler, these get killed **at the end** of the scheduler, and so there is no way to trigger this termination earlier; using a sub-scheduler might be an angle for achieving this result.
+
+## Troubleshooting
+
+As a general rule, and maybe especially when dealing with nested schedulers, it is important to keep in mind the following constraints.
+
+### Don't insert a job in several schedulers
+
+One given job should be inserted in **exactly one** scheduler. Be aware that the code does not check for this, it is the programmer's responsability to enforce this rule. 
+
+A job that is not inserted in any scheduler will of course never be run. 
+
+A job inserted in several schedulers will most likely behave very oddly, as each scheduler will be in a position to have it move along.
+
+
+### Create as many job instances as needed
+
+Another common mistake is to try and reuse a job instance in several places in a scheduler. Each instance carries the state of the job progress, so it is important to create as many instances/copies as there are tasks, and to not try and share job objects.
+
+In particular, if you take one job instance that has completed, and try to insert it into a new scheduler, it will be considered as done, and will not run again.
+
+### You can't run the same scheduler twice
+
+In much the same way, once a scheduler is done - assuming all went well - essentially all of its jobs are marked as done, and trying to run it again will either do nothing, or raise an exception.
+
+### You can't run an empty scheduler
+
+As of this writing, trying to run an empty scheduler results in an exception, as no entry point can be found in the requirements graph. This might change in the future though.
