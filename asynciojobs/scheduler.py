@@ -748,8 +748,26 @@ class Scheduler:
                         self._show_task_stack(
                             j, "non-critical job exception stack")
 
-    ####################
-    def export_as_dotfile(self, filename):
+    # graph-oriented methods
+    @staticmethod
+    def _job_label(job, show_ids):
+        result = ""
+        # add the _sched_id so we avoid 2 nodes accidentally
+        # merged into one because they share the same label
+        if show_ids and job._sched_id:                  # pylint: disable=W0212
+            result += "{}: ".format(job._sched_id)      # pylint: disable=W0212
+        result += job._get_graph_label()                # pylint: disable=W0212
+        return result
+
+    @staticmethod
+    def _dot_protect(string):
+        # escape any double quote
+        result = string.replace('"', r'\"')
+        # and put double quotes around all this
+        return '"' + result + '"'
+        return result
+
+    def export_as_dotfile(self, filename, show_ids=False):
         """
         Creates a graph that depicts the jobs and their requires
         relationships.
@@ -773,34 +791,28 @@ class Scheduler:
         """
         self._set_sched_ids()
 
-        def label_to_id(job):                           # pylint: disable=C0111
-            result = ""
-            # add the _sched_id so we avoid 2 nodes accidentally
-            # merged into one because they share the same label
-            if job._sched_id:                           # pylint: disable=W0212
-                result += "{}: ".format(job._sched_id)  # pylint: disable=W0212
-            result += job._get_graph_label()            # pylint: disable=W0212
-            # escape any double quote
-            result = result.replace('"', r'\"')
-            # and put double quotes around all this
-            return '"' + result + '"'
-
         # need to figure out totally isolated nodes
         exported = set()
         with open(filename, 'w') as output:
             output.write("digraph G {\n")
             for job in self.topological_order():
+                # declare node and attach label
+                output.write("{} [label="
+                             .format(job._sched_id))    # pylint: disable=W0212
+                output.write(
+                    self._dot_protect(self._job_label(job, show_ids)))
+                output.write("]\n")
+                # add edges
                 for req in job.required:
-                    output.write("{} -> {};\n"
-                                 .format(label_to_id(req),
-                                         label_to_id(job)))
+                    output.write(
+                        "{} -> {};\n"
+                        .format(req._sched_id,          # pylint: disable=W0212
+                                job._sched_id))         # pylint: disable=W0212
                     exported.update((job, req))
-            for isolated in self.jobs - exported:
-                output.write("{};\n".format(label_to_id(isolated)))
             output.write("}\n")
         print("(Over)wrote {}".format(filename))
 
-    def graph(self):
+    def graph(self, *, show_ids=False):
         """
         Returns:
           graphviz.Digraph: a native graph instance.
@@ -833,7 +845,7 @@ class Scheduler:
         # we use job._sched_id as the key, graph_label() as the label
         for job in self.topological_order():
             graph.node(job._sched_id,                   # pylint: disable=W0212
-                       job._get_graph_label())          # pylint: disable=W0212
+                       self._job_label(job, show_ids))
             for req in job.required:
                 graph.edge(req._sched_id,               # pylint: disable=W0212
                            job._sched_id)               # pylint: disable=W0212
