@@ -331,7 +331,7 @@ class AbstractJob:                                      # pylint: disable=R0902
         # show dependencies in both directions
         if show_requires and self.required:
             info += " - requires {"
-            info += ", ".join(req._get_sched_id()
+            info += ", ".join(req._get_sched_id()       # pylint: disable=e1101
                               for req in self.required)
             info += "}"
         return info

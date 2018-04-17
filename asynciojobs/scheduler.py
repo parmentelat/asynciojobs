@@ -779,7 +779,7 @@ class Scheduler:
             # merged into one because they share the same label
             if job._sched_id:                           # pylint: disable=W0212
                 result += "{}: ".format(job._sched_id)  # pylint: disable=W0212
-            result += job._get_graph_label()
+            result += job._get_graph_label()            # pylint: disable=W0212
             # escape any double quote
             result = result.replace('"', r'\"')
             # put double quotes around all this
@@ -833,7 +833,7 @@ class Scheduler:
         # we use job._sched_id as the key, graph_label() as the label
         for job in self.topological_order():
             graph.node(job._sched_id,                   # pylint: disable=W0212
-                       job._get_graph_label())
+                       job._get_graph_label())          # pylint: disable=W0212
             for req in job.required:
                 graph.edge(req._sched_id,               # pylint: disable=W0212
                            job._sched_id)               # pylint: disable=W0212
