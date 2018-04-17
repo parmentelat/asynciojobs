@@ -104,8 +104,8 @@ sa = Scheduler(a1, a2, a3)
 sa.orchestrate()
 ```
 
-    -> in_out(0.1)
     -> in_out(0.25)
+    -> in_out(0.1)
     -> in_out(0.2)
     <- in_out(0.1)
     <- in_out(0.2)
@@ -375,10 +375,10 @@ sd = Scheduler(j)
 sd.orchestrate(timeout=0.25)
 ```
 
-    11:29:29: forever 0
-    11:29:30: forever 1
-    11:29:30: forever 2
-    11-29-30: SCHEDULER: orchestrate: TIMEOUT occurred
+    13:09:20: forever 0
+    13:09:20: forever 1
+    13:09:20: forever 2
+    13-09-20: SCHEDULER: orchestrate: TIMEOUT occurred
 
 
 
@@ -463,7 +463,7 @@ sf.list()
 
     -> in_out(0.2)
     <- in_out(0.2)
-    11-29-31: SCHEDULER: Emergency exit upon exception in critical job
+    13-09-21: SCHEDULER: Emergency exit upon exception in critical job
     orchestrate: False
     1   ☉ ☓   <Job `Job[in_out (...)]`>[[ -> 200.0]]
     2 ⚠ ★ ☓   <Job `boom`>!! CRIT. EXC. => Exception:boom after 0.2s!! - requires {1}
@@ -505,15 +505,15 @@ end = time.time()
 print("total duration = {}s".format(end-beg))
 ```
 
-    3-th job
-    1-th job
-    8-th job
     4-th job
+    8-th job
     5-th job
     6-th job
     2-th job
     7-th job
-    total duration = 1.0052709579467773s
+    3-th job
+    1-th job
+    total duration = 1.0096750259399414s
 
 
 ## Customizing jobs
@@ -664,7 +664,7 @@ Sequence(
 
 
 
-    <asynciojobs.sequence.Sequence at 0x1094095c0>
+    <asynciojobs.sequence.Sequence at 0x10561a748>
 
 
 
@@ -677,8 +677,8 @@ mains.run()
 
     main-start
     subj1
-    subj3
     subj2
+    subj3
     subj4
     main-end
 

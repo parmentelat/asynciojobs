@@ -106,6 +106,9 @@ class Scheduler:
         """
         Adds a collection of ``Schedulable`` objects;
         this method is named after ``set.update()``.
+
+        Parameters:
+          jobs: a collection of ``Schedulable`` objects.
         """
         jobs = set(Sequence._flatten(jobs))         # pylint: disable=W0212
         self.jobs.update(jobs)
@@ -114,10 +117,18 @@ class Scheduler:
         """
         Adds a single ``Schedulable`` object;
         this method name is inspired from plain python ``set.add()``
+
+        Parameters:
+          job: a single ``Schedulable`` object.
         """
         self.update([job])
 
     def __len__(self):
+        """
+        You can call len() on a Scheduler object.
+        Returns:
+          int: number of jobs in the scheduler.
+        """
         return len(self.jobs)
 
     def failed_time_out(self):
@@ -146,23 +157,6 @@ class Scheduler:
         if self._failed_critical:
             return "a CRITICAL job has raised an exception"
         return "FINE"
-
-    ####################
-    def orchestrate(self, *args, loop=None, **kwds):
-        """
-        A synchroneous wrapper around :meth:`co_orchestrate()`
-
-        you can also use the alias method `orchestrate()`
-        """
-        if loop is None:
-            loop = asyncio.get_event_loop()
-        return loop.run_until_complete(
-            self.co_orchestrate(loop=loop, *args, **kwds))
-
-    # xxx this should be the main name,
-    # and orchestrate should be the alias
-    # an alias that is shorter to type
-    run = orchestrate
 
     ####################
     def sanitize(self):
@@ -456,6 +450,25 @@ class Scheduler:
                               show_result_or_exception=self.verbose,
                               show_requires=self.verbose)))
 
+    ####################
+    def orchestrate(self, *args, loop=None, **kwds):
+        """
+        A synchroneous wrapper around :meth:`co_orchestrate()`,
+        please referto that link for details on parameters and return value.
+
+        you can also use the alias method `orchestrate()`
+
+        """
+        if loop is None:
+            loop = asyncio.get_event_loop()
+        return loop.run_until_complete(
+            self.co_orchestrate(loop=loop, *args, **kwds))
+
+    # an alias that is shorter to type
+    # xxx this should be the main name,
+    # and orchestrate should be the alias
+    run = orchestrate
+
     async def co_orchestrate(                     # pylint: disable=R0912,R0915
             self, timeout=None, jobs_window=None, loop=None):
         """
@@ -474,7 +487,7 @@ class Scheduler:
         Returns:
           bool: `True` if none of these 2 conditions occur, `False` otherwise.
 
-        Jobs marked as ``forever`` are not waited forself. All jobs get
+        Jobs marked as ``forever`` are not waited for. All jobs get
         terminated through their `co_shutdown()` method.
 
         ---
@@ -487,7 +500,7 @@ class Scheduler:
           jobs_window: is an integer that specifies how many jobs
             can be run simultaneously. None or 0 means no limit.
 
-          loop: is an asyncio events loop, it defaults to
+          loop: an asyncio event loop, it defaults to
             ``asyncio.get_event_loop()``, which is almost certainly
             the right value to use.
 
@@ -765,7 +778,6 @@ class Scheduler:
         result = string.replace('"', r'\"')
         # and put double quotes around all this
         return '"' + result + '"'
-        return result
 
     def export_as_dotfile(self, filename, show_ids=False):
         """
@@ -775,6 +787,12 @@ class Scheduler:
         This method does not require ``graphviz`` to be installed, it
         writes a file in dot format for post-processing with
         e.g. graphviz's ``dot`` utility.
+
+        Parameters:
+          show_ids: if set, the graph labels are prefixed with each job's
+            index in the scheduler. This reflects the same order as
+            :meth:`topological_order()`, which is also used
+            e.g. in :meth:`list()`.
 
         See also the :meth:`graph()` method that
         serves the same purpose but natively as a ``graphviz`` object.
@@ -814,6 +832,10 @@ class Scheduler:
 
     def graph(self, *, show_ids=False):
         """
+        Parameters:
+          show_ids(bool): if set, job labels are prefixed with their index in
+            the topological order on the graph.
+
         Returns:
           graphviz.Digraph: a native graph instance.
 
@@ -821,12 +843,12 @@ class Scheduler:
         but it natively returns a graph instance. For that reason,
         its usage requires the installation of the ``graphviz`` package.
 
-        This is typically useful in a Jupyter notebook,
+        This method is typically useful in a Jupyter notebook,
         so as to visualize a scheduler in graph format  - see
         http://graphviz.readthedocs.io/en/stable/manual.html#jupyter-notebooks
         for how this works.
 
-        The dependency to from ``asynciojobs`` to ``graphviz`` is limited
+        The dependency from ``asynciojobs`` to ``graphviz`` is limited
         to this method, as it is the only place that needs it,
         and as installing ``graphviz`` can be cumbersome.
 
