@@ -146,6 +146,12 @@ class Tests(unittest.TestCase):
         s.list()
         s.list(details=True)
 
+        # assertRaises requires a function object,
+        # not the result, since there is no result of course
+        def closure():
+            return s.run()
+        self.assertRaises(ValueError, closure)
+
     ####################
     def test_cycle(self):
         """a simple loop with 3 jobs - cannot handle that"""
