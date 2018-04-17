@@ -1,5 +1,17 @@
 # ChangeLog
 
+## 0.7.1 - 2018 Apr 17
+
+* thoroughly review the way custom labels are defined and used; classes that
+  inherit `AbstractJob` can redefine text_label() and graph_label()
+* graph production: both methods (dot and native digraph) now consistently
+  accept argument `show_ids`
+* major overhaul on the documentation
+  * using the numpy style in docstrings
+  * examples of nested schedulers
+  * section on ttroubleshooting
+* code is now totally pep8/flake8- and pylint- clean
+
 ## 0.6.1 - 2018 Mar 12
 
 * adopt new layout for the doc - no source/ subdir under sphinx
@@ -106,7 +118,7 @@
 
 ## 0.2.3 - 2016 Oct 23
 
-* Engine.store_as_dotfile() can export job requirements graph to graphviz 
+* Engine.store_as_dotfile() can export job requirements graph to graphviz
 
 ## 0.2.2 - 2016 Oct 20
 
@@ -139,7 +151,7 @@
 ## 0.0.6 - 2016 Sep 21
 
 * in debug mode, show stack corresponding to caught exceptions
-* various cosmetic 
+* various cosmetic
 
 ## 0.0.5 - 2016 Sep 21
 
@@ -161,4 +173,3 @@
 ## 0.0.1 - 2016 Sep 15
 
 * initial version
-
