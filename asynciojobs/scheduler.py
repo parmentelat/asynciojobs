@@ -512,7 +512,10 @@ class Scheduler:
         # also if jobs_window is None
         window = Window(jobs_window, loop)
 
-        # initialize backlinks - i.e. _s_successors is the reverse of required
+        # initialize; this one is not crucial but is helpful
+        # for debugging purposes
+        self._set_sched_ids()
+        # backlinks - i.e. _s_successors is the reverse of required
         self._backlinks()
         # clear any Task instance
         self._reset_tasks()
