@@ -15,6 +15,7 @@ import asyncio
 from .job import AbstractJob
 from .sequence import Sequence
 from .window import Window
+from .watch import Watch
 
 ########
 Schedulable = Union[AbstractJob, Sequence]  # pylint: disable=C0103
@@ -59,6 +60,9 @@ class Scheduler:
       jobs_or_sequences: instances of `AbstractJob` or `Sequence`.
         The order in which they are mentioned is irrelevant.
       verbose (bool): flag that says if execution should be verbose.
+      watch: if the caller passes a :class:`~asynciojobs.watch.Watch`
+        instance, it is used in debugging messages to show the time
+        elapsed wrt that watch, instead of using the wall clock.
 
     Examples:
       Creating an empty scheduler::
@@ -88,11 +92,12 @@ class Scheduler:
     """
 
     def __init__(self, *jobs_or_sequences: Iterable[Schedulable],
-                 verbose=False):
+                 verbose=False, watch=None):
 
         self.jobs = set(Sequence._flatten(          # pylint: disable=W0212
             jobs_or_sequences))
         self.verbose = verbose
+        self.watch = watch
         # why does it fail ?
         # bool
         self._failed_critical = False
@@ -433,19 +438,32 @@ class Scheduler:
         """
         if not force and not self.verbose:
             return
-        time_format = "%H-%M-%S"
+
+        def print_time():
+            if self.watch is not None:
+                self.watch.print_elapsed()
+            else:
+                Watch.print_wall_clock()
+        name = ""
+        # with this line we allow a Scheduler to have a label
+        # it's mostly applicable to SchedulerJob, but can come in
+        # handy for regular Scheduler's as well
+        if hasattr(self, 'label'):
+            name = "({})".format(self.label)
+
+        # general feedback when no job is specified by caller
         if jobs is None:
-            print("{}: SCHEDULER: {}".format(
-                time.strftime(time_format), state))
+            print_time()
+            print("SCHEDULER{}: {}".format(name, state))
             return
         if not isinstance(jobs, (list, set, tuple)):
             jobs = (jobs,)
         for job in jobs:
             if not isinstance(job, AbstractJob):
                 job = job._job                          # pylint: disable=W0212
-            print("{}: {}: {}"
-                  .format(time.strftime(time_format),
-                          state,
+            print_time()
+            print("{} {}: {}"
+                  .format(name, state,
                           job._repr(                    # pylint: disable=W0212
                               show_result_or_exception=self.verbose,
                               show_requires=self.verbose)))

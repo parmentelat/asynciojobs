@@ -11,3 +11,4 @@ from .version import __version__
 from .scheduler import Scheduler
 from .job import AbstractJob, Job
 from .sequence import Sequence
+from .watch import Watch

@@ -22,3 +22,11 @@ The Sequence class
 
 .. automodule:: asynciojobs.sequence
 		:members:
+
+--------------------
+
+Convenience: the ``Watch`` class
+--------------------------------
+
+.. automodule:: asynciojobs.watch
+		:members:
