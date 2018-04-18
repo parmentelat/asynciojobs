@@ -173,7 +173,7 @@ class Scheduler:
 
         Returns:
           bool: returns True if scheduler object was fine,
-            and False if at least one removal was needed.
+          and False if at least one removal was needed.
         """
 
         changes = False
@@ -456,7 +456,8 @@ class Scheduler:
         A synchroneous wrapper around :meth:`co_orchestrate()`,
         please referto that link for details on parameters and return value.
 
-        you can also use the alias method `orchestrate()`
+        You can also use either ``orchestrate()`` or ``run()``
+        as these two names are aliases for one another.
 
         """
         if loop is None:
@@ -650,6 +651,7 @@ class Scheduler:
         with topological order
         """
         import math
+        # how many chars do we need to represent all jobs
         width = 1 if len(self.jobs) <= 9 \
             else int(math.log(len(self.jobs)-1, 10) + 1)
         # label_format is intended to be e.g. {:02d}

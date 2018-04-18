@@ -60,7 +60,7 @@ class AbstractJob:                                      # pylint: disable=R0902
     from **idle** to **running**.a
 
     On the other hand, in windowed orchestrations - see the ``jobs_window``
-    parameter to :meth:`asynciojobs.scheduler.Scheduler.co_orchestrate` -
+    parameter to :meth:`~asynciojobs.scheduler.Scheduler.co_orchestrate` -
     a job can be scheduled but not yet running, because it is waiting
     for a slot in the global window.
 
