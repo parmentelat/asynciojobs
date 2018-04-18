@@ -1,5 +1,5 @@
 """
-utilities to report time, mostly for debugging
+A utility to print time and compute durations, mostly for debugging and tests.
 """
 
 from datetime import datetime

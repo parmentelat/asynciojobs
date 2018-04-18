@@ -34,7 +34,7 @@ Nesting schedulers
 
 --------------------
 
-Convenience: the ``Watch`` class
+The ``Watch`` class
 --------------------------------
 
 .. automodule:: asynciojobs.watch
