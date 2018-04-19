@@ -51,7 +51,7 @@ class Tests(unittest.TestCase):
         Sequence(
             Job(co_print_sleep(watch, 0.5, "main begin")),
             # this is where the subscheduler is merged
-            Job(subs.co_orchestrate(), label='subscheduler'),
+            Job(subs.co_run(), label='subscheduler'),
             Job(co_print_sleep(watch, 0.5, "main end")),
             scheduler=mains
         )
@@ -84,10 +84,10 @@ class Tests(unittest.TestCase):
         mains = Scheduler(watch=watch)
         mainj1 = Job(co_print_sleep(watch, 0.5, "mainj1"), label="mainj1",
                      scheduler=mains)
-        mainj2 = Job(sub2.co_orchestrate(), label="mainj2",
+        mainj2 = Job(sub2.co_run(), label="mainj2",
                      required=mainj1,
                      scheduler=mains)
-        mainj3 = Job(sub3.co_orchestrate(), label="mainj3",
+        mainj3 = Job(sub3.co_run(), label="mainj3",
                      required=mainj1,
                      scheduler=mains)
         Job(co_print_sleep(watch, 0.5, "mainj4"), label="mainj4",

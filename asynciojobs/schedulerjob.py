@@ -28,7 +28,7 @@ class SchedulerJob(Scheduler, AbstractJob):
         to the :class:`~asynciojobs.job.AbstractJob` constructor.
 
 
-    Examples:
+    Example:
 
       Here's how to create a very simple scheduler with
       an embedded sub-scheduler; the whole result is equivalent to a simple
@@ -47,11 +47,30 @@ class SchedulerJob(Scheduler, AbstractJob):
            )
         main.run()
 
-    .. note:: the most appealling reason for using nested schedulers
-      lies with the use of ``forever`` jobs, that would need to be cleaned
-      up before the complete end of the main scheduler. Using an
-      intermediate-level scheduler can in some case help alleviate or solve
-      such issues.
+    Notes:
+
+      There can be several good reasons for using nested schedulers:
+
+      * the scope of a ``window`` object applies to a scheduler, so a nested
+        scheduler is a means to apply windoing on a specific set of jobs;
+      * likewise the ``timeout`` attribute only applies to the run for the
+        whole scheduler;
+      * you can use ``forever`` jobs that will be terminated earlier than
+        the end of the global scheduler;
+
+      Using an intermediate-level scheduler can in some case help alleviate or
+      solve such issues.
+
+      **XXX** However, at this point, the following remains **TODO**:
+
+      * need to add timeout and window settings as attributes
+        in the scheduler object
+      * because otherwise right now, the good aspects of using
+        scheduler-jobs a.k.a. subschedulers
+        are not available because co_run() on a scheduler expects these as
+        arguments, and one cannot store these attributes in the scheduler
+        object itself.
+
 
     """
     def __init__(self, *jobs_or_sequences,
@@ -61,6 +80,3 @@ class SchedulerJob(Scheduler, AbstractJob):
         Scheduler.__init__(self, *jobs_or_sequences,
                            verbose=verbose, watch=watch)
         AbstractJob.__init__(self, **kwds)
-
-    async def co_run(self):
-        await self.co_orchestrate()

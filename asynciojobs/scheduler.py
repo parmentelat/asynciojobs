@@ -34,22 +34,23 @@ class Scheduler:
     """
     A Scheduler instance is made of a set of AbstractJob objects.
 
-    The purpose of the scheduler object is to orchestrate the (co)execution of
+    The purpose of the scheduler object is to orchestrate an execution of
     these jobs that respects the *required* relationships,
     until they are all complete. It starts with the ones that have no
-    requirement, and then triggers the other ones
-    as their requirements are done.
+    requirement, and then triggers the other ones as their requirement
+    jobs complete.
 
-    For this reason, the dependency/requirements graph must be acyclic.
+    For this reason, the dependency/requirements graph **must be acyclic**.
 
     Optionnally a scheduler orchestration can be confined to a finite number
     of concurrent jobs (see the *jobs_window* parameter below).
 
 
-    Running a Job means executing its `co_run()` method,
+    Running a Job means executing its :meth:`co_run()` method,
     which must be a coroutine
 
-    The result of a job's `co_run()` is NOT taken into account, as
+    The result of a job's :meth:`~asynciojobs.job.AbstractJob.co_run()`
+     is NOT taken into account, as
     long as it returns without raising an exception. If it does raise
     an exception, overall execution is aborted iff the job is
     critical. In all cases, the result and/or exception of each
@@ -139,23 +140,29 @@ class Scheduler:
     def failed_time_out(self):
         """
         Returns:
-           bool: whether (co_)orchestrate has failed because of a time out.
+          bool: returns True if and only if :meth:`co_run()`
+          has failed because of a time out.
         """
         return self._failed_timeout
 
     def failed_critical(self):
         """
         Returns:
-          bool: whether (co_)orchestrate has failed because
-          a critical job has raised an exception
+          bool: returns True if and only if :meth:`co_run()`
+          has failed because a critical job has raised an exception.
         """
         return self._failed_critical
 
     def why(self):
         """
         Returns:
-          str: a message explaining why orchestrate has failed, or ``FINE``
-          if it has not failed.
+          str: a message explaining why :meth:`co_run()` has failed,
+          or ``"FINE"`` if it has not failed.
+
+        Notes:
+
+          At this point the code does not check that :meth:`co_run()` has
+          actually been called.
         """
         if self._failed_timeout:
             return "TIMED OUT after {}s".format(self._failed_timeout)
@@ -174,7 +181,7 @@ class Scheduler:
         external conditions.
 
         In any case it is crucial that this property holds
-        for orchestrate to perform properly.
+        for :meth:`co_run()` to perform properly.
 
         Returns:
           bool: returns True if scheduler object was fine,
@@ -202,7 +209,7 @@ class Scheduler:
         The purpose of this is primarily to check for cycles,
         and/or missing starting points.
 
-        It's not embedded in :meth:`co_orchestrate()` because
+        It's not embedded in :meth:`co_run()` because
         it is not strictly necessary, but it is safer to call this
         before running the scheduler if one wants to double-check the
         jobs dependency graph early on.
@@ -324,7 +331,7 @@ class Scheduler:
 
     def _record_beginning(self, timeout):
         """
-        Called once at the beginning of orchestrate, this method
+        Called once at the beginning of :meth:`co_run()`, this method
         computes the absolute expiration date when a timeout is defined.
         """
         self._expiration = \
@@ -333,9 +340,9 @@ class Scheduler:
 
     def _remaining_timeout(self):
         """
-        Called each time orchestrate is about to call asyncio.wait(),
+        Called each time :meth:`co_run()` is about to call `asyncio.wait()`,
         this method computes the timeout argument for wait
-        - or None if orchestrate had no timeout
+        - or None if co_run is called without a timeout
         """
         return \
             None if self._expiration is None \
@@ -343,7 +350,7 @@ class Scheduler:
 
     async def _tidy_tasks(self, pending):
         """
-        Once orchestrate is done, in order to tidy up the underlying
+        Once :meth:`co_run()` is done, in order to tidy up the underlying
         Task objects that have not completed, it is necessary to cancel
         them and wait for them.
 
@@ -469,33 +476,30 @@ class Scheduler:
                               show_requires=self.verbose)))
 
     ####################
-    def orchestrate(self, *args, loop=None, **kwds):
+    def run(self, *args, loop=None, **kwds):
         """
-        A synchroneous wrapper around :meth:`co_orchestrate()`,
-        please referto that link for details on parameters and return value.
+        A synchroneous wrapper around :meth:`co_run()`,
+        please refer to that link for details on parameters and return value.
 
-        You can also use either ``orchestrate()`` or ``run()``
-        as these two names are aliases for one another.
-
+        Also, the canonical name for this is ``run()`` but for historical
+        reasons you can also use ``orchestrate()`` as an alias for ``run()``.
         """
         if loop is None:
             loop = asyncio.get_event_loop()
         return loop.run_until_complete(
-            self.co_orchestrate(loop=loop, *args, **kwds))
+            self.co_run(loop=loop, *args, **kwds))
 
-    # an alias that is shorter to type
-    # xxx this should be the main name,
-    # and orchestrate should be the alias
-    run = orchestrate
+    # define the alias for legacy
+    orchestrate = run
 
-    async def co_orchestrate(                     # pylint: disable=R0912,R0915
+    async def co_run(                             # pylint: disable=R0912,R0915
             self, timeout=None, jobs_window=None, loop=None):
         """
         The primary entry point for running a scheduler.
         See also :meth:`run()` for a synchronous wrapper around this coroutine.
 
         Runs member jobs (that is, schedule their `co_run()` method)
-        in an order that satisfies their `required` relationsship.
+        in an order that satisfies their *required* relationsship.
 
         Proceeds to the end no matter what, except if either:
 
@@ -508,8 +512,6 @@ class Scheduler:
 
         Jobs marked as ``forever`` are not waited for. All jobs get
         terminated through their `co_shutdown()` method.
-
-        ---
 
         Parameters:
           timeout: can be an `int` or `float` and is expressed
@@ -558,7 +560,7 @@ class Scheduler:
             raise ValueError("No entry points found - cannot orchestrate")
 
         if self.verbose:
-            await self._feedback(None, "entering orchestrate with {} jobs"
+            await self._feedback(None, "entering co_run() with {} jobs"
                                  .format(len(self.jobs)))
 
         await self._feedback(entry_jobs, "STARTING")
@@ -584,7 +586,8 @@ class Scheduler:
             # there are also cases where done has more than one entry
             # typically when 2 jobs have very similar durations
             if not done:
-                await self._feedback(None, "orchestrate: TIMEOUT occurred",
+                await self._feedback(None,
+                                     "Scheduler.co_run: TIMEOUT occurred",
                                      force=True)
                 # clean up
                 await self._feedback(pending, "ABORTING")
@@ -628,7 +631,7 @@ class Scheduler:
 
             if nb_jobs_done == nb_jobs_finite:
                 if debug:
-                    print("orchestrate: {} CLEANING UP at iteration {} / {}"
+                    print("Scheduler.co_run: {} CLEANING UP at iteration {}/{}"
                           .format(4 * '-', nb_jobs_done, nb_jobs_finite))
                 if self.verbose and nb_jobs_forever != len(pending):
                     print("WARNING - apparent mismatch"

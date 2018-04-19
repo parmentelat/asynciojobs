@@ -101,7 +101,7 @@ So when we run them, we would start all 3 coroutines at once, and return once th
 
 ```python
 sa = Scheduler(a1, a2, a3)
-sa.orchestrate()
+sa.run()
 ```
 
     -> in_out(0.25)
@@ -159,7 +159,7 @@ Now `b2` needs `b1` to be finished before it can start. And so only the 2 first 
 ```python
 # with this setup we are certain that b3 ends in the middle of b2
 sb = Scheduler(b1, b2, b3)
-sb.orchestrate()
+sb.run()
 ```
 
     -> in_out(0.25)
@@ -189,7 +189,7 @@ sb2 = Scheduler(Sequence(Job(in_out(0.1), label="bp1"),
                       Job(in_out(0.2), label="bp2")),
              Job(in_out(0.25)))
 
-sb2.orchestrate()
+sb2.run()
 ```
 
     -> in_out(0.25)
@@ -207,16 +207,16 @@ sb2.orchestrate()
 
 
 
-### Return value for `Scheduler.orchestrate()` 
+### Return value for `Scheduler.run()` 
 
-Note that because `sb.orchestrate()` had returned `True`, we could have inferred that all jobs have completed. As a matter of fact, `orchestrate` returns `True` if and only if:
+Note that because `sb.run()` had returned `True`, we could have inferred that all jobs have completed. As a matter of fact, `run()` returns `True` if and only if:
 
 * all jobs have completed during the allocated timeout
 * no critical job has raised an exception
 
 ### Inspecting scheduler and results - `Scheduler.list()`
 
-Before we see more examples, let's see more ways to get information about what happened once `orchestrate` finishes.
+Before we see more examples, let's see more ways to get information about what happened once `run` finishes.
 For example to check that job `b1` has completed:
 
 
@@ -326,11 +326,11 @@ c1, c2, c3, c4 = (Job(in_out_bus(0.2, message_bus), label="c1"),
 c3.requires(c1)
 
 sc = Scheduler(c1, c2, c3, c4)
-sc.orchestrate()
+sc.run()
 ```
 
-    BUS: -> in_out(0.2)
     BUS: -> in_out(0.4)
+    BUS: -> in_out(0.2)
     BUS: <- in_out(0.2)
     BUS: -> in_out(0.3)
     BUS: <- in_out(0.4)
@@ -344,22 +344,22 @@ sc.orchestrate()
 
 
 
-Note that `orchestrate` always terminates as soon as all the non-`forever` jobs are complete. The `forever` jobs, on the other hand, get cancelled, so of course no return value is available at the end of the scenario&nbsp;:
+Note that `run()` always terminates as soon as all the non-`forever` jobs are complete. The `forever` jobs, on the other hand, get cancelled, so of course no return value is available at the end of the scenario&nbsp;:
 
 
 ```python
 sc.list()
 ```
 
-    1   ☉ ☓   <Job `c1`>[[ -> 2.0]]
+    1   ☉ ☓   <Job `c2`>[[ -> 4.0]]
     2   ☉ ↺ ∞ <Job `monitor`>
-    3   ☉ ☓   <Job `c2`>[[ -> 4.0]]
-    4   ☉ ☓   <Job `c3`>[[ -> 3.0]] - requires {1}
+    3   ☉ ☓   <Job `c1`>[[ -> 2.0]]
+    4   ☉ ☓   <Job `c3`>[[ -> 3.0]] - requires {3}
 
 
 ### Example D : specifying a global timeout
 
-`orchestrate` accepts a `timeout` argument in seconds. When provided, `orchestrate` will ensure its global duration does not exceed this value, and will return `False` if the timeout triggers.
+`run()` accepts a `timeout` argument in seconds. When provided, `run()` will ensure its global duration does not exceed this value, and will return `False` if the timeout triggers.
 
 Of course this can be used with any number of jobs and dependencies, but for the sake of simplicity let us see this in action with just one job that loops forever
 
@@ -372,13 +372,13 @@ async def forever():
         
 j = Job(forever(), forever=True)
 sd = Scheduler(j)
-sd.orchestrate(timeout=0.25)
+sd.run(timeout=0.25)
 ```
 
-    13:09:20: forever 0
-    13:09:20: forever 1
-    13:09:20: forever 2
-    13-09-20: SCHEDULER: orchestrate: TIMEOUT occurred
+    11:44:03: forever 0
+    11:44:03: forever 1
+    11:44:03: forever 2
+    11:44:03.796 SCHEDULER: Scheduler.co_run: TIMEOUT occurred
 
 
 
@@ -388,7 +388,7 @@ sd.orchestrate(timeout=0.25)
 
 
 
-As you can see the result of `orchestrate` in this case is `False`, since not all jobs have completed. Apart from that the jobs is now in this state:
+As you can see the result of `run()` in this case is `False`, since not all jobs have completed. Apart from that the jobs is now in this state:
 
 
 ```python
@@ -432,7 +432,7 @@ e2.requires(e1)
 e3.requires(e2)
 
 se = Scheduler(e1, e2, e3)
-print("orch:", se.orchestrate())
+print("orch:", se.run())
 se.list()
 ```
 
@@ -457,14 +457,14 @@ f2 = Job(boom(0.2), label="boom", critical=True)
 f3 = Job(in_out(0.3))
 
 sf = Scheduler(Sequence(f1, f2, f3))
-print("orchestrate:", sf.orchestrate())
+print("run:", sf.run())
 sf.list()
 ```
 
     -> in_out(0.2)
     <- in_out(0.2)
-    13-09-21: SCHEDULER: Emergency exit upon exception in critical job
-    orchestrate: False
+    11:44:04.964 SCHEDULER: Emergency exit upon exception in critical job
+    run: False
     1   ☉ ☓   <Job `Job[in_out (...)]`>[[ -> 200.0]]
     2 ⚠ ★ ☓   <Job `boom`>!! CRIT. EXC. => Exception:boom after 0.2s!! - requires {1}
     3     ⚐   <Job `Job[in_out (...)]`> - requires {2}
@@ -472,7 +472,7 @@ sf.list()
 
 ### Limiting the number of simultaneous jobs
 
-`orchestrate` accepts an optional argument `jobs_window` that allows to specify a maximum number of jobs running simultaneously. 
+`run()` accepts an optional argument `jobs_window` that allows to specify a maximum number of jobs running simultaneously. 
 
 When `jobs_windows` is not specified or `0`, it means no limit is imposed on the running jobs.
 
@@ -498,22 +498,22 @@ for i in range(1, 9):
 # so running them with a window of 4 means approx. 1 second
 import time
 beg = time.time()
-s.orchestrate(jobs_window = 4)
+s.run(jobs_window = 4)
 end = time.time()
 
 # expect around 1 second
 print("total duration = {}s".format(end-beg))
 ```
 
-    4-th job
+    3-th job
+    1-th job
     8-th job
+    4-th job
     5-th job
     6-th job
     2-th job
     7-th job
-    3-th job
-    1-th job
-    total duration = 1.0096750259399414s
+    total duration = 1.0027878284454346s
 
 
 ## Customizing jobs
@@ -524,7 +524,7 @@ print("total duration = {}s".format(end-beg))
 
 ### `AbstractJob.co_shutdown()`
 
-Before returning, `orchestrate` sends the `co_shutdown()` method on all jobs. The default behaviour - in the `Job` class - is to do nothing, but this can be redefined when relevant. Typically, an implementation of an `SshJob` will allow for a given SSH connection to be shared amongs several `SshJob` instances, and so `co_shutdown()` may be used to  close the underlying SSH connections at the end of the scenario.
+Before returning, `run()` sends the `co_shutdown()` method on all jobs. The default behaviour - in the `Job` class - is to do nothing, but this can be redefined when relevant. Typically, an implementation of an `SshJob` will allow for a given SSH connection to be shared amongs several `SshJob` instances, and so `co_shutdown()` may be used to  close the underlying SSH connections at the end of the scenario.
 
 ### The `apssh`  library and the ` SshJob` class
 
@@ -544,14 +544,14 @@ In some cases like esp. test scenarios, it can be helpful to add requirements to
 
 `rain_check` will check for cycles in the requirements graph. It returns a boolean. It's a good idea to call it before running an orchestration.
 
-### Need a coroutine instead ? : `Scheduler.co_orchestrate()` 
+### Need a coroutine instead ? : `Scheduler.co_run()` 
 
-`orchestrate` is a regular `def` function (i.e. not an `async def`), but in fact just a wrapper around the native coroutine called `co_orchestrate`.
+`run()` is a regular `def` function (i.e. not an `async def`), but in fact just a wrapper around the native coroutine called `co_run()`.
 
-    def orchestrate(self, loop=None, *args, **kwds):
+    def run(self, loop=None, *args, **kwds):
         if loop is None:
             loop = asyncio.get_event_loop()
-        return loop.run_until_complete(self.co_orchestrate(loop=loop, *args, **kwds))
+        return loop.run_until_complete(self.co_run(loop=loop, *args, **kwds))
 
 ### Visualization - in a notebook : `Scheduler.graph()`
 
@@ -631,48 +631,62 @@ g.render('readme')
 
 By simply taking advantage of the fact that:
 * a `Job` can be created from any coroutine, and that
-* `co_orchestrate` is a coroutine, 
+* `co_run` is a coroutine, 
+
 it is super-easy to nest schedulers.
 
-Let us consider the following example; we start with creating a simple diamond-shaped scheduler:
+### The basic idea
+
+For creating a nested scheduler inside scheduler `main_sched`, all you need to do is:
+* to create a second scheduler `sub_sched`, in a regular way with any number of jobs,
+* to create a job `proxy_job` inside `main_sched`, of type `Job`, that is in charge of triggering the nested scheduler, or in other words to create `proxy_job` as follows:
+
+```python
+# create a job that triggers the sub-scheduler
+proxy_job = Job(sub_sched.co_run())
+# add it to the main scheduler
+main_sched.add(proxy_job)
+```
+
+and you're done.
+
+Let us consider the following example. We start with creating a simple diamond-shaped scheduler:
 
 
 ```python
 # the sub-scheduler
-subs = Scheduler()
-subj1 = Job(aprint("subj1"), label='subj1', scheduler=subs)
-subj2 = Job(aprint("subj2"), label='subj2', required=subj1, scheduler=subs)
-subj3 = Job(aprint("subj3"), label='subj3', required=subj1, scheduler=subs)
-subj4 = Job(aprint("subj4"), label='subj4', required=(subj2, subj3), scheduler=subs)
+sub_sched = Scheduler()
+subj1 = Job(aprint("subj1"), label='subj1', scheduler=sub_sched)
+subj2 = Job(aprint("subj2"), label='subj2', required=subj1, scheduler=sub_sched)
+subj3 = Job(aprint("subj3"), label='subj3', required=subj1, scheduler=sub_sched)
+subj4 = Job(aprint("subj4"), label='subj4', required=(subj2, subj3), scheduler=sub_sched)
 ```
 
 We can now easily create a main scheduler, in which one of the jobs will run this low-level scheduler:
 
 
 ```python
-# the main scheduler
-mains = Scheduler()
-Sequence(
-    Job(aprint("main-start"), label="main-start"),
-    # this is where we graft the subscheduler into its upper-level scheduler
-    Job(subs.co_orchestrate(), label="sub-scheduler"),
-    Job(aprint("main-end"), label="main-end"),
-    scheduler = mains,
+# the main scheduler, created manually
+
+####
+# MAKE SURE to checkout a more leegant method below using SchedulerJob
+####
+
+main_sched = Scheduler(
+    Sequence(
+        Job(aprint("main-start"), label="main-start"),
+        # this is where we graft the subscheduler into its upper-level scheduler
+        Job(sub_sched.co_run(), label="sub-scheduler"),
+        Job(aprint("main-end"), label="main-end"),
+    )
 )
 ```
-
-
-
-
-    <asynciojobs.sequence.Sequence at 0x10561a748>
-
-
 
 Although the graphical presentation would not explicitly render that nesting, the semantics is what you'd expect:
 
 
 ```python
-mains.run()
+main_sched.run()
 ```
 
     main-start
@@ -690,11 +704,77 @@ mains.run()
 
 
 
+### The `SchedulerJob` class
+
+In order to make such constructions a little more explicit though, `asynciojobs` comes with a dedicated class called `SchedulerJob`. 
+
+This class is a mere mixin between `Scheduler` and `AbstractJob`. Being at the same time a `Scheduler` and an `AbstractJob`, it can be inserted in the main scheduler, and (sub-)jobs can be added to it.
+
+Here's how to write the same example as above, using this more elegant alternative.
+
+
+```python
+# the sub-scheduler;
+# like above, but implemented as a SchedulerJob
+
+from asynciojobs import SchedulerJob
+
+sub_sched = SchedulerJob()
+subj1 = Job(aprint("subj1"), label='subj1', scheduler=sub_sched)
+subj2 = Job(aprint("subj2"), label='subj2', required=subj1, scheduler=sub_sched)
+subj3 = Job(aprint("subj3"), label='subj3', required=subj1, scheduler=sub_sched)
+subj4 = Job(aprint("subj4"), label='subj4', required=(subj2, subj3), scheduler=sub_sched)
+```
+
+We can now easily create a main scheduler, in which one of the jobs will run this low-level scheduler:
+
+
+```python
+# the main scheduler
+main_sched = Scheduler(
+    Sequence(
+        Job(aprint("main-start"), label="main-start"),
+        # here we can just include the subscheduler as-is
+        sub_sched,
+        Job(aprint("main-end"), label="main-end"),
+        scheduler = main_sched,
+    )
+)
+```
+
+Although the graphical presentation would not explicitly render that nesting, the semantics is what you'd expect:
+
+
+```python
+main_sched.run()
+```
+
+    main-start
+    subj1
+    subj3
+    subj2
+    subj4
+    main-end
+
+
+
+
+
+    True
+
+
+
 ### What for ?
 
 This feature is admittedly not widely used, mostly because the graphical representation does not reflect nesting.
 
-There is one usage where this can be of interest though; when adding `forever` jobs to a scheduler, these get killed **at the end** of the scheduler, and so there is no way to trigger this termination earlier; using a sub-scheduler might be an angle for achieving this result.
+It can come in handy to deal with issues like:
+
+* you want the `jobs_window` attribute of `co_run()` to apply to only a subset of your jobs;
+* you want the `timeout` attirbute of `co_run()` to apply to only a subset of your jobs;
+* you have `forever` jobs that need to be terminated before sooner than the very end of the overall scenario.
+
+In some cases, using nested schedulers might be an angle for dealing with this kind of issues.
 
 ## Troubleshooting
 

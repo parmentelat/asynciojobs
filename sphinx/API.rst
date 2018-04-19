@@ -30,7 +30,6 @@ Nesting schedulers
 
 .. automodule:: asynciojobs.schedulerjob
 		:members:
-		:exclude-members: co_run
 
 --------------------
 
