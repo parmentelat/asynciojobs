@@ -1,8 +1,19 @@
 # ChangeLog
 
+## 0.8.1 - 2018 Apr 19
+
+* new class SchedulerJob allows to ease the creation of **nested schedulers**;
+  no support yet for graphical representation though
+* in the process, reviewed names for Scheduler methods:
+  * for synchroneous calls, one can use `run()` (preferred)
+    or ``orchestrate()`` (legacy)
+  * coroutine `co_orchestrate()` is now renamed into `co_run()`;
+   `co_orchestrate()` is now absent from the code
+* new class Watch for more elegant tests and nicer outputs
+
 ## 0.7.1 - 2018 Apr 17
 
-* thoroughly review the way custom labels are defined and used; classes that
+* thoroughly reviewed the way custom labels are defined and used; classes that
   inherit `AbstractJob` can redefine text_label() and graph_label()
 * graph production: both methods (dot and native digraph) now consistently
   accept argument `show_ids`
