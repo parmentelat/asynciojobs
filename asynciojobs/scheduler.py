@@ -787,17 +787,6 @@ class Scheduler:
                         self._show_task_stack(
                             j, "non-critical job exception stack")
 
-    # graph-oriented methods
-    @staticmethod
-    def _job_label(job, show_ids):
-        result = ""
-        # add the _sched_id so we avoid 2 nodes accidentally
-        # merged into one because they share the same label
-        if show_ids and job._sched_id:                  # pylint: disable=W0212
-            result += "{}: ".format(job._sched_id)      # pylint: disable=W0212
-        result += job._get_graph_label()                # pylint: disable=W0212
-        return result
-
     @staticmethod
     def _dot_protect(string):
         # escape any double quote
@@ -805,65 +794,107 @@ class Scheduler:
         # and put double quotes around all this
         return '"' + result + '"'
 
-    def export_as_dotfile(self, filename, show_ids=False):
-        """
-        Creates a graph that depicts the jobs and their requires
-        relationships.
+    # graphical outputs
+    #
+    # in a first attempt we had one function to store a dot format into a file
+    # and another one to build the graph natively; hence duplication of code
+    # there are simpler means to do that
+    # in addition with nested schedulers things become a bit messy, so
+    # it's crucial to stick to one single code
 
+    def dot_format(self):
+        """
+        Creates a graph that depicts the jobs and their *requires*
+        relationships, in `DOT Format`_.
+
+        Returns:
+          str: a representation of the graph in `DOT Format`_
+          underlying this scheduler.
+
+        See graphviz_'s documentation, together with its `Python wrapper
+        library`_, for more information on the format and available tools.
+
+        See also `Wikipedia on DOT`_ for a list of tools that support the
+        ``dot`` format.
+
+
+
+        As a general rule, ``asynciojobs`` has a support for producing
+        `DOT Format`_ but stops short of actually importing ``graphviz``
+        that can be cumbersome to install, but for the notable exception
+        of the :meth:graph() method. See that method for how
+        to convert a ``Scheduler`` instance into a native ``DiGraph``
+        instance.
+
+        .. _DOT Format: https://graphviz.gitlab.io/_pages/doc/info/lang.html
+
+        .. _graphviz: https://graphviz.gitlab.io/documentation/
+
+        .. _Python wrapper library: https://graphviz.readthedocs.io/en/stable/
+
+        .. _Wikipedia on DOT: https://en.wikipedia.org/wiki/
+DOT_%28graph_description_language%29
+        """
+        return ("digraph asynciojobs {"
+                + self._dot_body()
+                + "}")
+
+    def _dot_body(self):
+        """
+        Creates the dot body for a scheduler, i.e the part between
+        brackets, without the surrounding ``digraph`` or ``subgraph``
+        declaration, that must be added from the outside, depending
+        on whether we have a main scheduler or a nested one.
+        """
+        # use ids so as to not depend on labels
+        self._set_sched_ids()
+
+        result = ""
+        result += "{\n"
+        for job in self.topological_order():
+            # declare node and attach label
+            result +=("{} [label="
+                      .format(job._sched_id))           # pylint: disable=W0212
+            result += self._dot_protect(
+                job._get_graph_label())                 # pylint: disable=W0212
+            result += "]\n"
+            # add edges
+            for req in job.required:
+                result += ("{} -> {};\n"
+                           .format(req._sched_id,       # pylint: disable=W0212
+                                   job._sched_id))      # pylint: disable=W0212
+        result += "}\n"
+        return result
+
+    def export_as_dotfile(self, filename):
+        """
         This method does not require ``graphviz`` to be installed, it
         writes a file in dot format for post-processing with
         e.g. graphviz's ``dot`` utility.
 
         Parameters:
-          show_ids: if set, the graph labels are prefixed with each job's
-            index in the scheduler. This reflects the same order as
-            :meth:`topological_order()`, which is also used
-            e.g. in :meth:`list()`.
-
-        See also the :meth:`graph()` method that
-        serves the same purpose but natively as a ``graphviz`` object.
-
-        For example a PNG image can be then obtained from that dotfile
-        with e.g.::
-
-          dot -Tpng foo.dot -o foo.png
-
-        See also
-        https://en.wikipedia.org/wiki/DOT_%28graph_description_language%29
-        for a list of tools that support the ``dot`` format.
-
-        """
-        self._set_sched_ids()
-
-        # need to figure out totally isolated nodes
-        exported = set()
-        with open(filename, 'w') as output:
-            output.write("digraph G {\n")
-            for job in self.topological_order():
-                # declare node and attach label
-                output.write("{} [label="
-                             .format(job._sched_id))    # pylint: disable=W0212
-                output.write(
-                    self._dot_protect(self._job_label(job, show_ids)))
-                output.write("]\n")
-                # add edges
-                for req in job.required:
-                    output.write(
-                        "{} -> {};\n"
-                        .format(req._sched_id,          # pylint: disable=W0212
-                                job._sched_id))         # pylint: disable=W0212
-                    exported.update((job, req))
-            output.write("}\n")
-        print("(Over)wrote {}".format(filename))
-
-    def graph(self, *, show_ids=False):
-        """
-        Parameters:
-          show_ids(bool): if set, job labels are prefixed with their index in
-            the topological order on the graph.
+          filename: where to store the result.
 
         Returns:
-          graphviz.Digraph: a native graph instance.
+          str: a message that can be printed for information, like e.g.
+            ``"(Over)wrote foo.dot"``
+
+        See also the :meth:`graph()` method that serves a similar purpose but
+        natively as a ``graphviz`` object.
+
+        As an example of post-processing, a PNG image can be then obtained from
+        that dotfile with e.g.::
+
+          dot -Tpng foo.dot -o foo.png
+        """
+        with open(filename, 'w') as output:
+            output.write(self.dot_format())
+        return "(Over)wrote {}".format(filename)
+
+    def graph(self):
+        """
+        Returns:
+          graphviz.Digraph: a graph
 
         This method serves the same purpose as :meth:`export_to_dotfile()`,
         but it natively returns a graph instance. For that reason,
@@ -884,18 +915,5 @@ class Scheduler:
           pip3 install graphviz     # for the python bindings
         """
 
-        from graphviz import Digraph
-        graph = Digraph()
-
-        # write numbering in the jobs in _sched_id
-        self._set_sched_ids()
-
-        # we use job._sched_id as the key, graph_label() as the label
-        for job in self.topological_order():
-            graph.node(job._sched_id,                   # pylint: disable=W0212
-                       self._job_label(job, show_ids))
-            for req in job.required:
-                graph.edge(req._sched_id,               # pylint: disable=W0212
-                           job._sched_id)               # pylint: disable=W0212
-
-        return graph
+        from graphviz import Source
+        return Source(source = self.dot_format())

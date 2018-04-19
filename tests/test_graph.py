@@ -31,10 +31,6 @@ class Tests(unittest.TestCase):
         g.format = 'png'
         g.render('tests/test_graph1')
         print("(over)wrote tests/test_graph1.png")
-        g_ids = s.graph(show_ids=True)
-        g_ids.format = 'png'
-        g_ids.render('tests/test_graph1_ids')
-        print("(over)wrote tests/test_graph1_ids.png")
 
     def test_graph2(self):
 
