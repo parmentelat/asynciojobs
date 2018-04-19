@@ -2,20 +2,22 @@
 
 import unittest
 
-from asynciojobs import Scheduler, Job, Sequence
+from asynciojobs import Scheduler, Job, Sequence, Watch
 
 from .util import co_print_sleep
 
 
-class TestGraph(unittest.TestCase):
+class Tests(unittest.TestCase):
 
     def test_graph1(self):
 
+        watch = Watch()
+
         s = Scheduler()
         s.add(Sequence(
-            Job(co_print_sleep('begin')),
-            Job(co_print_sleep('middle', 1), label='middle'),
-            Job(co_print_sleep('end', .25)),
+            Job(co_print_sleep(watch, .25, 'begin')),
+            Job(co_print_sleep(watch, 1., 'middle'), label='middle'),
+            Job(co_print_sleep(watch, .25, 'end')),
         ))
         print("test_graph1 NO DETAILS")
         s.list()
@@ -23,6 +25,8 @@ class TestGraph(unittest.TestCase):
         s.list(details=True)
         print("GRAPH")
         self.assertEqual(len(s), 3)
+        s.run()
+        self.assertAlmostEqual(watch.seconds(), 1.5, delta=0.05)
         g = s.graph()
         g.format = 'png'
         g.render('tests/test_graph1')
@@ -58,17 +62,18 @@ class TestGraph(unittest.TestCase):
                 return f"GraphJob details\nare even more verbose and say\n" \
                     f"that initial graph message\nwas {self.graph}"
 
+        watch = Watch()
         s = Scheduler()
         s.add(Sequence(
             TextJob('textjob-with',
-                    co_print_sleep('textjob, no label ')),
+                    co_print_sleep(watch, 0.1, 'textjob, no label ')),
             TextJob('textjob-without',
-                    co_print_sleep('textjob, with label '),
+                    co_print_sleep(watch, 0.1, 'textjob, with label '),
                     label='TextLabel'),
             GraphJob('graphjob-with',
-                     co_print_sleep('graphjob, no label ')),
+                     co_print_sleep(watch, 0.1, 'graphjob, no label ')),
             GraphJob('graphjob-without',
-                     co_print_sleep('graphjob, with label '),
+                     co_print_sleep(watch, 0.1, 'graphjob, with label '),
                      label='GraphLabel'),
         ))
         print("test_graph2 NO DETAILS")
