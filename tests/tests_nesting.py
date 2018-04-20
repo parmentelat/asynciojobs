@@ -1,4 +1,4 @@
-# pylint: disable=c0111,c0103
+# pylint: disable=c0111, c0103, c0330
 
 import unittest
 
@@ -142,9 +142,11 @@ class Tests(unittest.TestCase):
             if not s.sanitize():
                 print(f"OOPS, had to sanitize sched {s.label}")
 
+        print("===== test_nesting3", "LIST without details")
+        mains.list(details=False)
         print("===== test_nesting3", "LIST with details")
         mains.list(details=True)
-        
+
         print("---run")
         ok = mains.run()
         if not ok:
@@ -197,8 +199,8 @@ class Tests(unittest.TestCase):
                   Job(co_print_sleep(watch, .2, "one")),
                   Job(co_print_sleep(watch, .2, "two")),
                   Job(co_print_sleep(watch, .2, "three")),
-                  ),
-                  watch=watch,
+                ),
+                watch=watch,
               ),
               Job(co_print_sleep(watch, .2, "END")),
             ),

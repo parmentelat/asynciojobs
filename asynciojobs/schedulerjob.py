@@ -88,7 +88,7 @@ class SchedulerJob(Scheduler, AbstractJob):
         for the next job.
         """
         # first set index on the current (kind of fake) node
-        i = AbstractJob._set_sched_id(self,            # pylint: disable=w0212
+        i = AbstractJob._set_sched_id(self,             # pylint: disable=w0212
                                       start, id_format)
         # go on with the jobs in sub scheduler
         return Scheduler._set_sched_ids(self,           # pylint: disable=w0212

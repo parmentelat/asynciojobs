@@ -446,7 +446,7 @@ class Scheduler:
         if not force and not self.verbose:
             return
 
-        def print_time():
+        def print_time():                               # pylint: disable=c0111
             if self.watch is not None:
                 self.watch.print_elapsed()
             else:
@@ -456,7 +456,7 @@ class Scheduler:
         # it's mostly applicable to SchedulerJob, but can come in
         # handy for regular Scheduler's as well
         if hasattr(self, 'label'):
-            name = "({})".format(self.label)
+            name = "({})".format(self.label)            # pylint: disable=e1101
 
         # general feedback when no job is specified by caller
         if jobs is None:
@@ -935,4 +935,4 @@ DOT_%28graph_description_language%29
         """
 
         from graphviz import Source
-        return Source(source = self.dot_format())
+        return Source(source=self.dot_format())
