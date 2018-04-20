@@ -56,7 +56,7 @@ class Tests(unittest.TestCase):
             scheduler=mains
         )
 
-        print("===== test_nesting1", "LIST")
+        print("===== test_nesting1", "LIST with details")
         mains.list(details=True)
         ok = mains.run()
         self.assertTrue(ok)
@@ -142,8 +142,9 @@ class Tests(unittest.TestCase):
             if not s.sanitize():
                 print(f"OOPS, had to sanitize sched {s.label}")
 
-        print("---list")
+        print("===== test_nesting3", "LIST with details")
         mains.list(details=True)
+        
         print("---run")
         ok = mains.run()
         if not ok:
@@ -177,6 +178,9 @@ class Tests(unittest.TestCase):
             ),
             watch=watch)
 
+        print("===== test_nesting_sequence", "LIST with details")
+        main.list(details=True)
+
         self.assertTrue(main.run())
         self.assertAlmostEqual(watch.seconds(), expected_duration, delta=.05)
 
@@ -199,6 +203,9 @@ class Tests(unittest.TestCase):
               Job(co_print_sleep(watch, .2, "END")),
             ),
             watch=watch)
+
+        print("===== test_nesting_sequence2", "LIST with details")
+        main.list(details=True)
 
         self.assertTrue(main.run())
         self.assertAlmostEqual(watch.seconds(), expected_duration, delta=.05)

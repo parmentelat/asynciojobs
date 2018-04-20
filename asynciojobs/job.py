@@ -140,6 +140,26 @@ class AbstractJob:                                      # pylint: disable=R0902
     def _get_sched_id(self):
         return self._sched_id or '??'
 
+    def _set_sched_id(self, start, id_format):
+        """
+        Works as a complicit to Scheduler._set_sched_ids.
+        It sets local the ``_sched_id`` attribute and returns the index
+        for the next job.
+
+        This is defined as a method so that SchedulerJob can redefine itself.
+
+        Returns:
+          int: next index, in this case ``start + 1``
+        """
+        self._sched_id = str(id_format.format(start))
+        return start + 1
+
+    def _job_count(self):
+        """
+        Complicit to Scheduler._total_length()
+        """
+        return 1
+
     def _get_text_label(self):
         # In terms of labelling, things have become a little tricky over
         # time. When listing an instance of Scheduler, there are 2 ways

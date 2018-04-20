@@ -669,20 +669,45 @@ class Scheduler:
                         candidate_next, window, loop=loop))
                     added += 1
 
-    def _set_sched_ids(self):
+    def _total_length(self):
         """
-        write into each job._sched_id an id compliant
+        Counts the total number of jobs that need to be numbered
+        in nested scenarii.
+
+        Regular jobs count for 1,
+        and schedulerjobs count for 1 + their own _total_length
+
+        Returns:
+          int: total number of nodes in subject and nested schedulers
+
+        """
+        return sum(job._job_count()                     # pylint: disable=w0212
+                   for job in self.jobs)
+
+    def _set_sched_ids(self, start=1, id_format=None):
+        """
+        Write into each job._sched_id an id compliant
         with topological order
+
+        Returns:
+          int: the next index to use
         """
-        import math
-        # how many chars do we need to represent all jobs
-        width = 1 if len(self.jobs) <= 9 \
-            else int(math.log(len(self.jobs)-1, 10) + 1)
-        # label_format is intended to be e.g. {:02d}
-        label_format = "{{:0{w}d}}".format(w=width)     # pylint: disable=w1303
-        # inject number in each job in their _sched_id field
-        for i, job in enumerate(self.topological_order(), 1):
-            job._sched_id = label_format.format(i)      # pylint: disable=W0212
+        # id_format is computed once by the toplevel scheduler
+        # and then passed along the tree
+
+        if id_format is None:
+            import math
+            # how many chars do we need to represent all jobs
+            total = self._total_length()
+            print(f"total={total} - {type(total)}")
+            width = 1 if total <= 9 \
+                else int(math.log(total-1, 10)) + 1
+            # id_format is intended to be e.g. {:02d}
+            id_format = "{{:0{w}d}}".format(w=width)    # pylint: disable=w1303
+        i = start
+        for job in self.topological_order():
+            i = job._set_sched_id(i, id_format)         # pylint: disable=w0212
+        return i
 
     ####################
     def list(self, details=False):

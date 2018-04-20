@@ -80,3 +80,25 @@ class SchedulerJob(Scheduler, AbstractJob):
         Scheduler.__init__(self, *jobs_or_sequences,
                            verbose=verbose, watch=watch)
         AbstractJob.__init__(self, **kwds)
+
+    def _set_sched_id(self, start, id_format):
+        """
+        Works as a complicit to Scheduler._set_sched_ids.
+        It sets local the ``_sched_id`` attribute and returns the index
+        for the next job.
+        """
+        # first set index on the current (kind of fake) node
+        i = AbstractJob._set_sched_id(self,            # pylint: disable=w0212
+                                      start, id_format)
+        # go on with the jobs in sub scheduler
+        return Scheduler._set_sched_ids(self,           # pylint: disable=w0212
+                                        i, id_format)
+
+    def _job_count(self):
+        """
+        Complicit to Scheduler._total_length()
+
+        Returns:
+          int: 1 + number of nodes included/nested
+        """
+        return 1 + self._total_length()
