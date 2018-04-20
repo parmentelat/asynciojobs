@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.8.2 - 2018 Apr 20
+
+* `Scheduler.list()` shows nested jobs too
+* resurrected the `PrintJob` class
+
 ## 0.8.1 - 2018 Apr 19
 
 * new class SchedulerJob allows to ease the creation of **nested schedulers**;
