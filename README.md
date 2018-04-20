@@ -104,9 +104,9 @@ sa = Scheduler(a1, a2, a3)
 sa.run()
 ```
 
+    -> in_out(0.2)
     -> in_out(0.25)
     -> in_out(0.1)
-    -> in_out(0.2)
     <- in_out(0.1)
     <- in_out(0.2)
     <- in_out(0.25)
@@ -329,8 +329,8 @@ sc = Scheduler(c1, c2, c3, c4)
 sc.run()
 ```
 
-    BUS: -> in_out(0.4)
     BUS: -> in_out(0.2)
+    BUS: -> in_out(0.4)
     BUS: <- in_out(0.2)
     BUS: -> in_out(0.3)
     BUS: <- in_out(0.4)
@@ -351,10 +351,10 @@ Note that `run()` always terminates as soon as all the non-`forever` jobs are co
 sc.list()
 ```
 
-    1   ☉ ☓   <Job `c2`>[[ -> 4.0]]
+    1   ☉ ☓   <Job `c1`>[[ -> 2.0]]
     2   ☉ ↺ ∞ <Job `monitor`>
-    3   ☉ ☓   <Job `c1`>[[ -> 2.0]]
-    4   ☉ ☓   <Job `c3`>[[ -> 3.0]] - requires {3}
+    3   ☉ ☓   <Job `c2`>[[ -> 4.0]]
+    4   ☉ ☓   <Job `c3`>[[ -> 3.0]] - requires {1}
 
 
 ### Example D : specifying a global timeout
@@ -375,10 +375,10 @@ sd = Scheduler(j)
 sd.run(timeout=0.25)
 ```
 
-    11:44:03: forever 0
-    11:44:03: forever 1
-    11:44:03: forever 2
-    11:44:03.796 SCHEDULER: Scheduler.co_run: TIMEOUT occurred
+    12:36:27: forever 0
+    12:36:27: forever 1
+    12:36:27: forever 2
+    12:36:27.864 SCHEDULER: Scheduler.co_run: TIMEOUT occurred
 
 
 
@@ -463,7 +463,7 @@ sf.list()
 
     -> in_out(0.2)
     <- in_out(0.2)
-    11:44:04.964 SCHEDULER: Emergency exit upon exception in critical job
+    12:36:29.29 SCHEDULER: Emergency exit upon exception in critical job
     run: False
     1   ☉ ☓   <Job `Job[in_out (...)]`>[[ -> 200.0]]
     2 ⚠ ★ ☓   <Job `boom`>!! CRIT. EXC. => Exception:boom after 0.2s!! - requires {1}
@@ -505,15 +505,15 @@ end = time.time()
 print("total duration = {}s".format(end-beg))
 ```
 
-    3-th job
-    1-th job
-    8-th job
-    4-th job
-    5-th job
     6-th job
     2-th job
     7-th job
-    total duration = 1.0027878284454346s
+    3-th job
+    8-th job
+    1-th job
+    4-th job
+    5-th job
+    total duration = 1.0079560279846191s
 
 
 ## Customizing jobs
@@ -588,7 +588,11 @@ If visualizing in a notebook is not an option, or if you do not have graphviz in
 s.export_as_dotfile('readme.dot')
 ```
 
-    (Over)wrote readme.dot
+
+
+
+    '(Over)wrote readme.dot'
+
 
 
 Then later on - and possibly on another host - you can use this dot file as an input to produce a `.png` graphics, using the `dot` program (which is part of `graphviz`), like e.g.:
@@ -731,6 +735,7 @@ We can now easily create a main scheduler, in which one of the jobs will run thi
 
 ```python
 # the main scheduler
+sub_sched.label = "nested"
 main_sched = Scheduler(
     Sequence(
         Job(aprint("main-start"), label="main-start"),
@@ -742,6 +747,36 @@ main_sched = Scheduler(
 )
 ```
 
+Because I have used `SchedulerJob` instead of a combination of `Job` and `Scheduler.co_run()`, I can now use `list()` to inspect the contents of the scheduler **including the nested jobs**:
+
+
+```python
+main_sched.list()
+```
+
+    1     ⚐   <Job `main-start`>
+    3     ⚐   <Job `subj1`>
+    4     ⚐   <Job `subj2`> - requires {3}
+    5     ⚐   <Job `subj3`> - requires {3}
+    6     ⚐   <Job `subj4`> - requires {4, 5}
+    7     ⚐   <Job `main-end`> - requires {2}
+
+
+
+```python
+main_sched.list(details=True)
+```
+
+    1     ⚐   <Job `main-start`>
+    > SchedulerJob nested with 4 jobs
+    3     ⚐   <Job `subj1`>
+    4     ⚐   <Job `subj2`> - requires {3}
+    5     ⚐   <Job `subj3`> - requires {3}
+    6     ⚐   <Job `subj4`> - requires {4, 5}
+    < SchedulerJob
+    7     ⚐   <Job `main-end`> - requires {2}
+
+
 Although the graphical presentation would not explicitly render that nesting, the semantics is what you'd expect:
 
 
@@ -751,8 +786,8 @@ main_sched.run()
 
     main-start
     subj1
-    subj3
     subj2
+    subj3
     subj4
     main-end
 
