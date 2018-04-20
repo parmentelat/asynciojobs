@@ -154,11 +154,21 @@ class AbstractJob:                                      # pylint: disable=R0902
         self._sched_id = str(id_format.format(start))
         return start + 1
 
-    def _job_count(self):
+    def _job_count(self):                      # pylint: disable=r0201
         """
         Complicit to Scheduler._total_length()
         """
         return 1
+
+    def _list(self, details, depth):
+        """
+        Complicit to Scheduler.list()
+        """
+        print(self._sched_id, self._repr(show_requires=True))
+        if details and hasattr(self, 'details'):
+            details = self.details()
+            if details is not None:
+                print(details)
 
     def _get_text_label(self):
         # In terms of labelling, things have become a little tricky over

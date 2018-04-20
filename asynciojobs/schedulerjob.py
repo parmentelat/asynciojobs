@@ -102,3 +102,17 @@ class SchedulerJob(Scheduler, AbstractJob):
           int: 1 + number of nodes included/nested
         """
         return 1 + self._total_length()
+
+    def _list(self, details, depth):
+        """
+        Complicit to Scheduler.list()
+        """
+        if details:
+            print('>'*(depth+1), "{} {} with {} jobs"
+                  .format(type(self).__name__,
+                          self._get_text_label(),
+                          len(self)))
+        for job in self.topological_order():
+            job._list(details, depth+1)                 # pylint: disable=W0212
+        if details:
+            print('<'*(depth+1), type(self).__name__)

@@ -699,7 +699,6 @@ class Scheduler:
             import math
             # how many chars do we need to represent all jobs
             total = self._total_length()
-            print(f"total={total} - {type(total)}")
             width = 1 if total <= 9 \
                 else int(math.log(total-1, 10)) + 1
             # id_format is intended to be e.g. {:02d}
@@ -722,12 +721,7 @@ class Scheduler:
         # requirements
         self._set_sched_ids()
         for job in self.topological_order():
-            print(job._sched_id,                        # pylint: disable=W0212
-                  job._repr(show_requires=True))        # pylint: disable=W0212
-            if details and hasattr(job, 'details'):
-                details = job.details()
-                if details is not None:
-                    print(details)
+            job._list(details, 0)                       # pylint: disable=W0212
 
     def list_safe(self):
         """
@@ -878,8 +872,8 @@ DOT_%28graph_description_language%29
         result += "{\n"
         for job in self.topological_order():
             # declare node and attach label
-            result +=("{} [label="
-                      .format(job._sched_id))           # pylint: disable=W0212
+            result += ("{} [label="
+                       .format(job._sched_id))          # pylint: disable=W0212
             result += self._dot_protect(
                 job._get_graph_label())                 # pylint: disable=W0212
             result += "]\n"
