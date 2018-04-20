@@ -16,7 +16,7 @@ from asynciojobs import Job as J
 from asynciojobs import Sequence as Seq
 from asynciojobs import Scheduler
 
-from asynciojobs.job import _PrintJob as PrintJob
+from asynciojobs import PrintJob
 
 # pylint: disable=R0904, R0914, R0903, R1710
 # pylint: disable=W0106, W0212, W0201, C0103, C0111, C0321

@@ -13,7 +13,7 @@ Job-like classes
 --------------------
 
 .. automodule:: asynciojobs.job
-		:members:
+		:members: AbstractJob, Job
 
 --------------------
 
@@ -33,8 +33,11 @@ Nesting schedulers
 
 --------------------
 
-The ``Watch`` class
+Convenience classes
 --------------------------------
+
+.. automodule:: asynciojobs.printjob
+        :members:
 
 .. automodule:: asynciojobs.watch
 		:members:
