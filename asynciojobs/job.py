@@ -137,9 +137,6 @@ class AbstractJob:                                      # pylint: disable=R0902
         # by Scheduler.list() and similar
         self._sched_id = None
 
-    def _get_sched_id(self):
-        return self._sched_id or '??'
-
     def _set_sched_id(self, start, id_format):
         """
         Works as a complicit to Scheduler._set_sched_ids.
@@ -160,11 +157,15 @@ class AbstractJob:                                      # pylint: disable=R0902
         """
         return 1
 
-    def _list(self, details, depth):
+    # we don't use depth
+    def _list(self, details, _):
         """
         Complicit to Scheduler.list()
         """
-        print(self._sched_id, self._repr(show_requires=True))
+        print(self.repr_id(),
+              self.repr_short(),
+              self.repr_main(),
+              self.repr_requires())
         if details and hasattr(self, 'details'):
             details = self.details()
             if details is not None:
@@ -182,14 +183,6 @@ class AbstractJob:                                      # pylint: disable=R0902
         # Except that, the job itself has no idea about that at first,
         # it's the Scheduler instance that decides on that.
         #
-        # so:
-        # * if use_sched_id is True, looks in self._sched_id that is expected
-        # to have been set by companion class Scheduler;
-        # if not set returns a warning msg '??'
-        #
-        # * otherwise, i.e. if use_sched_id is False, looks for the label
-        #  used at creation-time, and otherwise runs its class's
-        #  `text_label()` method
 
         # use instance-specific label if set
         attempt = self.label
@@ -319,11 +312,19 @@ class AbstractJob:                                      # pylint: disable=R0902
         # than others
         return "{} {} {} {}".format(c_crit, c_boom, c_running, c_forever)
 
-    def short(self):
+    def repr_id(self):
         """
         Returns:
-          a 4 characters string (in fact 7 with interspaces)
-          that summarizes the 4 dimensions of the job, that is to say
+          str: the job's id inside the scheduler, or '??' if that was
+          not yet set by the scheduler.
+        """
+        return self._sched_id or '??'
+
+    def repr_short(self):
+        """
+        Returns:
+          str: a 4 characters string (in fact 7 with interspaces)
+            that summarizes the 4 dimensions of the job, that is to say
 
         * its point in the lifecycle (idle → scheduled → running → done)
 
@@ -338,36 +339,57 @@ class AbstractJob:                                      # pylint: disable=R0902
             return self._short_unicode()
         return self._short_ascii()
 
-    def _repr(self, show_requires=True, show_result_or_exception=True):
-        """
-        returns a string that describes this job instance,
-        with contents as specified
-        """
-        info = self.short()
-        info += " <{} `{}`>".format(type(self).__name__,
-                                    self._get_text_label())
+    def _req_csv(self):
+        if not self.required:
+            return ""
+        return ("{"
+                + ", ".join(req.repr_id()
+                            for req in self.required)
+                + "}")
 
-        if show_result_or_exception:
-            exception = self.raised_exception()
-            if exception:
-                critical_msg = "CRIT. EXC." if self.is_critical() \
-                               else "exception"
-                info += "!! {} => {}:{}!!"\
-                        .format(critical_msg,
-                                type(exception).__name__, exception)
-            elif self.is_done():
-                info += "[[ -> {}]]".format(self.result())
+    def repr_main(self):
+        """
+        Returns:
+          str: standardized body of the object's repr,
+            like e.g. ``<SshJob `my command`>``.
+        """
+        return ("<{} `{}`>"
+                .format(type(self).__name__,
+                        self._get_text_label()))
 
-        # show dependencies in both directions
-        if show_requires and self.required:
-            info += " - requires {"
-            info += ", ".join(req._get_sched_id()       # pylint: disable=e1101
-                              for req in self.required)
-            info += "}"
-        return info
+    def repr_result(self):
+        """
+        Returns:
+          str: standardized repr's part that shows
+            the result or exception of the job.
+        """
+        exception = self.raised_exception()
+        if exception:
+            critical_msg = "CRIT. EXC." if self.is_critical() \
+                           else "exception"
+            return ("!! {} => {}:{}!!"
+                    .format(critical_msg,
+                            type(exception).__name__, exception))
+        if self.is_done():
+            return "[[ -> {}]]".format(self.result())
+        return "[not done]"
+
+    def repr_requires(self):
+        """
+        Returns:
+          str: text part that describes requirements
+        """
+        if self.required:
+            return "requires={}".format(self._req_csv())
+        return ""
 
     def __repr__(self):
-        return self._repr(show_requires=False)
+        return (
+            "{} {} {} {}"
+            .format(self.repr_short(),
+                    self.repr_main(),
+                    self.repr_result(),
+                    self.repr_requires()))
 
     def requires(self, *requirements):
         """

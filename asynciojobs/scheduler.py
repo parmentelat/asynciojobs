@@ -287,20 +287,77 @@ class Scheduler:
                             " {} jobs are not reachable from free jobs"
                             .format(target_marked - nb_marked))
 
+    def entry_jobs(self):
+        """
+        A generator that yields all jobs that have no requirement.
+
+        Exemples:
+
+          List all entry points::
+
+             for job in scheduler.entry_points():
+                 print(job)
+        """
+        for job in self.jobs:
+            if not job.required:
+                yield job
+
+    def exit_jobs(self, *,
+                  discard_forever=True,
+                  compute_backlinks=True):
+        """
+        A generator that yields all jobs that are
+        not a requirement to another job.
+
+        Reverse of :meth:`entry_points()`.
+
+        Parameters:
+          discard_forever: if True, jobs marked as forever are skipped.
+          compute_backlinks: for this method to work properly, it is necessary
+            to compute backlinks, an internal structure that holds the opposite
+            of the *required* relationsship. Passing False here allows to skip
+            that stage, when that relationship is known to be up to date
+            already.
+        """
+        if compute_backlinks:
+            self._backlinks()
+        for job in self.jobs:
+            if discard_forever and job.forever:
+                continue
+            if not job._s_successors:                   # pylint: disable=w0212
+                yield job
+
+    def _entry_csv(self):
+        result = ", ".join(job.repr_id()
+                           for job in self.entry_jobs())
+        if result:
+            result = "{" + result + "}"
+        return result
+
+    def _exit_csv(self, discard_forever=True,
+                  compute_backlinks=False):
+        result = ", ".join(job.repr_id()
+                           for job in self.exit_jobs(
+                               discard_forever=discard_forever,
+                               compute_backlinks=compute_backlinks))
+        if result:
+            result = "{" + result + "}"
+        return result
+
     ####################
     def _reset_marks(self):
         """
         reset Job._s_mark on all jobs
         """
         for job in self.jobs:
-            job._s_mark = None                      # pylint: disable=W0212
+            job._s_mark = None                          # pylint: disable=W0212
 
     def _reset_tasks(self):
         """
         In case one tries to run the same scheduler twice
         """
         for job in self.jobs:
-            job._task = None                        # pylint: disable=W0212
+            job._task = None                            # pylint: disable=W0212
 
     def _backlinks(self):
         """
@@ -379,11 +436,11 @@ class Scheduler:
             task.cancel()
             # if debug is turned on, provide details on the exceptions
             if debug:
+                job = task._job                         # pylint: disable=W0212
                 self._show_task_stack(
-                    task, "TIDYING {}"
-                    .format(task._job._repr(            # pylint: disable=W0212
-                        show_result_or_exception=False,
-                        show_requires=False)))
+                    task,
+                    "TIDYING {} {} {}"
+                    .format(job.repr_id(), job.repr_short(), job.repr_main()))
         # don't bother to set a timeout,
         # this is expected to be immediate
         # since all tasks are canceled
@@ -469,11 +526,16 @@ class Scheduler:
             if not isinstance(job, AbstractJob):
                 job = job._job                          # pylint: disable=W0212
             print_time()
-            print("{} {}: {}"
+            print("{} {}: {} {} {}"
                   .format(name, state,
-                          job._repr(                    # pylint: disable=W0212
-                              show_result_or_exception=self.verbose,
-                              show_requires=self.verbose)))
+                          job.repr_id(), job.repr_short(), job.repr_main()),
+                  end="")
+            if self.verbose:
+                print(" {} {}"
+                      .format(job.repr_result(),
+                              job.repr_requires()),
+                      end="")
+            print()
 
     ####################
     def run(self, *args, loop=None, **kwds):
@@ -687,7 +749,7 @@ class Scheduler:
     def _set_sched_ids(self, start=1, id_format=None):
         """
         Write into each job._sched_id an id compliant
-        with topological order
+        with topological order.
 
         Returns:
           int: the next index to use
@@ -789,10 +851,8 @@ class Scheduler:
             for j in self.topological_order():
                 if j in criticals:
                     self._show_task_stack(
-                        j, "stack for CRITICAL JOB {}"
-                        .format(j._repr(                # pylint: disable=W0212
-                            show_result_or_exception=False,
-                            show_requires=False)))
+                        j, "stack for CRITICAL JOB {} {} {}"
+                        .format(j.repr_id(), j.repr_short(), j.repr_main()))
             # then exceptions that were not critical
             non_critical_exceptions = exceptions - criticals
             for j in self.topological_order():
@@ -872,16 +932,14 @@ DOT_%28graph_description_language%29
         result += "{\n"
         for job in self.topological_order():
             # declare node and attach label
-            result += ("{} [label="
-                       .format(job._sched_id))          # pylint: disable=W0212
+            result += ("{} [label=".format(job.repr_id()))
             result += self._dot_protect(
                 job._get_graph_label())                 # pylint: disable=W0212
             result += "]\n"
             # add edges
             for req in job.required:
                 result += ("{} -> {};\n"
-                           .format(req._sched_id,       # pylint: disable=W0212
-                                   job._sched_id))      # pylint: disable=W0212
+                           .format(req.repr_id(), job.repr_id()))
         result += "}\n"
         return result
 

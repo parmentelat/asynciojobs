@@ -1,10 +1,9 @@
-from asynciojobs import Scheduler
-
-from asynciojobs import AbstractJob
-
 """
 The ``SchedulerJob`` class makes it easier to nest scheduler objects.
 """
+
+from asynciojobs import Scheduler
+from asynciojobs import AbstractJob
 
 
 class SchedulerJob(Scheduler, AbstractJob):
@@ -103,16 +102,27 @@ class SchedulerJob(Scheduler, AbstractJob):
         """
         return 1 + self._total_length()
 
+    def repr_entries(self):                             # pylint: disable=c0111
+        return "entries={}".format(self._entry_csv())
+
+    def repr_exits(self):                               # pylint: disable=c0111
+        return "exits={}".format(self._exit_csv(compute_backlinks=True))
+
     def _list(self, details, depth):
         """
         Complicit to Scheduler.list()
         """
-        if details:
-            print('>'*(depth+1), "{} {} with {} jobs"
-                  .format(type(self).__name__,
-                          self._get_text_label(),
-                          len(self)))
+        print(self.repr_id(),
+              self.repr_short(),
+              '>'*(depth+1),
+              self.repr_main(),
+              "{} -> {}".format(self.repr_requires(),
+                                self.repr_entries()))
         for job in self.topological_order():
             job._list(details, depth+1)                 # pylint: disable=W0212
-        if details:
-            print('<'*(depth+1), type(self).__name__)
+        print(self.repr_id(),
+              # this should be 7-spaces like repr_short()
+              '  end  ',
+              '<'*(depth+1),
+              self.repr_main(),
+              self.repr_exits())
