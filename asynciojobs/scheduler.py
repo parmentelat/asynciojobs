@@ -115,9 +115,13 @@ class Scheduler:
 
         Parameters:
           jobs: a collection of ``Schedulable`` objects.
+
+        Returns:
+          self: the scheduler object, for cascading insertions if needed.
         """
         jobs = set(Sequence._flatten(jobs))             # pylint: disable=W0212
         self.jobs.update(jobs)
+        return self
 
     def add(self, job: Schedulable):
         """
@@ -126,8 +130,12 @@ class Scheduler:
 
         Parameters:
           job: a single ``Schedulable`` object.
+
+        Returns:
+          self: the scheduler object, for cascading insertions if needed.
         """
         self.update([job])
+        return self
 
     def __len__(self):
         """
