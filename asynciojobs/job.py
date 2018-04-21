@@ -11,8 +11,8 @@ It also defines a couple of simple job classes.
 import sys
 import asyncio
 
-debug = False                               # pylint: disable=C0103
-debug = True                                # pylint: disable=C0103
+debug = False                                           # pylint: disable=C0103
+debug = True                                            # pylint: disable=C0103
 
 # pylint settings
 # W0212: we have a lot of accesses to protected members of other classes
@@ -151,7 +151,7 @@ class AbstractJob:                                      # pylint: disable=R0902
         self._sched_id = str(id_format.format(start))
         return start + 1
 
-    def _job_count(self):                      # pylint: disable=r0201
+    def _job_count(self):                               # pylint: disable=r0201
         """
         Complicit to Scheduler._total_length()
         """

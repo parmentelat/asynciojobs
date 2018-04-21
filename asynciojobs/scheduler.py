@@ -18,11 +18,11 @@ from .window import Window
 from .watch import Watch
 
 ########
-Schedulable = Union[AbstractJob, Sequence]  # pylint: disable=C0103
+Schedulable = Union[AbstractJob, Sequence]              # pylint: disable=C0103
 
 # will hopefully go away some day
-debug = False                               # pylint: disable=C0103
-# debug = True                                # pylint: disable=C0103
+debug = False                                           # pylint: disable=C0103
+# debug = True
 
 # pylint settings
 # W0212: we have a lot of accesses to protected members of other classes
@@ -95,7 +95,7 @@ class Scheduler:
     def __init__(self, *jobs_or_sequences: Iterable[Schedulable],
                  verbose=False, watch=None):
 
-        self.jobs = set(Sequence._flatten(          # pylint: disable=W0212
+        self.jobs = set(Sequence._flatten(              # pylint: disable=W0212
             jobs_or_sequences))
         self.verbose = verbose
         self.watch = watch
@@ -116,7 +116,7 @@ class Scheduler:
         Parameters:
           jobs: a collection of ``Schedulable`` objects.
         """
-        jobs = set(Sequence._flatten(jobs))         # pylint: disable=W0212
+        jobs = set(Sequence._flatten(jobs))             # pylint: disable=W0212
         self.jobs.update(jobs)
 
     def add(self, job: Schedulable):
@@ -224,7 +224,7 @@ class Scheduler:
             for _ in self.topological_order():
                 pass
             return True
-        except Exception as exc:                    # pylint: disable=W0703
+        except Exception as exc:                        # pylint: disable=W0703
             if self.verbose:
                 print("rain_check failed", exc)
             return False
@@ -257,17 +257,17 @@ class Scheduler:
             # loop on unfinished business
             for job in self.jobs:
                 # ignore jobs already marked
-                if job._s_mark:                     # pylint: disable=W0212
+                if job._s_mark:                         # pylint: disable=W0212
                     continue
                 # if there's no requirement (first pass),
                 # or later on if all requirements have already been marked,
                 # then we can mark this one
                 has_unmarked_requirements = False
                 for required_job in job.required:
-                    if required_job._s_mark is None:  # pylint: disable=W0212
+                    if required_job._s_mark is None:    # pylint: disable=W0212
                         has_unmarked_requirements = True
                 if not has_unmarked_requirements:
-                    job._s_mark = True              # pylint: disable=W0212
+                    job._s_mark = True                  # pylint: disable=W0212
                     nb_marked += 1
                     changed = True
                     yield job
@@ -365,12 +365,12 @@ class Scheduler:
         as the reverse of Job.required
         """
         for job in self.jobs:
-            job._s_successors = set()               # pylint: disable=W0212
+            job._s_successors = set()                   # pylint: disable=W0212
         for job in self.jobs:
             for req in job.required:
-                req._s_successors.add(job)          # pylint: disable=W0212
+                req._s_successors.add(job)              # pylint: disable=W0212
 
-    def _ensure_future(self, job, window, loop):    # pylint: disable=R0201
+    def _ensure_future(self, job, window, loop):        # pylint: disable=R0201
         """
         this is the hook that lets us make sure the created Task objects
         have a backlink pointer to their corresponding job
@@ -382,8 +382,8 @@ class Scheduler:
         #                                               vv
         task = asyncio.ensure_future(window.run_job(job)(), loop=loop)
         # create references back and forth between Job and asyncio.Task
-        task._job = job                             # pylint: disable=W0212
-        job._task = task                            # pylint: disable=W0212
+        task._job = job                                 # pylint: disable=W0212
+        job._task = task                                # pylint: disable=W0212
         return task
 
     def _record_beginning(self, timeout):
@@ -524,6 +524,7 @@ class Scheduler:
             jobs = (jobs,)
         for job in jobs:
             if not isinstance(job, AbstractJob):
+                # we expect a task here
                 job = job._job                          # pylint: disable=W0212
             print_time()
             print("{} {}: {} {} {}"
@@ -637,7 +638,7 @@ class Scheduler:
                                      return_when=asyncio.FIRST_COMPLETED)
 
             done_ok = {t for t in done
-                       if not t._exception}         # pylint: disable=W0212
+                       if not t._exception}             # pylint: disable=W0212
             await self._feedback(done_ok, "DONE")
             done_ko = done - done_ok
             await self._feedback(done_ko, "RAISED EXC.")
@@ -664,7 +665,7 @@ class Scheduler:
             # do we have at least one critical job with an exception ?
             critical_failure = False
             for done_task in done:
-                done_job = done_task._job           # pylint: disable=W0212
+                done_job = done_task._job               # pylint: disable=W0212
                 if done_job.raised_exception():
                     critical_failure = critical_failure \
                         or done_job.is_critical()
