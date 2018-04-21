@@ -144,10 +144,11 @@ class Tests(unittest.TestCase):
 
         print("===== test_nesting3", "LIST without details")
         mains.list(details=False)
-        return
-        print("===== test_nesting3", "LIST with details")
-        mains.list(details=True)
+        main_graph = mains.graph()
+        main_graph.format = 'png'
+        main_graph.render("tests/test_nesting3")
 
+        watch.reset()
         print("---run")
         ok = mains.run()
         if not ok:

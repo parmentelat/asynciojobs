@@ -915,11 +915,11 @@ class Scheduler:
         .. _Wikipedia on DOT: https://en.wikipedia.org/wiki/
 DOT_%28graph_description_language%29
         """
-        return ("digraph asynciojobs {"
-                + self._dot_body()
-                + "}")
+        self._set_sched_ids()
+        # xxx should maybe use/show scheduler's label if set
+        return ("digraph asynciojobs" + self._dot_body())
 
-    def _dot_body(self):
+    def _dot_body(self, cluster_count=0):
         """
         Creates the dot body for a scheduler, i.e the part between
         brackets, without the surrounding ``digraph`` or ``subgraph``
@@ -927,20 +927,47 @@ DOT_%28graph_description_language%29
         on whether we have a main scheduler or a nested one.
         """
         # use ids so as to not depend on labels
-        self._set_sched_ids()
 
         result = ""
         result += "{\n"
         for job in self.topological_order():
-            # declare node and attach label
-            result += ("{} [label=".format(job.repr_id()))
-            result += self._dot_protect(
-                job._get_graph_label())                 # pylint: disable=W0212
-            result += "]\n"
-            # add edges
-            for req in job.required:
-                result += ("{} -> {};\n"
-                           .format(req.repr_id(), job.repr_id()))
+
+            # regular jobs
+            if not isinstance(job, Scheduler):
+                # declare node and attach label
+                result += ("{} [label=".format(job.repr_id()))
+                result += self._dot_protect(
+                    job._get_graph_label())             # pylint: disable=W0212
+                result += "]\n"
+                # add edges
+                for req in job.required:
+
+                    # upstream is a regular job
+                    if not isinstance(req, Scheduler):
+                        result += ("{} -> {};\n"
+                                   .format(req.repr_id(), job.repr_id()))
+
+                    # upstream is a scheduler
+                    else:
+                        for exit_j in req.exit_jobs():
+                            result += ("{} -> {};\n"
+                                       .format(exit_j.repr_id(),
+                                               job.repr_id()))
+
+            # nested scheduler
+            else:
+                # xxx should maybe use/show scheduler's label if set
+                # insert a subgraph instead
+                cluster_count += 1
+                result += "subgraph cluster_{}".format(cluster_count)
+                result += job._dot_body(cluster_count)  # pylint: disable=W0212
+
+                for req in job.required:
+                    for entry in job.entry_jobs():
+                        result += ("{} -> {};\n"
+                                   .format(req.repr_id(),
+                                           entry.repr_id()))
+
         result += "}\n"
         return result
 
