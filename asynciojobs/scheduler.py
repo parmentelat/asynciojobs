@@ -295,6 +295,7 @@ class Scheduler:
                             " {} jobs are not reachable from free jobs"
                             .format(target_marked - nb_marked))
 
+    # entry and exit jobs
     def entry_jobs(self):
         """
         A generator that yields all jobs that have no requirement.
@@ -351,6 +352,12 @@ class Scheduler:
         if result:
             result = "{" + result + "}"
         return result
+
+    def repr_entries(self):                             # pylint: disable=c0111
+        return "entries={}".format(self._entry_csv())
+
+    def repr_exits(self):                               # pylint: disable=c0111
+        return "exits={}".format(self._exit_csv(compute_backlinks=True))
 
     ####################
     def _reset_marks(self):

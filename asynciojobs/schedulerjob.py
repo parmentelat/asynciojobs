@@ -102,12 +102,6 @@ class SchedulerJob(Scheduler, AbstractJob):
         """
         return 1 + self._total_length()
 
-    def repr_entries(self):                             # pylint: disable=c0111
-        return "entries={}".format(self._entry_csv())
-
-    def repr_exits(self):                               # pylint: disable=c0111
-        return "exits={}".format(self._exit_csv(compute_backlinks=True))
-
     def _list(self, details, depth):
         """
         Complicit to Scheduler.list()
