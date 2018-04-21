@@ -8,26 +8,7 @@ from asynciojobs import SchedulerJob
 
 from asynciojobs import Watch
 
-from .util import co_print_sleep
-
-
-# create a small diamond scheduler
-# total duration = 2 * duration
-def diamond_scheduler(watch, duration, msg, scheduler_class=Scheduler):
-    d = scheduler_class(watch=watch)
-    j1 = Job(co_print_sleep(watch, duration/2, f"top {msg}"),
-             label=f"top {msg}1",
-             scheduler=d)
-    j2 = Job(co_print_sleep(watch, duration, f"left {msg}"),
-             label=f"left {msg}",
-             required=j1, scheduler=d)
-    j3 = Job(co_print_sleep(watch, duration, f"right {msg}", ),
-             label=f"right {msg}",
-             required=j1, scheduler=d)
-    Job(co_print_sleep(watch, duration / 2, f"bottom {msg}"),
-        label=f"bottom {msg}",
-        required=(j2, j3), scheduler=d)
-    return d
+from .util import co_print_sleep, produce_png, diamond_scheduler
 
 
 class Tests(unittest.TestCase):
@@ -42,23 +23,23 @@ class Tests(unittest.TestCase):
 
         watch = Watch('test_nesting1')
         # sub-scheduler - total approx 1 s
-        subs = Scheduler(watch=watch)
-        Job(co_print_sleep(watch, 0.5, "sub short"), scheduler=subs)
-        Job(co_print_sleep(watch, 1, "sub longs"), scheduler=subs)
+        sub_sched = Scheduler(watch=watch)
+        Job(co_print_sleep(watch, 0.5, "sub short"), scheduler=sub_sched)
+        Job(co_print_sleep(watch, 1, "sub longs"), scheduler=sub_sched)
 
         # main scheduler - total approx 2 s
-        mains = Scheduler(watch=watch)
+        main_sched = Scheduler(watch=watch)
         Sequence(
             Job(co_print_sleep(watch, 0.5, "main begin")),
             # this is where the subscheduler is merged
-            Job(subs.co_run(), label='subscheduler'),
+            Job(sub_sched.co_run(), label='subscheduler'),
             Job(co_print_sleep(watch, 0.5, "main end")),
-            scheduler=mains
+            scheduler=main_sched
         )
 
         print("===== test_nesting1", "LIST with details")
-        mains.list(details=True)
-        ok = mains.run()
+        main_sched.list(details=True)
+        ok = main_sched.run()
         self.assertTrue(ok)
 
         # allow for a small variation around 2s of course
@@ -72,29 +53,31 @@ class Tests(unittest.TestCase):
         """
         watch = Watch('test_nesting2')
         # sub-scheduler - total approx 0.5 s
-        sub2 = diamond_scheduler(watch, 0.25, "SUB2")
+        sub2 = diamond_scheduler(watch, 0.5, "SUB2",
+                                 scheduler_class=Scheduler)
         sub2.watch = watch
         # sub-scheduler - total approx 1 s
-        sub3 = diamond_scheduler(watch, 0.5, "SUB3")
+        sub3 = diamond_scheduler(watch, 1, "SUB3",
+                                 scheduler_class=Scheduler)
         sub3.watch = watch
 
         # main scheduler - total approx
         # 0.5 + max(0.5, 1) + 0.5 = 2 s
         expected_duration = 2
-        mains = Scheduler(watch=watch)
+        main_sched = Scheduler(watch=watch)
         mainj1 = Job(co_print_sleep(watch, 0.5, "mainj1"), label="mainj1",
-                     scheduler=mains)
+                     scheduler=main_sched)
         mainj2 = Job(sub2.co_run(), label="mainj2",
                      required=mainj1,
-                     scheduler=mains)
+                     scheduler=main_sched)
         mainj3 = Job(sub3.co_run(), label="mainj3",
                      required=mainj1,
-                     scheduler=mains)
+                     scheduler=main_sched)
         Job(co_print_sleep(watch, 0.5, "mainj4"), label="mainj4",
             required=(mainj2, mainj3),
-            scheduler=mains)
+            scheduler=main_sched)
 
-        ok = mains.run()
+        ok = main_sched.run()
         self.assertTrue(ok)
 
         # allow for a small variation around 2s of course
@@ -114,45 +97,43 @@ class Tests(unittest.TestCase):
         expected_duration = 2
 
         watch = Watch('test_nesting3')
-        mains = Scheduler(verbose=True, watch=watch)
-        mains.label = "main3"
+        main_sched = Scheduler(verbose=True, watch=watch)
+        main_sched.label = "main3"
         mainj1 = Job(co_print_sleep(watch, 0.5, "mainj1"), label="mainj1",
-                     scheduler=mains)
+                     scheduler=main_sched)
 
         # sub-scheduler 2 - total approx 0.5 s
-        subsched2 = diamond_scheduler(watch, 0.25, "SUB2", SchedulerJob)
-        mains.add(subsched2)
-        subsched2.requires(mainj1)
-        subsched2.label = "subsched2"
-        subsched2.verbose = True
+        sub_sched2 = diamond_scheduler(watch, 0.5, "SUB2")
+        main_sched.add(sub_sched2)
+        sub_sched2.requires(mainj1)
+        sub_sched2.label = "sub_sched2"
+        sub_sched2.verbose = True
 
         # sub-scheduler 3 - total approx 1 s
-        subsched3 = diamond_scheduler(watch, 0.5, "SUB3", SchedulerJob)
-        mains.add(subsched3)
-        subsched3.requires(mainj1)
-        subsched3.label = "subsched3"
-        subsched3.verbose = True
+        sub_sched3 = diamond_scheduler(watch, 1, "SUB3")
+        main_sched.add(sub_sched3)
+        sub_sched3.requires(mainj1)
+        sub_sched3.label = "sub_sched3"
+        sub_sched3.verbose = True
 
         # last job in main scheduler
         Job(co_print_sleep(watch, 0.5, "mainj4"), label="mainj4",
-            required=(subsched2, subsched3),
-            scheduler=mains)
+            required=(sub_sched2, sub_sched3),
+            scheduler=main_sched)
 
-        for s in mains, subsched2, subsched3:
+        for s in main_sched, sub_sched2, sub_sched3:
             if not s.sanitize():
                 print(f"OOPS, had to sanitize sched {s.label}")
 
         print("===== test_nesting3", "LIST without details")
-        mains.list(details=False)
-        main_graph = mains.graph()
-        main_graph.format = 'png'
-        main_graph.render("tests/test_nesting3")
+        main_sched.list(details=False)
+        produce_png(main_sched, "test_nesting3")
 
         watch.reset()
         print("---run")
-        ok = mains.run()
+        ok = main_sched.run()
         if not ok:
-            mains.debrief()
+            main_sched.debrief()
         self.assertTrue(ok)
 
         # allow for a small variation around 2s of course
@@ -188,28 +169,4 @@ class Tests(unittest.TestCase):
         self.assertTrue(main.run())
         self.assertAlmostEqual(watch.seconds(), expected_duration, delta=.05)
 
-    def test_nesting_sequence2(self):
-
-        expected_duration = 1.
-        watch = Watch('test_nesting_sequence')
-
-        main = Scheduler(
-            Sequence(
-              Job(co_print_sleep(watch, .2, "BEGIN")),
-              SchedulerJob(
-                Sequence(
-                  Job(co_print_sleep(watch, .2, "one")),
-                  Job(co_print_sleep(watch, .2, "two")),
-                  Job(co_print_sleep(watch, .2, "three")),
-                ),
-                watch=watch,
-              ),
-              Job(co_print_sleep(watch, .2, "END")),
-            ),
-            watch=watch)
-
-        print("===== test_nesting_sequence2", "LIST with details")
-        main.list(details=True)
-
-        self.assertTrue(main.run())
-        self.assertAlmostEqual(watch.seconds(), expected_duration, delta=.05)
+        produce_png(main, "test_nesting_sequence")

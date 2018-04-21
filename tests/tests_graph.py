@@ -4,7 +4,7 @@ import unittest
 
 from asynciojobs import Scheduler, Job, Sequence, Watch
 
-from .util import co_print_sleep
+from .util import co_print_sleep, produce_png
 
 
 class Tests(unittest.TestCase):
@@ -27,10 +27,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(len(s), 3)
         s.run()
         self.assertAlmostEqual(watch.seconds(), 1.5, delta=0.05)
-        g = s.graph()
-        g.format = 'png'
-        g.render('tests/test_graph1')
-        print("(over)wrote tests/test_graph1.png")
+        produce_png(s, "test_graph1")
 
     def test_graph2(self):
 
@@ -56,7 +53,7 @@ class Tests(unittest.TestCase):
 
             def details(self):
                 return f"GraphJob details\nare even more verbose and say\n" \
-                    f"that initial graph message\nwas {self.graph}"
+                       f"that initial graph message\nwas {self.graph}"
 
         watch = Watch()
         s = Scheduler()
@@ -78,7 +75,4 @@ class Tests(unittest.TestCase):
         s.list(details=True)
         print("GRAPH")
         self.assertEqual(len(s), 4)
-        g = s.graph()
-        g.format = 'png'
-        g.render('tests/test_graph2')
-        print("(over)wrote tests/test_graph2.png")
+        produce_png(s, "test_graph2")
