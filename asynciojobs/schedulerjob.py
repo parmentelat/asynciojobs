@@ -120,3 +120,12 @@ class SchedulerJob(Scheduler, AbstractJob):
               '<'*(depth+1),
               self.repr_main(),
               self.repr_exits())
+
+    def dot_cluster_name(self):
+        """
+        assigns a name to the subgraph that will represent
+        a schedulerjob; dot format imposes this name to start
+        with ``cluster_`
+        """
+        return "cluster_{}"\
+               .format(self._sched_id)

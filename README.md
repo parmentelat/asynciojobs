@@ -244,9 +244,9 @@ To see an overview of a scheduler, just use the `list()` method that will give y
 sb.list()
 ```
 
-    1   ☉ ☓   <Job `Job[in_out (...)]`>[[ -> 250.0]]
-    2   ☉ ☓   <Job `b1`>[[ -> 100.0]]
-    3   ☉ ☓   <Job `b2`>[[ -> 200.0]] - requires {2}
+    1   ☉ ☓   <Job `Job[in_out (...)]`> 
+    2   ☉ ☓   <Job `b1`> 
+    3   ☉ ☓   <Job `b2`> requires={2}
 
 
 Here is a complete list of the symbols used, with their meaning 
@@ -329,8 +329,8 @@ sc = Scheduler(c1, c2, c3, c4)
 sc.run()
 ```
 
-    BUS: -> in_out(0.2)
     BUS: -> in_out(0.4)
+    BUS: -> in_out(0.2)
     BUS: <- in_out(0.2)
     BUS: -> in_out(0.3)
     BUS: <- in_out(0.4)
@@ -351,10 +351,10 @@ Note that `run()` always terminates as soon as all the non-`forever` jobs are co
 sc.list()
 ```
 
-    1   ☉ ☓   <Job `c1`>[[ -> 2.0]]
-    2   ☉ ↺ ∞ <Job `monitor`>
-    3   ☉ ☓   <Job `c2`>[[ -> 4.0]]
-    4   ☉ ☓   <Job `c3`>[[ -> 3.0]] - requires {1}
+    1   ☉ ↺ ∞ <Job `monitor`> 
+    2   ☉ ☓   <Job `c2`> 
+    3   ☉ ☓   <Job `c1`> 
+    4   ☉ ☓   <Job `c3`> requires={3}
 
 
 ### Example D : specifying a global timeout
@@ -375,10 +375,10 @@ sd = Scheduler(j)
 sd.run(timeout=0.25)
 ```
 
-    12:36:27: forever 0
-    12:36:27: forever 1
-    12:36:27: forever 2
-    12:36:27.864 SCHEDULER: Scheduler.co_run: TIMEOUT occurred
+    19:01:04: forever 0
+    19:01:04: forever 1
+    19:01:04: forever 2
+    19:01:04.480 SCHEDULER: Scheduler.co_run: TIMEOUT occurred
 
 
 
@@ -398,7 +398,7 @@ j
 
 
 
-      ☉ ↺ ∞ <Job `Job[forever (...)]`>
+      ☉ ↺ ∞ <Job `Job[forever (...)]`> [not done] 
 
 
 
@@ -441,9 +441,9 @@ se.list()
     -> in_out(0.3)
     <- in_out(0.3)
     orch: True
-    1   ☉ ☓   <Job `Job[in_out (...)]`>[[ -> 200.0]]
-    2   ★ ☓   <Job `boom`>!! exception => Exception:boom after 0.2s!! - requires {1}
-    3   ☉ ☓   <Job `Job[in_out (...)]`>[[ -> 300.0]] - requires {2}
+    1   ☉ ☓   <Job `Job[in_out (...)]`> 
+    2   ★ ☓   <Job `boom`> requires={1}
+    3   ☉ ☓   <Job `Job[in_out (...)]`> requires={2}
 
 
 ### Example F : critical jobs
@@ -463,11 +463,11 @@ sf.list()
 
     -> in_out(0.2)
     <- in_out(0.2)
-    12:36:29.29 SCHEDULER: Emergency exit upon exception in critical job
+    19:01:05.652 SCHEDULER: Emergency exit upon exception in critical job
     run: False
-    1   ☉ ☓   <Job `Job[in_out (...)]`>[[ -> 200.0]]
-    2 ⚠ ★ ☓   <Job `boom`>!! CRIT. EXC. => Exception:boom after 0.2s!! - requires {1}
-    3     ⚐   <Job `Job[in_out (...)]`> - requires {2}
+    1   ☉ ☓   <Job `Job[in_out (...)]`> 
+    2 ⚠ ★ ☓   <Job `boom`> requires={1}
+    3     ⚐   <Job `Job[in_out (...)]`> requires={2}
 
 
 ### Limiting the number of simultaneous jobs
@@ -505,15 +505,15 @@ end = time.time()
 print("total duration = {}s".format(end-beg))
 ```
 
-    6-th job
-    2-th job
     7-th job
+    2-th job
+    6-th job
     3-th job
-    8-th job
     1-th job
     4-th job
+    8-th job
     5-th job
-    total duration = 1.0079560279846191s
+    total duration = 1.0038080215454102s
 
 
 ## Customizing jobs
@@ -618,7 +618,7 @@ Note that if you do have `graphviz` available, you can produce a png file more s
 
 
 ```python
-# a trick to produce a png file on a box that has pygraphviz installed
+# a trick to produce a png file on a box that has graphviz pip-installed
 g = s.graph()
 g.format = 'png'
 g.render('readme')
@@ -635,78 +635,9 @@ g.render('readme')
 
 By simply taking advantage of the fact that:
 * a `Job` can be created from any coroutine, and that
-* `co_run` is a coroutine, 
+* `Scheduler.co_run` is a coroutine, 
 
-it is super-easy to nest schedulers.
-
-### The basic idea
-
-For creating a nested scheduler inside scheduler `main_sched`, all you need to do is:
-* to create a second scheduler `sub_sched`, in a regular way with any number of jobs,
-* to create a job `proxy_job` inside `main_sched`, of type `Job`, that is in charge of triggering the nested scheduler, or in other words to create `proxy_job` as follows:
-
-```python
-# create a job that triggers the sub-scheduler
-proxy_job = Job(sub_sched.co_run())
-# add it to the main scheduler
-main_sched.add(proxy_job)
-```
-
-and you're done.
-
-Let us consider the following example. We start with creating a simple diamond-shaped scheduler:
-
-
-```python
-# the sub-scheduler
-sub_sched = Scheduler()
-subj1 = Job(aprint("subj1"), label='subj1', scheduler=sub_sched)
-subj2 = Job(aprint("subj2"), label='subj2', required=subj1, scheduler=sub_sched)
-subj3 = Job(aprint("subj3"), label='subj3', required=subj1, scheduler=sub_sched)
-subj4 = Job(aprint("subj4"), label='subj4', required=(subj2, subj3), scheduler=sub_sched)
-```
-
-We can now easily create a main scheduler, in which one of the jobs will run this low-level scheduler:
-
-
-```python
-# the main scheduler, created manually
-
-####
-# MAKE SURE to checkout a more leegant method below using SchedulerJob
-####
-
-main_sched = Scheduler(
-    Sequence(
-        Job(aprint("main-start"), label="main-start"),
-        # this is where we graft the subscheduler into its upper-level scheduler
-        Job(sub_sched.co_run(), label="sub-scheduler"),
-        Job(aprint("main-end"), label="main-end"),
-    )
-)
-```
-
-Although the graphical presentation would not explicitly render that nesting, the semantics is what you'd expect:
-
-
-```python
-main_sched.run()
-```
-
-    main-start
-    subj1
-    subj2
-    subj3
-    subj4
-    main-end
-
-
-
-
-
-    True
-
-
+it is easy to nest schedulers.
 
 ### The `SchedulerJob` class
 
@@ -714,14 +645,18 @@ In order to make such constructions a little more explicit though, `asynciojobs`
 
 This class is a mere mixin between `Scheduler` and `AbstractJob`. Being at the same time a `Scheduler` and an `AbstractJob`, it can be inserted in the main scheduler, and (sub-)jobs can be added to it.
 
-Here's how to write the same example as above, using this more elegant alternative.
+
+```python
+from asynciojobs import SchedulerJob
+```
+
+Consider the following example:
 
 
 ```python
-# the sub-scheduler;
-# like above, but implemented as a SchedulerJob
-
-from asynciojobs import SchedulerJob
+# we start with the creation of an internal scheduler
+# that has a simple diamond structure
+# note the use of SchedulerJob and not just simply Scheduler
 
 sub_sched = SchedulerJob()
 subj1 = Job(aprint("subj1"), label='subj1', scheduler=sub_sched)
@@ -730,7 +665,7 @@ subj3 = Job(aprint("subj3"), label='subj3', required=subj1, scheduler=sub_sched)
 subj4 = Job(aprint("subj4"), label='subj4', required=(subj2, subj3), scheduler=sub_sched)
 ```
 
-We can now easily create a main scheduler, in which one of the jobs will run this low-level scheduler:
+We can now create a main scheduler, in which one of the jobs **is** this low-level scheduler:
 
 
 ```python
@@ -739,45 +674,53 @@ sub_sched.label = "nested"
 main_sched = Scheduler(
     Sequence(
         Job(aprint("main-start"), label="main-start"),
-        # here we can just include the subscheduler as-is
+        # the way to graft the low-level logic in this main workflow
+        # is to just use the ShcdulerJOb instance as a job
         sub_sched,
         Job(aprint("main-end"), label="main-end"),
-        scheduler = main_sched,
     )
 )
 ```
 
-Because I have used `SchedulerJob` instead of a combination of `Job` and `Scheduler.co_run()`, I can now use `list()` to inspect the contents of the scheduler **including the nested jobs**:
+This nested structure is rendered by both `list()` and `graph()`:
 
 
 ```python
+# list() shows the contents of sub-schedulers implemented as SchedulerJob instances
 main_sched.list()
 ```
 
-    1     ⚐   <Job `main-start`>
-    3     ⚐   <Job `subj1`>
-    4     ⚐   <Job `subj2`> - requires {3}
-    5     ⚐   <Job `subj3`> - requires {3}
-    6     ⚐   <Job `subj4`> - requires {4, 5}
-    7     ⚐   <Job `main-end`> - requires {2}
+    1     ⚐   <Job `main-start`> 
+    2     ⚐   > <SchedulerJob `nested`> requires={1} -> entries={3}
+    3     ⚐   <Job `subj1`> 
+    4     ⚐   <Job `subj2`> requires={3}
+    5     ⚐   <Job `subj3`> requires={3}
+    6     ⚐   <Job `subj4`> requires={4, 5}
+    2   end   < <SchedulerJob `nested`> exits={6}
+    7     ⚐   <Job `main-end`> requires={2}
 
+
+When using a `SchedulerJob` to describe nested schedulers, `asynciojobs` will also produce a graphical output that properly exhibits the overall structure; this example requires the `graphviz` package:
 
 
 ```python
-main_sched.list(details=True)
+main_dot = main_sched.graph()
+main_dot.format = 'png'
+main_dot.render("readme-nested")
 ```
 
-    1     ⚐   <Job `main-start`>
-    > SchedulerJob nested with 4 jobs
-    3     ⚐   <Job `subj1`>
-    4     ⚐   <Job `subj2`> - requires {3}
-    5     ⚐   <Job `subj3`> - requires {3}
-    6     ⚐   <Job `subj4`> - requires {4, 5}
-    < SchedulerJob
-    7     ⚐   <Job `main-end`> - requires {2}
 
 
-Although the graphical presentation would not explicitly render that nesting, the semantics is what you'd expect:
+
+    'readme-nested.png'
+
+
+
+That we now visualize; again, from a live notebook it is enough to evaluate ``main_sched.graph()`` to see that picture:
+
+![](readme-nested.png)
+
+Which when executed produces this output:
 
 
 ```python
@@ -801,15 +744,15 @@ main_sched.run()
 
 ### What for ?
 
-This feature is admittedly not widely used, mostly because the graphical representation does not reflect nesting.
+This feature can can come in handy to deal with issues like:
 
-It can come in handy to deal with issues like:
+* you want to be able to re-use code - as in writing a library - and for that SchedulerJob is a convenient way to address that; functions can return pieces of workflows that can be easily mixed within a larger scenario.
 
-* you want the `jobs_window` attribute of `co_run()` to apply to only a subset of your jobs;
-* you want the `timeout` attirbute of `co_run()` to apply to only a subset of your jobs;
-* you have `forever` jobs that need to be terminated before sooner than the very end of the overall scenario.
+* in another dimension, nested schedulers can be a solution if
+  * you want the `jobs_window` attribute of `co_run()` to apply to only a subset of your jobs;
+  * you want the `timeout` attirbute of `co_run()` to apply to only a subset of your jobs;
+  * you have `forever` jobs that need to be terminated sooner than the very end of the overall scenario.
 
-In some cases, using nested schedulers might be an angle for dealing with this kind of issues.
 
 ## Troubleshooting
 

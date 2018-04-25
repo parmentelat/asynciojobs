@@ -5,8 +5,6 @@ The Scheduler class is a set of AbstractJobs, that together with their
 *required* relationship, form an execution graph.
 """
 
-from typing import Iterable, Union
-
 import time
 import io
 
@@ -17,9 +15,7 @@ from .sequence import Sequence
 from .window import Window
 from .watch import Watch
 
-########
-Schedulable = Union[AbstractJob, Sequence]              # pylint: disable=C0103
-
+#
 # will hopefully go away some day
 debug = False                                           # pylint: disable=C0103
 # debug = True
@@ -27,8 +23,15 @@ debug = False                                           # pylint: disable=C0103
 # pylint settings
 # W0212: we have a lot of accesses to protected members of other classes
 # R0914 Too many local variables
-# pylint: disable=R0914
+# R0904 Too many public methods (xxx this one should be reachable)
+# C0302 Too many lines in module (would be nice to not count docstrings)
+# pylint: disable=R0914, R0904, C0302
 
+# Historical note: we used to formally define the Schedulable type hint
+# but that ended up clobbering the documentation, and was more harmful
+# than helpful
+# in plain english, a Schedulable object is either
+# an instance of AbstractJob or of Sequence
 
 class Scheduler:
     """
@@ -92,7 +95,7 @@ class Scheduler:
 
     """
 
-    def __init__(self, *jobs_or_sequences: Iterable[Schedulable],
+    def __init__(self, *jobs_or_sequences,
                  verbose=False, watch=None):
 
         self.jobs = set(Sequence._flatten(              # pylint: disable=W0212
@@ -108,7 +111,7 @@ class Scheduler:
         self._expiration = None
 
     # think of an scheduler as a set of jobs
-    def update(self, jobs: Iterable[Schedulable]):
+    def update(self, jobs):
         """
         Adds a collection of ``Schedulable`` objects;
         this method is named after ``set.update()``.
@@ -123,7 +126,7 @@ class Scheduler:
         self.jobs.update(jobs)
         return self
 
-    def add(self, job: Schedulable):
+    def add(self, job):
         """
         Adds a single ``Schedulable`` object;
         this method name is inspired from plain python ``set.add()``
@@ -316,17 +319,19 @@ class Scheduler:
                   compute_backlinks=True):
         """
         A generator that yields all jobs that are
-        not a requirement to another job.
-
-        Reverse of :meth:`entry_points()`.
+        not a requirement to another job; it is thus in some sense
+        the reverse of :meth:`entry_points()`.
 
         Parameters:
-          discard_forever: if True, jobs marked as forever are skipped.
+          discard_forever: if True, jobs marked as forever are skipped; forever
+            jobs often have no successors, but are seldom of interest when
+            calling this method.
           compute_backlinks: for this method to work properly, it is necessary
             to compute backlinks, an internal structure that holds the opposite
-            of the *required* relationsship. Passing False here allows to skip
+            of the *required* relationship. Passing False here allows to skip
             that stage, when that relationship is known to be up to date
             already.
+
         """
         if compute_backlinks:
             self._backlinks()
@@ -352,6 +357,25 @@ class Scheduler:
         if result:
             result = "{" + result + "}"
         return result
+
+    def some_entry_job(self):
+        """
+        Returns one randomly picked entry job
+        Needed when creating the dot format, because
+        of the specifics of that format; although it may be
+        that returning any job would do the job as well
+        """
+        for job in self.entry_jobs():
+            return job
+        raise ValueError("Internal error")
+
+    def some_exit_job(self):
+        """
+        Same for exit nodes;
+        """
+        for job in self.exit_jobs():
+            return job
+        raise ValueError("Internal error")
 
     def repr_entries(self):                             # pylint: disable=c0111
         return "entries={}".format(self._entry_csv())
@@ -932,9 +956,9 @@ DOT_%28graph_description_language%29
         """
         self._set_sched_ids()
         # xxx should maybe use/show scheduler's label if set
-        return ("digraph asynciojobs" + self._dot_body())
+        return "digraph asynciojobs" + self._dot_body()
 
-    def _dot_body(self, cluster_count=0):
+    def _dot_body(self):
         """
         Creates the dot body for a scheduler, i.e the part between
         brackets, without the surrounding ``digraph`` or ``subgraph``
@@ -945,6 +969,7 @@ DOT_%28graph_description_language%29
 
         result = ""
         result += "{\n"
+        result += "compound=true;\n"
         for job in self.topological_order():
 
             # regular jobs
@@ -964,24 +989,39 @@ DOT_%28graph_description_language%29
 
                     # upstream is a scheduler
                     else:
-                        for exit_j in req.exit_jobs():
-                            result += ("{} -> {};\n"
-                                       .format(exit_j.repr_id(),
-                                               job.repr_id()))
+                        from_node = req.some_exit_job()
+                        cluster_name = req.dot_cluster_name()
+                        result += ("{} -> {} [ltail={}];\n"
+                                   .format(from_node.repr_id(),
+                                           job.repr_id(),
+                                           cluster_name))
 
             # nested scheduler
             else:
                 # xxx should maybe use/show scheduler's label if set
                 # insert a subgraph instead
-                cluster_count += 1
-                result += "subgraph cluster_{}".format(cluster_count)
-                result += job._dot_body(cluster_count)  # pylint: disable=W0212
+
+                cluster_name = job.dot_cluster_name()
+                result += "subgraph {}".format(cluster_name)
+                result += job._dot_body()  # pylint: disable=W0212
 
                 for req in job.required:
-                    for entry in job.entry_jobs():
-                        result += ("{} -> {};\n"
+
+                    # upstream is a regular job
+                    if not isinstance(req, Scheduler):
+                        result += ("{} -> {} [lhead={}];\n"
                                    .format(req.repr_id(),
-                                           entry.repr_id()))
+                                           job.some_entry_job().repr_id(),
+                                           cluster_name))
+
+                    # upstream is a scheduler as well
+                    else:
+                        src_cluster_name = req.dot_cluster_name()
+                        result += ("{} -> {} [lhead={} ltail={}];\n"
+                                   .format(req.some_exit_job().repr_id(),
+                                           job.some_entry_job().repr_id(),
+                                           cluster_name,
+                                           src_cluster_name))
 
         result += "}\n"
         return result
@@ -990,14 +1030,15 @@ DOT_%28graph_description_language%29
         """
         This method does not require ``graphviz`` to be installed, it
         writes a file in dot format for post-processing with
-        e.g. graphviz's ``dot`` utility.
+        e.g. graphviz's ``dot`` utility. It is a simple wrapper around
+        :meth:`dot_format()`.
 
         Parameters:
           filename: where to store the result.
 
         Returns:
           str: a message that can be printed for information, like e.g.
-            ``"(Over)wrote foo.dot"``
+          ``"(Over)wrote foo.dot"``
 
         See also the :meth:`graph()` method that serves a similar purpose but
         natively as a ``graphviz`` object.

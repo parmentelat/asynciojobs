@@ -51,10 +51,11 @@ class Tests(unittest.TestCase):
         sched = Scheduler(
             Sequence(
                 Job(co_print_sleep(watch, .2, "beg"),
-                    label="test_easy"),
+                    label="test_png_simple start"),
                 diamond_scheduler(watch, .6, "middle-up"),
                 pipes(watch, .6, "middle-down"),
-                Job(co_print_sleep(watch, .2, "end")),
+                Job(co_print_sleep(watch, .2, "end"),
+                    label="test_png_simple end"),
             ),
             watch=watch
         )
