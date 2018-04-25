@@ -1,5 +1,13 @@
 # ChangeLog
 
+## 0.9.1 - 2018 Apr 25
+
+* graphical output should now properly show nested schedulers in all cases of imbrications
+* textual output marginally nicer too
+* removed the formal definition of the Schedulable type hint that was only clobbering the doc
+* major renaming; all methods that produce pieces of text for representing objects are called repr_something()
+* more tools in tests.utils
+
 ## 0.8.2 - 2018 Apr 20
 
 * `Scheduler.list()` shows nested jobs too
