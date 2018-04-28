@@ -2,7 +2,7 @@
 
 import unittest
 
-from asynciojobs import Scheduler, Job, Sequence, Watch
+from asynciojobs import PureScheduler, Job, Sequence, Watch
 
 from .util import co_print_sleep, produce_png
 
@@ -13,7 +13,7 @@ class Tests(unittest.TestCase):
 
         watch = Watch()
 
-        s = Scheduler()
+        s = PureScheduler()
         s.add(Sequence(
             Job(co_print_sleep(watch, .25, 'begin')),
             Job(co_print_sleep(watch, 1., 'middle'), label='middle'),
@@ -56,7 +56,7 @@ class Tests(unittest.TestCase):
                        f"that initial graph message\nwas {self.graph}"
 
         watch = Watch()
-        s = Scheduler()
+        s = PureScheduler()
         s.add(Sequence(
             TextJob('textjob-with',
                     co_print_sleep(watch, 0.1, 'textjob, no label ')),

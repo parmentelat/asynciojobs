@@ -14,7 +14,7 @@ import unittest
 from asynciojobs import AbstractJob
 from asynciojobs import Job as J
 from asynciojobs import Sequence as Seq
-from asynciojobs import Scheduler
+from asynciojobs import PureScheduler
 
 from asynciojobs import PrintJob
 
@@ -124,11 +124,13 @@ common_sep = 40 * '*' + ' '
 
 
 def check_required_types(scheduler, message):
-    wrong = [j for j in scheduler.jobs if not isinstance(
-        j, AbstractJob) or not hasattr(j, 'required')]
+    wrong = [j for j in scheduler.jobs
+             if not isinstance(j, AbstractJob)
+             or not hasattr(j, 'required')]
     if wrong:
-        print("in {} : Scheduler {} has {}/{} ill-typed jobs"
-              .format(message, scheduler, len(wrong), len(scheduler.jobs)))
+        print("in {} : {} {} has {}/{} ill-typed jobs"
+              .format(message, type(scheduler).__name__,
+                      scheduler, len(wrong), len(scheduler.jobs)))
         return False
     return True
 
@@ -142,7 +144,7 @@ def list_sep(scheduler, sep):
 class Tests(unittest.TestCase):
 
     def test_empty(self):                               # pylint: disable=r0201
-        s = Scheduler()
+        s = PureScheduler()
         s.list()
         s.list(details=True)
 
@@ -160,7 +162,7 @@ class Tests(unittest.TestCase):
         a2.requires(a3)
         a3.requires(a1)
 
-        sched = Scheduler(a1, a2, a3)
+        sched = PureScheduler(a1, a2, a3)
 
         # these lines seem to trigger a nasty message about a coro not being
         # waited
@@ -182,7 +184,7 @@ class Tests(unittest.TestCase):
         a7.requires(a5)
         a7.requires(a6)
 
-        sched = Scheduler(*jobs)
+        sched = PureScheduler(*jobs)
         list_sep(sched, common_sep + "LIST BEFORE")
         self.assertTrue(sched.rain_check())
         self.assertTrue(sched.orchestrate(loop=asyncio.get_event_loop()))
@@ -196,7 +198,7 @@ class Tests(unittest.TestCase):
     def test_forever1(self):
         a1, a2, t1 = SLJ(1), SLJ(1.5), TJ(.6)
         a2.requires(a1)
-        sched = Scheduler(a1, a2, t1)
+        sched = PureScheduler(a1, a2, t1)
         sched.list()
         self.assertTrue(sched.orchestrate())
         sched.list()
@@ -206,7 +208,7 @@ class Tests(unittest.TestCase):
         a1, a2, a3 = [SLJ(x) for x in (0.5, 0.6, 0.7)]
         a2.requires(a1)
         a3.requires(a2)
-        sched = Scheduler(a1, a2, a3)
+        sched = PureScheduler(a1, a2, a3)
         # should timeout in the middle of stage 2
         self.assertFalse(sched.orchestrate(timeout=1))
         sched.list()
@@ -216,7 +218,7 @@ class Tests(unittest.TestCase):
 
         print("verbose = {}".format(verbose))
         a1, a2 = SLJ(1), J(co_exception(0.5), label='non critical boom')
-        sched = Scheduler(a1, a2, verbose=verbose)
+        sched = PureScheduler(a1, a2, verbose=verbose)
         self.assertTrue(sched.orchestrate())
         print(common_sep + 'debrief()')
         sched.debrief()
@@ -232,7 +234,7 @@ class Tests(unittest.TestCase):
         print("verbose = {}".format(verbose))
         a1, a2 = SLJ(1), J(co_exception(0.5),
                            label='critical boom', critical=True)
-        sched = Scheduler(a1, a2, verbose=verbose)
+        sched = PureScheduler(a1, a2, verbose=verbose)
         self.assertFalse(sched.orchestrate())
         print(common_sep + 'debrief()')
         sched.debrief()
@@ -248,7 +250,7 @@ class Tests(unittest.TestCase):
         a2 = J(sl(0.1), label=2)
         a3 = J(sl(0.1), label=3)
         s = Seq(a1, a2, a3)
-        sched = Scheduler(s)
+        sched = PureScheduler(s)
         list_sep(sched, common_sep + "sequence1")
         self.assertEqual(len(a1.required), 0)
         self.assertEqual(len(a2.required), 1)
@@ -263,7 +265,7 @@ class Tests(unittest.TestCase):
         a2 = J(sl(0.1), label=2)
         a3 = J(sl(0.1), label=3)
         s = Seq(a2, a3, required=a1)
-        sched = Scheduler(a1, s)
+        sched = PureScheduler(a1, s)
         list_sep(sched, common_sep + "sequence2")
         self.assertEqual(len(a1.required), 0)
         self.assertEqual(len(a2.required), 1)
@@ -278,7 +280,7 @@ class Tests(unittest.TestCase):
         a2 = J(sl(0.1), label=2)
         s = Seq(a1, a2)
         a3 = J(sl(0.1), label=3, required=s)
-        sched = Scheduler()
+        sched = PureScheduler()
         sched.update((s, a3))
         list_sep(sched, common_sep + "sequence3")
         self.assertEqual(len(a1.required), 0)
@@ -296,7 +298,7 @@ class Tests(unittest.TestCase):
         a4 = J(sl(0.1), label=4)
         s1 = Seq(a1, a2)
         s2 = Seq(a3, a4)
-        sched = Scheduler(Seq(s1, s2))
+        sched = PureScheduler(Seq(s1, s2))
         list_sep(sched, common_sep + "sequence4")
         self.assertEqual(len(a1.required), 0)
         self.assertEqual(len(a2.required), 1)
@@ -317,7 +319,7 @@ class Tests(unittest.TestCase):
         s1 = Seq(a1, a2)
         s2 = Seq(a3, a4, required=s1)
         s3 = Seq(a5, a6, required=s2)
-        sched = Scheduler(s1, s2, s3)
+        sched = PureScheduler(s1, s2, s3)
         list_sep(sched, common_sep + "sequence5")
         self.assertEqual(len(a1.required), 0)
         self.assertEqual(len(a2.required), 1)
@@ -331,7 +333,7 @@ class Tests(unittest.TestCase):
     ##########
     def test_sequence6(self):
         "adding a sequence"
-        sched = Scheduler()
+        sched = PureScheduler()
         a1 = J(sl(0.1), label=1)
         a2 = J(sl(0.1), label=2)
         a3 = J(sl(0.1), label=3)
@@ -400,7 +402,7 @@ class Tests(unittest.TestCase):
         a1 = J(sl(1), label="a1")
         a2 = J(sl(2), label="a2")
         a3 = J(sl(10), label="a3")
-        result = Scheduler(a1, a2, a3).orchestrate(timeout=3)
+        result = PureScheduler(a1, a2, a3).orchestrate(timeout=3)
         self.assertEqual(result, False)
         self.assertEqual(a1.is_done(), True)
         self.assertEqual(a1.result(), 1)
@@ -417,7 +419,7 @@ class Tests(unittest.TestCase):
 
         a1 = J(sl(0.5), label="finite")
         a2 = J(tick(0.1), forever=True, label="forever")
-        sched = Scheduler(a1, a2)
+        sched = PureScheduler(a1, a2)
         result = sched.orchestrate()
         self.assertEqual(result, True)
         self.assertEqual(a1.is_done(), True)
@@ -425,7 +427,7 @@ class Tests(unittest.TestCase):
 
     ##########
     def test_creation_scheduler(self):
-        sched = Scheduler()
+        sched = PureScheduler()
         s = Seq(J(sl(1)), J(sl(2)), scheduler=sched)
         J(sl(3), required=s, scheduler=sched)
         # make sure that jobs appended in the sequence
@@ -436,7 +438,7 @@ class Tests(unittest.TestCase):
         self.assertTrue(sched.orchestrate())
 
     def test_loop(self):
-        s = Scheduler()
+        s = PureScheduler()
         Seq(J(sl(.1)), J(sl(.2)),
             scheduler=s)
         loop = asyncio.get_event_loop()
@@ -446,7 +448,7 @@ class Tests(unittest.TestCase):
     def _test_window(self, total, window):
         atom = .1
         tolerance = 8  # more or less % in terms of overall time
-        s = Scheduler()
+        s = PureScheduler()
         for i in range(1, total + 1):
             s.add(PrintJob("{}-th {}s job".
                            format(i, atom),
@@ -519,7 +521,7 @@ class Tests(unittest.TestCase):
         class AJ(AbstractJob):
             pass
 
-        sched = Scheduler()
+        sched = PureScheduler()
         previous = None
         for state in "idle", "scheduled", "running", "done":
             for boom in True, False:
@@ -540,6 +542,6 @@ if __name__ == '__main__':
     import sys
     if '-v' in sys.argv:
         # set module flag
-        Scheduler.debug = True
+        asynciojobs.purescheduler.debug = True
         sys.argv.remove('-v')
     unittest.main()

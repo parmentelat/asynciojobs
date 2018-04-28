@@ -2,9 +2,9 @@
 
 import unittest
 
-from asynciojobs import Scheduler, Job, Sequence
+from asynciojobs import PureScheduler, Job, Sequence
 
-from asynciojobs import SchedulerJob
+from asynciojobs import Scheduler
 
 from asynciojobs import Watch
 
@@ -13,6 +13,7 @@ from .util import co_print_sleep, produce_png, diamond_scheduler
 
 class Tests(unittest.TestCase):
 
+    # xxx probably useless
     def test_nesting1(self):
         """
         one main scheduler in sequence
@@ -23,12 +24,12 @@ class Tests(unittest.TestCase):
 
         watch = Watch('test_nesting1')
         # sub-scheduler - total approx 1 s
-        sub_sched = Scheduler(watch=watch)
+        sub_sched = PureScheduler(watch=watch)
         Job(co_print_sleep(watch, 0.5, "sub short"), scheduler=sub_sched)
         Job(co_print_sleep(watch, 1, "sub longs"), scheduler=sub_sched)
 
         # main scheduler - total approx 2 s
-        main_sched = Scheduler(watch=watch)
+        main_sched = PureScheduler(watch=watch)
         Sequence(
             Job(co_print_sleep(watch, 0.5, "main begin")),
             # this is where the subscheduler is merged
@@ -54,17 +55,17 @@ class Tests(unittest.TestCase):
         watch = Watch('test_nesting2')
         # sub-scheduler - total approx 0.5 s
         sub2 = diamond_scheduler(watch, 0.5, "SUB2",
-                                 scheduler_class=Scheduler)
+                                 scheduler_class=PureScheduler)
         sub2.watch = watch
         # sub-scheduler - total approx 1 s
         sub3 = diamond_scheduler(watch, 1, "SUB3",
-                                 scheduler_class=Scheduler)
+                                 scheduler_class=PureScheduler)
         sub3.watch = watch
 
         # main scheduler - total approx
         # 0.5 + max(0.5, 1) + 0.5 = 2 s
         expected_duration = 2
-        main_sched = Scheduler(watch=watch)
+        main_sched = PureScheduler(watch=watch)
         mainj1 = Job(co_print_sleep(watch, 0.5, "mainj1"), label="mainj1",
                      scheduler=main_sched)
         mainj2 = Job(sub2.co_run(), label="mainj2",
@@ -87,7 +88,7 @@ class Tests(unittest.TestCase):
     def test_nesting3(self):
         """
         same as test_nesting2
-        but using a SchedulerJob instance
+        but using a Scheduler instance
         2 sub schedulers run in parallel while
         the third main one controls them both
         """
@@ -97,7 +98,7 @@ class Tests(unittest.TestCase):
         expected_duration = 2
 
         watch = Watch('test_nesting3')
-        main_sched = Scheduler(verbose=True, watch=watch)
+        main_sched = PureScheduler(verbose=True, watch=watch)
         main_sched.label = "main3"
         mainj1 = Job(co_print_sleep(watch, 0.5, "mainj1"), label="mainj1",
                      scheduler=main_sched)
@@ -146,7 +147,7 @@ class Tests(unittest.TestCase):
 
         watch = Watch('test_nesting_sequence')
 
-        subjob = SchedulerJob(
+        subjob = Scheduler(
             Sequence(
                 Job(co_print_sleep(watch, .2, "one")),
                 Job(co_print_sleep(watch, .2, "two")),
@@ -155,7 +156,7 @@ class Tests(unittest.TestCase):
             watch=watch,
         )
 
-        main = Scheduler(
+        main = PureScheduler(
             Sequence(
                 Job(co_print_sleep(watch, .2, "BEGIN")),
                 subjob,

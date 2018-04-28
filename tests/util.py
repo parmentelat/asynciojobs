@@ -4,7 +4,7 @@ import asyncio
 
 from pathlib import Path
 
-from asynciojobs import Watch, Job, SchedulerJob
+from asynciojobs import Watch, Job, Scheduler
 
 
 async def co_print_sleep(watch, duration, message):
@@ -31,7 +31,7 @@ def produce_png(scheduler, name):
     print(f"png file produced in {actual_name}{{,.png}}")
 
 
-def diamond_scheduler(watch, duration, msg, scheduler_class=SchedulerJob):
+def diamond_scheduler(watch, duration, msg, scheduler_class=Scheduler):
     """
     create a small diamond scheduler
     total duration = duration
@@ -53,7 +53,7 @@ def diamond_scheduler(watch, duration, msg, scheduler_class=SchedulerJob):
 
 
 def pipes(watch, duration, msg, *,
-          nb_pipes=2, scheduler_class=SchedulerJob):
+          nb_pipes=2, scheduler_class=Scheduler):
     """
     2 pipes of 2 jobs each
     total duration = duration
