@@ -69,17 +69,6 @@ class Scheduler(PureScheduler, AbstractJob):
       Using an intermediate-level scheduler can in some case help alleviate or
       solve such issues.
 
-      **XXX** However, at this point, the following remains **TODO**:
-
-      * need to add timeout and window settings as attributes
-        in the scheduler object
-      * because otherwise right now, the good aspects of using
-        scheduler-jobs a.k.a. subschedulers
-        are not available because co_run() on a scheduler expects these as
-        arguments, and one cannot store these attributes in the scheduler
-        object itself.
-
-
     """
     def __init__(self, *jobs_or_sequences,
                  jobs_window=None, timeout=None,
