@@ -47,7 +47,7 @@ class AbstractJob:                                      # pylint: disable=R0902
       and a `co_shutdown()` methods that specify
       the actual behaviour of the job, as coroutines.
     * AbstractJob is mostly a companion class to the
-      :class:`~asynciojobs.scheduler.Scheduler` class,
+      :class:`~asynciojobs.purescheduler.PureScheduler` class,
       that triggers these co_* methods.
 
     **Life Cycle**: AbstractJob is also aware of a common life cycle
@@ -60,7 +60,8 @@ class AbstractJob:                                      # pylint: disable=R0902
     from **idle** to **running**.a
 
     On the other hand, in windowed orchestrations - see the ``jobs_window``
-    parameter to :meth:`~asynciojobs.scheduler.Scheduler.co_orchestrate` -
+    parameter to
+    :meth:`~asynciojobs.purescheduler.PureScheduler.co_orchestrate` -
     a job can be scheduled but not yet running, because it is waiting
     for a slot in the global window.
 
@@ -97,7 +98,7 @@ class AbstractJob:                                      # pylint: disable=R0902
           Labels must not be confused with details, see :meth:`details()`
 
         scheduler: this can be an instance of a
-          :class:`~asynciojobs.scheduler.Scheduler` object, in which
+          :class:`~asynciojobs.purescheduler.PureScheduler` object, in which
           the newly created job instance is immediately added.
           A job instance can also be inserted in a scheduler instance later on.
 
@@ -143,7 +144,8 @@ class AbstractJob:                                      # pylint: disable=R0902
         It sets local the ``_sched_id`` attribute and returns the index
         for the next job.
 
-        This is defined as a method so that SchedulerJob can redefine itself.
+        This is defined as a method so that (nestable) Scheduler
+        can redefine it.
 
         Returns:
           int: next index, in this case ``start + 1``
@@ -214,8 +216,8 @@ class AbstractJob:                                      # pylint: disable=R0902
           a one-line string that describes this job.
 
         This representation for the job is used by the Scheduler object
-        through its :meth:`~asynciojobs.scheduler.Scheduler.list()` and
-        :meth:`~asynciojobs.scheduler.Scheduler.debrief()` methods, i.e.
+        through its :meth:`~asynciojobs.purescheduler.PureScheduler.list()` and
+        :meth:`~asynciojobs.purescheduler.PureScheduler.debrief()` methods, i.e.
         when a scheduler is printed out in textual format.
 
         The overall logic is to always use the instance's ``label`` attribute
@@ -231,8 +233,8 @@ class AbstractJob:                                      # pylint: disable=R0902
         Returns:
           a string used by the Scheduler methods
           that produce a graph, such as
-          :meth:`~asynciojobs.scheduler.Scheduler.graph` and
-          :meth:`~asynciojobs.scheduler.Scheduler.export_as_dotfile`.
+          :meth:`~asynciojobs.purescheduler.PureScheduler.graph` and
+          :meth:`~asynciojobs.purescheduler.PureScheduler.export_as_dotfile`.
 
         Because of the way graphs are presented, it can have contain "newline"
         characters, that will render as line breaks in the output graph.
@@ -530,8 +532,8 @@ class AbstractJob:                                      # pylint: disable=R0902
         An optional method to implement on concrete job classes; if it
         returns a non None value, these additional details about that job
         will get printed by
-        :meth:`asynciojobs.scheduler.Scheduler.list()` and
-        :meth:`asynciojobs.scheduler.Scheduler.debrief()`
+        :meth:`asynciojobs.purescheduler.PureScheduler.list()` and
+        :meth:`asynciojobs.purescheduler.PureScheduler.debrief()`
         when called with `details=True`.
         """
         pass
@@ -586,7 +588,7 @@ class Job(AbstractJob):
     async def co_shutdown(self):
         """
         Implementation of the method expected by :class:`AbstractJob`,
-        or more exactly by :meth:`asynciojobs.scheduler.Scheduler.list`
+        or more exactly by :meth:`asynciojobs.purescheduler.PureScheduler.list`
         """
         if self.coshutdown:
             result = await self.coshutdown

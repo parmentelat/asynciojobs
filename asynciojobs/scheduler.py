@@ -9,7 +9,7 @@ from asynciojobs import AbstractJob
 class Scheduler(PureScheduler, AbstractJob):
     """
     The ``Scheduler`` class is a mixin of the two
-    :class:`~asynciojobs.scheduler.PureScheduler` and
+    :class:`~asynciojobs.purescheduler.PureScheduler` and
     :class:`~asynciojobs.job.AbstractJob` classes.
 
     As such it can be used to create nested schedulers,
@@ -18,11 +18,13 @@ class Scheduler(PureScheduler, AbstractJob):
     a scheduler.
 
     Parameters:
-      jobs_or_sequences: passed to :class:`~asynciojobs.scheduler.PureScheduler`,
+      jobs_or_sequences: passed to
+        :class:`~asynciojobs.purescheduler.PureScheduler`,
         allows to add these jobs inside of the newly-created scheduler;
       verbose (bool): passed to
-        :class:`~asynciojobs.scheduler.PureScheduler`;
-      watch (Watch): passed to :class:`~asynciojobs.scheduler.PureScheduler`;
+        :class:`~asynciojobs.purescheduler.PureScheduler`;
+      watch (Watch): passed to
+        :class:`~asynciojobs.purescheduler.PureScheduler`;
       kwds: all other named arguments are sent
         to the :class:`~asynciojobs.job.AbstractJob` constructor.
 
@@ -57,7 +59,7 @@ class Scheduler(PureScheduler, AbstractJob):
       * you can use ``forever`` jobs that will be terminated earlier than
         the end of the global scheduler;
       * strictly speaking, the outermost instance in this example could be an
-        instance of ``PureScheduler``, but in practice it is simpler to always 
+        instance of ``PureScheduler``, but in practice it is simpler to always
         create instances of ``Scheduler``.
 
       Using an intermediate-level scheduler can in some case help alleviate or
@@ -80,7 +82,7 @@ class Scheduler(PureScheduler, AbstractJob):
                  watch=None,
                  **kwds):
         PureScheduler.__init__(self, *jobs_or_sequences,
-                           verbose=verbose, watch=watch)
+                               verbose=verbose, watch=watch)
         AbstractJob.__init__(self, **kwds)
 
     def _set_sched_id(self, start, id_format):
@@ -93,7 +95,7 @@ class Scheduler(PureScheduler, AbstractJob):
         i = AbstractJob._set_sched_id(self,             # pylint: disable=w0212
                                       start, id_format)
         # go on with the jobs in sub scheduler
-        return PureScheduler._set_sched_ids(self,           # pylint: disable=w0212
+        return PureScheduler._set_sched_ids(self,       # pylint: disable=w0212
                                             i, id_format)
 
     def _job_count(self):
@@ -127,7 +129,7 @@ class Scheduler(PureScheduler, AbstractJob):
     def dot_cluster_name(self):
         """
         assigns a name to the subgraph that will represent
-        a schedulerjob; dot format imposes this name to start
+        a nested scheduler; dot format imposes this name to start
         with ``cluster_`
         """
         return "cluster_{}"\

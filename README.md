@@ -9,7 +9,7 @@
 
 ## A simplistic orchestration engine
 
-The main and single purpose of this library is to allow for the static description of a scenario involving `asyncio`-compliant jobs, that have dependencies in the sense that a given job cannot start until its requirements have not completed.
+The main and single purpose of this library is to allow for the static description of scenarii involving `asyncio`-compliant jobs, that have dependencies in the sense that a given job cannot start until its requirements have not completed.
 
 So in a nutshell you would:
 
@@ -24,11 +24,12 @@ Further features allow to
 * define a global `timeout` for the whole scheduler;
 * define a *window* in terms of a maximal number of simultaneous jobs that are allowed to run.
 
+Finally, knowing that a `Scheduler` instance is also a job, nested schedulers can be very easily created, allowing for re-usable pieces to be returned by regular python functions.
 
 A job object can be created:
 
 * either as a `Job` instance from a regular asyncio coroutine
-* or by specializing the `AbstractJob` class and defining its `co_run()` method
+* or by specializing the `AbstractJob` class, and defining its `co_run()` method
 
 As a convenience, the `Sequence` class is mostly a helper class that can free you from manually managing the `requires` deps in long strings of jobs.
 
@@ -40,7 +41,7 @@ Contact author : *thierry dot parmentelat at inria dot fr*
 
 ## Prerequisites
 
-`asynciojobs` requires `asyncio` and python-3.5.
+`asynciojobs` requires `asyncio` and python-3.5 or more recent.
 
 
 ```python
@@ -185,9 +186,10 @@ The code above in example B is exactly identical to this
 ```python
 from asynciojobs import Sequence
 
-sb2 = Scheduler(Sequence(Job(in_out(0.1), label="bp1"),
-                      Job(in_out(0.2), label="bp2")),
-             Job(in_out(0.25)))
+sb2 = Scheduler(
+    Sequence(Job(in_out(0.1), label="bp1"),
+             Job(in_out(0.2), label="bp2")),
+    Job(in_out(0.25)))
 
 sb2.run()
 ```
@@ -209,7 +211,7 @@ sb2.run()
 
 ### Return value for `Scheduler.run()` 
 
-Note that because `sb.run()` had returned `True`, we could have inferred that all jobs have completed. As a matter of fact, `run()` returns `True` if and only if:
+Note that because `sb.run()` had returned `True`, we could have inferred that all jobs have completed. As a matter of fact, `run()` returns `True` **if and only if**:
 
 * all jobs have completed during the allocated timeout
 * no critical job has raised an exception
@@ -244,9 +246,9 @@ To see an overview of a scheduler, just use the `list()` method that will give y
 sb.list()
 ```
 
-    1   ☉ ☓   <Job `Job[in_out (...)]`> 
-    2   ☉ ☓   <Job `b1`> 
-    3   ☉ ☓   <Job `b2`> requires={2}
+    1   ☉ ☓   <Job `Job[in_out (...)]`> [[ -> 250.0]] 
+    2   ☉ ☓   <Job `b1`> [[ -> 100.0]] 
+    3   ☉ ☓   <Job `b2`> [[ -> 200.0]] requires={2}
 
 
 Here is a complete list of the symbols used, with their meaning 
@@ -290,7 +292,7 @@ Note that if your locale/terminal cannot output these, the code will tentatively
 
 ### Example C : infinite loops, or coroutines that don't return
 
-Sometimes it is useful to deal with a endless loop; for example if we want to separate completely actions and printing, we can use an `asyncio.Queue` to implement a simple message bus as follows
+Sometimes it is useful to deal with a endless loop; for example if we want to separate completely actions and printing, we can use an `asyncio.Queue` to implement a simple message bus as follows:
 
 
 ```python
@@ -314,7 +316,9 @@ async def in_out_bus(timeout, bus):
     return 10 * timeout
 ```
 
-We can replay the prevous scenario, adding the monitoring loop as a separate job; however we need to declare this job with `forever=True` so that the scheduler knows it does not have to wait for the monitoring loop, that will never return.
+We can replay the prevous scenario, adding the monitoring loop as a separate job.
+
+However, we need to declare this extra job with `forever=True`, so that the scheduler knows it **does not have to wait** for the monitoring loop, as we know in advance that it will never return.
 
 
 ```python
@@ -351,10 +355,10 @@ Note that `run()` always terminates as soon as all the non-`forever` jobs are co
 sc.list()
 ```
 
-    1   ☉ ↺ ∞ <Job `monitor`> 
-    2   ☉ ☓   <Job `c2`> 
-    3   ☉ ☓   <Job `c1`> 
-    4   ☉ ☓   <Job `c3`> requires={3}
+    1   ☉ ☓   <Job `c2`> [[ -> 4.0]] 
+    2   ☉ ☓   <Job `c1`> [[ -> 2.0]] 
+    3   ☉ ↺ ∞ <Job `monitor`> [not done] 
+    4   ☉ ☓   <Job `c3`> [[ -> 3.0]] requires={2}
 
 
 ### Example D : specifying a global timeout
@@ -375,10 +379,10 @@ sd = Scheduler(j)
 sd.run(timeout=0.25)
 ```
 
-    19:01:04: forever 0
-    19:01:04: forever 1
-    19:01:04: forever 2
-    19:01:04.480 SCHEDULER: Scheduler.co_run: TIMEOUT occurred
+    05:19:36: forever 0
+    05:19:36: forever 1
+    05:19:36: forever 2
+    05:19:36.872 SCHEDULER(None): PureScheduler.co_run: TIMEOUT occurred
 
 
 
@@ -441,9 +445,9 @@ se.list()
     -> in_out(0.3)
     <- in_out(0.3)
     orch: True
-    1   ☉ ☓   <Job `Job[in_out (...)]`> 
-    2   ★ ☓   <Job `boom`> requires={1}
-    3   ☉ ☓   <Job `Job[in_out (...)]`> requires={2}
+    1   ☉ ☓   <Job `Job[in_out (...)]`> [[ -> 200.0]] 
+    2   ★ ☓   <Job `boom`> !! exception => Exception:boom after 0.2s!! requires={1}
+    3   ☉ ☓   <Job `Job[in_out (...)]`> [[ -> 300.0]] requires={2}
 
 
 ### Example F : critical jobs
@@ -463,11 +467,11 @@ sf.list()
 
     -> in_out(0.2)
     <- in_out(0.2)
-    19:01:05.652 SCHEDULER: Emergency exit upon exception in critical job
+    05:19:38.38 SCHEDULER(None): Emergency exit upon exception in critical job
     run: False
-    1   ☉ ☓   <Job `Job[in_out (...)]`> 
-    2 ⚠ ★ ☓   <Job `boom`> requires={1}
-    3     ⚐   <Job `Job[in_out (...)]`> requires={2}
+    1   ☉ ☓   <Job `Job[in_out (...)]`> [[ -> 200.0]] 
+    2 ⚠ ★ ☓   <Job `boom`> !! CRIT. EXC. => Exception:boom after 0.2s!! requires={1}
+    3     ⚐   <Job `Job[in_out (...)]`> [not done] requires={2}
 
 
 ### Limiting the number of simultaneous jobs
@@ -505,15 +509,15 @@ end = time.time()
 print("total duration = {}s".format(end-beg))
 ```
 
-    7-th job
-    2-th job
     6-th job
+    2-th job
+    7-th job
     3-th job
+    8-th job
     1-th job
     4-th job
-    8-th job
     5-th job
-    total duration = 1.0038080215454102s
+    total duration = 1.0043129920959473s
 
 
 ## Customizing jobs
@@ -633,39 +637,23 @@ g.render('readme')
 
 ## Nesting schedulers
 
-By simply taking advantage of the fact that:
-* a `Job` can be created from any coroutine, and that
-* `Scheduler.co_run` is a coroutine, 
+As mentioned in the introduction, a `Scheduler` instance can itself be used as a job. This makes it easy to split complex scenarii into pieces, and to combine them in a modular way.
 
-it is easy to nest schedulers.
-
-### The `SchedulerJob` class
-
-In order to make such constructions a little more explicit though, `asynciojobs` comes with a dedicated class called `SchedulerJob`. 
-
-This class is a mere mixin between `Scheduler` and `AbstractJob`. Being at the same time a `Scheduler` and an `AbstractJob`, it can be inserted in the main scheduler, and (sub-)jobs can be added to it.
-
-
-```python
-from asynciojobs import SchedulerJob
-```
-
-Consider the following example:
+Let us consider the following example:
 
 
 ```python
 # we start with the creation of an internal scheduler
 # that has a simple diamond structure
-# note the use of SchedulerJob and not just simply Scheduler
 
-sub_sched = SchedulerJob()
+sub_sched = Scheduler()
 subj1 = Job(aprint("subj1"), label='subj1', scheduler=sub_sched)
 subj2 = Job(aprint("subj2"), label='subj2', required=subj1, scheduler=sub_sched)
 subj3 = Job(aprint("subj3"), label='subj3', required=subj1, scheduler=sub_sched)
 subj4 = Job(aprint("subj4"), label='subj4', required=(subj2, subj3), scheduler=sub_sched)
 ```
 
-We can now create a main scheduler, in which one of the jobs **is** this low-level scheduler:
+We can now create a main scheduler, in which **one of the jobs is this low-level scheduler**:
 
 
 ```python
@@ -686,21 +674,37 @@ This nested structure is rendered by both `list()` and `graph()`:
 
 
 ```python
-# list() shows the contents of sub-schedulers implemented as SchedulerJob instances
+# list() shows the contents of sub-schedulers implemented as Scheduler instances
 main_sched.list()
 ```
 
-    1     ⚐   <Job `main-start`> 
-    2     ⚐   > <SchedulerJob `nested`> requires={1} -> entries={3}
-    3     ⚐   <Job `subj1`> 
-    4     ⚐   <Job `subj2`> requires={3}
-    5     ⚐   <Job `subj3`> requires={3}
-    6     ⚐   <Job `subj4`> requires={4, 5}
-    2   end   < <SchedulerJob `nested`> exits={6}
-    7     ⚐   <Job `main-end`> requires={2}
+    1     ⚐   <Job `main-start`> [not done] 
+    2     ⚐   > <Scheduler `nested`> requires={1} -> entries={3}
+    3     ⚐   <Job `subj1`> [not done] 
+    4     ⚐   <Job `subj2`> [not done] requires={3}
+    5     ⚐   <Job `subj3`> [not done] requires={3}
+    6     ⚐   <Job `subj4`> [not done] requires={4, 5}
+    2   end   < <Scheduler `nested`> exits={6}
+    7     ⚐   <Job `main-end`> [not done] requires={2}
 
 
-When using a `SchedulerJob` to describe nested schedulers, `asynciojobs` will also produce a graphical output that properly exhibits the overall structure; this example requires the `graphviz` package:
+When using a `Scheduler` to describe nested schedulers, `asynciojobs` will also produce a graphical output that properly exhibits the overall structure:
+
+
+```python
+# the easiest way to see 
+# a scheduler as a graph is from a notebook:
+main_sched.graph()
+```
+
+
+
+
+![svg](README-eval_files/README-eval_100_0.svg)
+
+
+
+Let us do this again another way, so that this shows up properly in *readthedocs*:
 
 
 ```python
@@ -716,7 +720,7 @@ main_dot.render("readme-nested")
 
 
 
-That we now visualize; again, from a live notebook it is enough to evaluate ``main_sched.graph()`` to see that picture:
+That we now visualize again, using the produced png:
 
 ![](readme-nested.png)
 
@@ -742,17 +746,35 @@ main_sched.run()
 
 
 
-### What for ?
+### Benefits of nesting schedulers
 
 This feature can can come in handy to deal with issues like:
 
-* you want to be able to re-use code - as in writing a library - and for that SchedulerJob is a convenient way to address that; functions can return pieces of workflows that can be easily mixed within a larger scenario.
+* you want to be able to re-use code - as in writing a library - and nesting schedulers is a convenient way to address that; functions can return pieces of workflows implemented as schedulers, that can be easily mixed within a larger scenario;
 
 * in another dimension, nested schedulers can be a solution if
   * you want the `jobs_window` attribute of `co_run()` to apply to only a subset of your jobs;
   * you want the `timeout` attirbute of `co_run()` to apply to only a subset of your jobs;
   * you have `forever` jobs that need to be terminated sooner than the very end of the overall scenario.
 
+
+### Historical note
+
+Internally, `asynciojobs` comes with the `PureScheduler` class. 
+
+A `PureScheduler` instance is a fully functional scheduler, but it cannot be used as a nested scheduler.
+
+In terms of implementation, `Scheduler` is a mixin class that inherits from both `PureScheduler` and `AbstractJob`.
+
+In previous versions of this library, the `Scheduler` class could not be nested, and a specific class was required for the purpose of creating nestable schedulers, like is shown in this table:
+
+| version  | scheduling only | nestable scheduler |
+|----------|-----------------|--------------------|
+| <= 0.8   | `Scheduler`     | n/a                |
+| 0.9      | `Scheduler`     | `SchedulerJob`     |
+| >= 0.10  | `PureScheduler` | `Scheduler`        |
+
+The bottom line is that, starting with version 0.10, users primarily do not need to worry about that, and creating only nestable `Scheduler` objects is the recommended approach.
 
 ## Troubleshooting
 

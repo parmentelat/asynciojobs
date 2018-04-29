@@ -540,6 +540,7 @@ class Tests(unittest.TestCase):
 
 if __name__ == '__main__':
     import sys
+    import asynciojobs
     if '-v' in sys.argv:
         # set module flag
         asynciojobs.purescheduler.debug = True

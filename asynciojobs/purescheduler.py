@@ -50,7 +50,7 @@ class PureScheduler:
 
     It is also possible to define a timeout on the execution of a scheduler.
 
-    
+
     Running an AbstractJob means executing its :meth:`co_run()` method,
     which must be a coroutine
 
@@ -778,8 +778,8 @@ class PureScheduler:
         Counts the total number of jobs that need to be numbered
         in nested scenarii.
 
-        Regular jobs count for 1,
-        and schedulerjobs count for 1 + their own _total_length
+        A regular job counts for 1,
+        and a scheduler counts for 1 + its own _total_length
 
         Returns:
           int: total number of nodes in subject and nested schedulers

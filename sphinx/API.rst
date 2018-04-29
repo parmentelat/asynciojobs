@@ -1,8 +1,11 @@
 The asynciojobs API
 ========================================
 
-The Scheduler class
---------------------
+The Scheduler classes
+---------------------
+
+.. automodule:: asynciojobs.purescheduler
+		:members:
 
 .. automodule:: asynciojobs.scheduler
 		:members:
@@ -21,14 +24,6 @@ The Sequence class
 -------------------
 
 .. automodule:: asynciojobs.sequence
-		:members:
-
---------------------
-
-Nesting schedulers
--------------------
-
-.. automodule:: asynciojobs.schedulerjob
 		:members:
 
 --------------------
