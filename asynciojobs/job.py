@@ -165,6 +165,7 @@ class AbstractJob:                                      # pylint: disable=R0902
         print(self.repr_id(),
               self.repr_short(),
               self.repr_main(),
+              self.repr_result(),
               self.repr_requires())
         if details and hasattr(self, 'details'):
             details = self.details()
