@@ -187,7 +187,7 @@ class Tests(unittest.TestCase):
         sched = PureScheduler(*jobs)
         list_sep(sched, common_sep + "LIST BEFORE")
         self.assertTrue(sched.rain_check())
-        self.assertTrue(sched.orchestrate(loop=asyncio.get_event_loop()))
+        self.assertTrue(sched.run())
         for j in jobs:
             self.assertFalse(j.raised_exception())
         list_sep(sched, common_sep + "LIST AFTER")
@@ -200,7 +200,7 @@ class Tests(unittest.TestCase):
         a2.requires(a1)
         sched = PureScheduler(a1, a2, t1)
         sched.list()
-        self.assertTrue(sched.orchestrate())
+        self.assertTrue(sched.run())
         sched.list()
 
     ####################
@@ -210,7 +210,7 @@ class Tests(unittest.TestCase):
         a3.requires(a2)
         sched = PureScheduler(a1, a2, a3, timeout=1)
         # should timeout in the middle of stage 2
-        self.assertFalse(sched.orchestrate())
+        self.assertFalse(sched.run())
         sched.list()
 
     ####################
@@ -219,7 +219,7 @@ class Tests(unittest.TestCase):
         print("verbose = {}".format(verbose))
         a1, a2 = SLJ(1), J(co_exception(0.5), label='non critical boom')
         sched = PureScheduler(a1, a2, verbose=verbose)
-        self.assertTrue(sched.orchestrate())
+        self.assertTrue(sched.run())
         print(common_sep + 'debrief()')
         sched.debrief()
 
@@ -235,7 +235,7 @@ class Tests(unittest.TestCase):
         a1, a2 = SLJ(1), J(co_exception(0.5),
                            label='critical boom', critical=True)
         sched = PureScheduler(a1, a2, verbose=verbose)
-        self.assertFalse(sched.orchestrate())
+        self.assertFalse(sched.run())
         print(common_sep + 'debrief()')
         sched.debrief()
 
@@ -256,7 +256,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(len(a2.required), 1)
         self.assertEqual(len(a3.required), 1)
         self.assertTrue(check_required_types(sched, "test_sequence1"))
-        self.assertTrue(sched.orchestrate())
+        self.assertTrue(sched.run())
 
     ####################
     def test_sequence2(self):
@@ -271,7 +271,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(len(a2.required), 1)
         self.assertEqual(len(a3.required), 1)
         self.assertTrue(check_required_types(sched, "test_sequence2"))
-        self.assertTrue(sched.orchestrate())
+        self.assertTrue(sched.run())
 
     ####################
     def test_sequence3(self):
@@ -287,7 +287,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(len(a2.required), 1)
         self.assertEqual(len(a3.required), 1)
         self.assertTrue(check_required_types(sched, "test_sequence3"))
-        self.assertTrue(sched.orchestrate())
+        self.assertTrue(sched.run())
 
     ####################
     def test_sequence4(self):
@@ -305,7 +305,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(len(a3.required), 1)
         self.assertEqual(len(a4.required), 1)
         self.assertTrue(check_required_types(sched, "test_sequence4"))
-        self.assertTrue(sched.orchestrate())
+        self.assertTrue(sched.run())
 
     ####################
     def test_sequence5(self):
@@ -328,7 +328,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(len(a5.required), 1)
         self.assertEqual(len(a6.required), 1)
         self.assertTrue(check_required_types(sched, "test_sequence5"))
-        self.assertTrue(sched.orchestrate())
+        self.assertTrue(sched.run())
 
     ##########
     def test_sequence6(self):
@@ -338,7 +338,7 @@ class Tests(unittest.TestCase):
         a2 = J(sl(0.1), label=2)
         a3 = J(sl(0.1), label=3)
         sched.add(Seq(a1, a2, a3))
-        self.assertTrue(sched.orchestrate())
+        self.assertTrue(sched.run())
 
     ##########
     def test_requires_job(self):
@@ -402,7 +402,7 @@ class Tests(unittest.TestCase):
         a1 = J(sl(1), label="a1")
         a2 = J(sl(2), label="a2")
         a3 = J(sl(10), label="a3")
-        result = PureScheduler(a1, a2, a3, timeout=3).orchestrate()
+        result = PureScheduler(a1, a2, a3, timeout=3).run()
         self.assertEqual(result, False)
         self.assertEqual(a1.is_done(), True)
         self.assertEqual(a1.result(), 1)
@@ -420,7 +420,7 @@ class Tests(unittest.TestCase):
         a1 = J(sl(0.5), label="finite")
         a2 = J(tick(0.1), forever=True, label="forever")
         sched = PureScheduler(a1, a2)
-        result = sched.orchestrate()
+        result = sched.run()
         self.assertEqual(result, True)
         self.assertEqual(a1.is_done(), True)
         self.assertEqual(a2.is_done(), False)
@@ -435,14 +435,14 @@ class Tests(unittest.TestCase):
         s.append(J(sl(.5)))
         self.assertEqual(len(sched.jobs), 4)
         self.assertTrue(sched.rain_check())
-        self.assertTrue(sched.orchestrate())
+        self.assertTrue(sched.run())
 
     def test_loop(self):
         s = PureScheduler()
         Seq(J(sl(.1)), J(sl(.2)),
             scheduler=s)
         loop = asyncio.get_event_loop()
-        self.assertTrue(s.orchestrate(loop=loop))
+        self.assertTrue(s.run(loop=loop))
 
     # if window is defined, total should be a multiple of window
     def _test_window(self, total, window):
@@ -454,7 +454,7 @@ class Tests(unittest.TestCase):
                            format(i, atom),
                            sleep=atom))
         beg = time.time()
-        ok = s.orchestrate()
+        ok = s.run()
         ok or s.debrief(details=True)
         end = time.time()
         duration = end - beg
