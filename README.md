@@ -105,9 +105,9 @@ sa = Scheduler(a1, a2, a3)
 sa.run()
 ```
 
+    -> in_out(0.1)
     -> in_out(0.2)
     -> in_out(0.25)
-    -> in_out(0.1)
     <- in_out(0.1)
     <- in_out(0.2)
     <- in_out(0.25)
@@ -379,10 +379,10 @@ sd = Scheduler(j)
 sd.run(timeout=0.25)
 ```
 
-    05:19:36: forever 0
-    05:19:36: forever 1
-    05:19:36: forever 2
-    05:19:36.872 SCHEDULER(None): PureScheduler.co_run: TIMEOUT occurred
+    05:57:06: forever 0
+    05:57:06: forever 1
+    05:57:06: forever 2
+    05:57:06.633 SCHEDULER(None): PureScheduler.co_run: TIMEOUT occurred
 
 
 
@@ -467,7 +467,7 @@ sf.list()
 
     -> in_out(0.2)
     <- in_out(0.2)
-    05:19:38.38 SCHEDULER(None): Emergency exit upon exception in critical job
+    05:57:07.818 SCHEDULER(None): Emergency exit upon exception in critical job
     run: False
     1   ☉ ☓   <Job `Job[in_out (...)]`> [[ -> 200.0]] 
     2 ⚠ ★ ☓   <Job `boom`> !! CRIT. EXC. => Exception:boom after 0.2s!! requires={1}
@@ -511,13 +511,13 @@ print("total duration = {}s".format(end-beg))
 
     6-th job
     2-th job
+    1-th job
     7-th job
     3-th job
     8-th job
-    1-th job
     4-th job
     5-th job
-    total duration = 1.0043129920959473s
+    total duration = 1.0034968852996826s
 
 
 ## Customizing jobs
@@ -683,7 +683,7 @@ main_sched.list()
     3     ⚐   <Job `subj1`> [not done] 
     4     ⚐   <Job `subj2`> [not done] requires={3}
     5     ⚐   <Job `subj3`> [not done] requires={3}
-    6     ⚐   <Job `subj4`> [not done] requires={4, 5}
+    6     ⚐   <Job `subj4`> [not done] requires={5, 4}
     2   end   < <Scheduler `nested`> exits={6}
     7     ⚐   <Job `main-end`> [not done] requires={2}
 
@@ -733,8 +733,8 @@ main_sched.run()
 
     main-start
     subj1
-    subj2
     subj3
+    subj2
     subj4
     main-end
 
@@ -768,11 +768,16 @@ In terms of implementation, `Scheduler` is a mixin class that inherits from both
 
 In previous versions of this library, the `Scheduler` class could not be nested, and a specific class was required for the purpose of creating nestable schedulers, like is shown in this table:
 
-| version  | scheduling only | nestable scheduler |
-|----------|-----------------|--------------------|
-| <= 0.8   | `Scheduler`     | n/a                |
-| 0.9      | `Scheduler`     | `SchedulerJob`     |
-| >= 0.10  | `PureScheduler` | `Scheduler`        |
+<table>
+  <thead>
+      <tr><th>version</th><th>just scheduling</th><th>nestable scheduler</th></tr>
+  </thead>
+  <tbody>
+      <tr><td><= 0.8</td><td><code>Scheduler</code></td><td>no class available</td></tr>
+      <tr><td>== 0.9</td><td><code>Scheduler</code></td><td><code>SchedulerJob</code></td></tr>
+      <tr><td>>= 0.10</td><td><code>PureScheduler</code></td><td><code>Scheduler</code></td></tr>
+  </tbody>
+</table>
 
 The bottom line is that, starting with version 0.10, users primarily do not need to worry about that, and creating only nestable `Scheduler` objects is the recommended approach.
 
