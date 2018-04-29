@@ -208,9 +208,9 @@ class Tests(unittest.TestCase):
         a1, a2, a3 = [SLJ(x) for x in (0.5, 0.6, 0.7)]
         a2.requires(a1)
         a3.requires(a2)
-        sched = PureScheduler(a1, a2, a3)
+        sched = PureScheduler(a1, a2, a3, timeout=1)
         # should timeout in the middle of stage 2
-        self.assertFalse(sched.orchestrate(timeout=1))
+        self.assertFalse(sched.orchestrate())
         sched.list()
 
     ####################
@@ -402,7 +402,7 @@ class Tests(unittest.TestCase):
         a1 = J(sl(1), label="a1")
         a2 = J(sl(2), label="a2")
         a3 = J(sl(10), label="a3")
-        result = PureScheduler(a1, a2, a3).orchestrate(timeout=3)
+        result = PureScheduler(a1, a2, a3, timeout=3).orchestrate()
         self.assertEqual(result, False)
         self.assertEqual(a1.is_done(), True)
         self.assertEqual(a1.result(), 1)
@@ -448,13 +448,13 @@ class Tests(unittest.TestCase):
     def _test_window(self, total, window):
         atom = .1
         tolerance = 8  # more or less % in terms of overall time
-        s = PureScheduler()
+        s = PureScheduler(jobs_window=window)
         for i in range(1, total + 1):
             s.add(PrintJob("{}-th {}s job".
                            format(i, atom),
                            sleep=atom))
         beg = time.time()
-        ok = s.orchestrate(jobs_window=window)
+        ok = s.orchestrate()
         ok or s.debrief(details=True)
         end = time.time()
         duration = end - beg

@@ -105,9 +105,9 @@ sa = Scheduler(a1, a2, a3)
 sa.run()
 ```
 
+    -> in_out(0.25)
     -> in_out(0.1)
     -> in_out(0.2)
-    -> in_out(0.25)
     <- in_out(0.1)
     <- in_out(0.2)
     <- in_out(0.25)
@@ -163,8 +163,8 @@ sb = Scheduler(b1, b2, b3)
 sb.run()
 ```
 
-    -> in_out(0.25)
     -> in_out(0.1)
+    -> in_out(0.25)
     <- in_out(0.1)
     -> in_out(0.2)
     <- in_out(0.25)
@@ -246,9 +246,9 @@ To see an overview of a scheduler, just use the `list()` method that will give y
 sb.list()
 ```
 
-    1   ☉ ☓   <Job `Job[in_out (...)]`> [[ -> 250.0]] 
-    2   ☉ ☓   <Job `b1`> [[ -> 100.0]] 
-    3   ☉ ☓   <Job `b2`> [[ -> 200.0]] requires={2}
+    1   ☉ ☓   <Job `b1`> [[ -> 100.0]] 
+    2   ☉ ☓   <Job `b2`> [[ -> 200.0]] requires={1}
+    3   ☉ ☓   <Job `Job[in_out (...)]`> [[ -> 250.0]] 
 
 
 Here is a complete list of the symbols used, with their meaning 
@@ -355,17 +355,17 @@ Note that `run()` always terminates as soon as all the non-`forever` jobs are co
 sc.list()
 ```
 
-    1   ☉ ☓   <Job `c2`> [[ -> 4.0]] 
-    2   ☉ ☓   <Job `c1`> [[ -> 2.0]] 
-    3   ☉ ↺ ∞ <Job `monitor`> [not done] 
-    4   ☉ ☓   <Job `c3`> [[ -> 3.0]] requires={2}
+    1   ☉ ↺ ∞ <Job `monitor`> [not done] 
+    2   ☉ ☓   <Job `c2`> [[ -> 4.0]] 
+    3   ☉ ☓   <Job `c1`> [[ -> 2.0]] 
+    4   ☉ ☓   <Job `c3`> [[ -> 3.0]] requires={3}
 
 
 ### Example D : specifying a global timeout
 
-`run()` accepts a `timeout` argument in seconds. When provided, `run()` will ensure its global duration does not exceed this value, and will return `False` if the timeout triggers.
+A `Scheduler` object has a `timeout` attribute, that can be set to a duration (in seconds). When provided, `run()` will ensure its global duration does not exceed this value, and will return `False` if the timeout triggers.
 
-Of course this can be used with any number of jobs and dependencies, but for the sake of simplicity let us see this in action with just one job that loops forever
+Of course this can be used with any number of jobs and dependencies, but for the sake of simplicity let us see this in action with just one job that loops forever:
 
 
 ```python
@@ -375,14 +375,14 @@ async def forever():
         await asyncio.sleep(.1)
         
 j = Job(forever(), forever=True)
-sd = Scheduler(j)
-sd.run(timeout=0.25)
+sd = Scheduler(j, timeout=0.25)
+sd.run()
 ```
 
-    05:57:06: forever 0
-    05:57:06: forever 1
-    05:57:06: forever 2
-    05:57:06.633 SCHEDULER(None): PureScheduler.co_run: TIMEOUT occurred
+    16:24:40: forever 0
+    16:24:40: forever 1
+    16:24:40: forever 2
+    16:24:40.854 SCHEDULER(None): PureScheduler.co_run: TIMEOUT occurred
 
 
 
@@ -467,7 +467,7 @@ sf.list()
 
     -> in_out(0.2)
     <- in_out(0.2)
-    05:57:07.818 SCHEDULER(None): Emergency exit upon exception in critical job
+    16:24:42.15 SCHEDULER(None): Emergency exit upon exception in critical job
     run: False
     1   ☉ ☓   <Job `Job[in_out (...)]`> [[ -> 200.0]] 
     2 ⚠ ★ ☓   <Job `boom`> !! CRIT. EXC. => Exception:boom after 0.2s!! requires={1}
@@ -476,7 +476,7 @@ sf.list()
 
 ### Limiting the number of simultaneous jobs
 
-`run()` accepts an optional argument `jobs_window` that allows to specify a maximum number of jobs running simultaneously. 
+A `Scheduler` has a `jobs_window` attribute that allows to specify a maximum number of jobs running simultaneously. 
 
 When `jobs_windows` is not specified or `0`, it means no limit is imposed on the running jobs.
 
@@ -491,7 +491,7 @@ async def aprint(message, delay=0.5):
 
 ```python
 # let us now add 8 jobs that take 0.5 second each
-s = Scheduler()
+s = Scheduler(jobs_window=4)
 
 for i in range(1, 9):
     s.add(Job(aprint("{}-th job".format(i), 0.5)))
@@ -502,22 +502,22 @@ for i in range(1, 9):
 # so running them with a window of 4 means approx. 1 second
 import time
 beg = time.time()
-s.run(jobs_window = 4)
+s.run()
 end = time.time()
 
 # expect around 1 second
 print("total duration = {}s".format(end-beg))
 ```
 
+    5-th job
     6-th job
     2-th job
-    1-th job
     7-th job
     3-th job
     8-th job
+    1-th job
     4-th job
-    5-th job
-    total duration = 1.0034968852996826s
+    total duration = 1.001410961151123s
 
 
 ## Customizing jobs
@@ -753,8 +753,8 @@ This feature can can come in handy to deal with issues like:
 * you want to be able to re-use code - as in writing a library - and nesting schedulers is a convenient way to address that; functions can return pieces of workflows implemented as schedulers, that can be easily mixed within a larger scenario;
 
 * in another dimension, nested schedulers can be a solution if
-  * you want the `jobs_window` attribute of `co_run()` to apply to only a subset of your jobs;
-  * you want the `timeout` attirbute of `co_run()` to apply to only a subset of your jobs;
+  * you want the `jobs_window` attribute to apply to only a subset of your jobs;
+  * or you need the `timeout` attribute to apply to only a subset of your jobs;
   * you have `forever` jobs that need to be terminated sooner than the very end of the overall scenario.
 
 
@@ -793,6 +793,14 @@ A job that is not inserted in any scheduler will of course never be run.
 
 A job inserted in several schedulers will most likely behave very oddly, as each scheduler will be in a position to have it move along.
 
+
+### You can only create requirements between jobs in the same scheduler
+
+With nested schedulers, it can be tempting to create dependencies between jobs that are not part of the same scheduler, but that belong in sibling or cousin schedulers. 
+
+This is **currently not supported**, a job can only have requirements to **other jobs in the same scheduler**.
+
+Like for the previous topic, as of now there is no provision in the code to enforce that, and failing to comply with that rule will result in unexpected behaviour.
 
 ### Create as many job instances as needed
 

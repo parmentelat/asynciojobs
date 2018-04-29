@@ -33,7 +33,8 @@ debug = False                                           # pylint: disable=C0103
 # in plain english, a Schedulable object is either
 # an instance of AbstractJob or of Sequence
 
-class PureScheduler:
+
+class PureScheduler:                                    # pylint: disable=r0902
     """
     A PureScheduler instance is made of a set of AbstractJob objects.
 
@@ -46,9 +47,10 @@ class PureScheduler:
     For this reason, the dependency/requirements graph **must be acyclic**.
 
     Optionnally a scheduler orchestration can be confined to a finite number
-    of concurrent jobs (see the *jobs_window* parameter below).
+    of concurrent jobs (see the ``jobs_window`` parameter below).
 
-    It is also possible to define a timeout on the execution of a scheduler.
+    It is also possible to define a ``timeout`` attribute on the object,
+    that will limit the execution time of a scheduler.
 
 
     Running an AbstractJob means executing its :meth:`co_run()` method,
@@ -65,10 +67,16 @@ class PureScheduler:
     Parameters:
       jobs_or_sequences: instances of `AbstractJob` or `Sequence`.
         The order in which they are mentioned is irrelevant.
-      verbose (bool): flag that says if execution should be verbose.
+      jobs_window: is an integer that specifies how many jobs
+        can be run simultaneously. None or 0 means no limit.
+      timeout: can be an `int` or `float` and is expressed
+       in seconds; it applies to the overall orchestration of that scheduler,
+       not to any individual job.
       watch: if the caller passes a :class:`~asynciojobs.watch.Watch`
         instance, it is used in debugging messages to show the time
         elapsed wrt that watch, instead of using the wall clock.
+      verbose (bool): flag that says if execution should be verbose.
+
 
     Examples:
       Creating an empty scheduler::
@@ -98,12 +106,16 @@ class PureScheduler:
     """
 
     def __init__(self, *jobs_or_sequences,
-                 verbose=False, watch=None):
+                 jobs_window=None, timeout=None,
+                 watch=None, verbose=False):
 
         self.jobs = set(Sequence._flatten(              # pylint: disable=W0212
             jobs_or_sequences))
-        self.verbose = verbose
+        self.jobs_window = jobs_window
+        # timeout is in seconds
+        self.timeout = timeout
         self.watch = watch
+        self.verbose = verbose
         # why does it fail ?
         # bool
         self._failed_critical = False
@@ -596,8 +608,8 @@ class PureScheduler:
     # define the alias for legacy
     orchestrate = run
 
-    async def co_run(                             # pylint: disable=R0912,R0915
-            self, timeout=None, jobs_window=None, loop=None):
+    async def co_run(self, loop=None):            # pylint: disable=R0912,R0915
+
         """
         The primary entry point for running a scheduler.
         See also :meth:`run()` for a synchronous wrapper around this coroutine.
@@ -618,13 +630,6 @@ class PureScheduler:
         terminated through their `co_shutdown()` method.
 
         Parameters:
-          timeout: can be an `int` or `float` and is expressed
-           in seconds; it applies to the overall orchestration, not to
-           any individual job.
-
-          jobs_window: is an integer that specifies how many jobs
-            can be run simultaneously. None or 0 means no limit.
-
           loop: an asyncio event loop, it defaults to
             ``asyncio.get_event_loop()``, which is almost certainly
             the right value to use.
@@ -634,7 +639,7 @@ class PureScheduler:
             loop = asyncio.get_event_loop()
         # create a Window no matter what; it will know what to do
         # also if jobs_window is None
-        window = Window(jobs_window, loop)
+        window = Window(self.jobs_window, loop)
 
         # initialize; this one is not crucial but is helpful
         # for debugging purposes
@@ -644,7 +649,7 @@ class PureScheduler:
         # clear any Task instance
         self._reset_tasks()
         # for computing global timeout
-        self._record_beginning(timeout)
+        self._record_beginning(self.timeout)
         # reset status
         self._failed_critical = False
         self._failed_timeout = False
@@ -697,7 +702,7 @@ class PureScheduler:
                 await self._feedback(pending, "ABORTING")
                 await self._tidy_tasks(pending)
                 await self.co_shutdown()
-                self._failed_timeout = timeout
+                self._failed_timeout = self.timeout
                 return False
 
             # exceptions need to be cleaned up
@@ -735,7 +740,7 @@ class PureScheduler:
 
             if nb_jobs_done == nb_jobs_finite:
                 if debug:
-                    print("PureScheduler.co_run: {} CLEANING UP at iteration {}/{}"
+                    print("PureScheduler.co_run: {} CLEANING UP at iter. {}/{}"
                           .format(4 * '-', nb_jobs_done, nb_jobs_finite))
                 if self.verbose and nb_jobs_forever != len(pending):
                     print("WARNING - apparent mismatch"

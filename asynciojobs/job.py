@@ -60,8 +60,8 @@ class AbstractJob:                                      # pylint: disable=R0902
     from **idle** to **running**.a
 
     On the other hand, in windowed orchestrations - see the ``jobs_window``
-    parameter to
-    :meth:`~asynciojobs.purescheduler.PureScheduler.co_orchestrate` -
+    attribute to
+    :meth:`~asynciojobs.purescheduler.PureScheduler` -
     a job can be scheduled but not yet running, because it is waiting
     for a slot in the global window.
 
@@ -217,8 +217,8 @@ class AbstractJob:                                      # pylint: disable=R0902
 
         This representation for the job is used by the Scheduler object
         through its :meth:`~asynciojobs.purescheduler.PureScheduler.list()` and
-        :meth:`~asynciojobs.purescheduler.PureScheduler.debrief()` methods, i.e.
-        when a scheduler is printed out in textual format.
+        :meth:`~asynciojobs.purescheduler.PureScheduler.debrief()` methods,
+        i.e. when a scheduler is printed out in textual format.
 
         The overall logic is to always use the instance's ``label`` attribute
         if set, or to use this method otherwise. If none of this returns

@@ -21,9 +21,13 @@ class Scheduler(PureScheduler, AbstractJob):
       jobs_or_sequences: passed to
         :class:`~asynciojobs.purescheduler.PureScheduler`,
         allows to add these jobs inside of the newly-created scheduler;
-      verbose (bool): passed to
+      jobs_window: passed to
+        :class:`~asynciojobs.purescheduler.PureScheduler`;
+      timeout: passed to
         :class:`~asynciojobs.purescheduler.PureScheduler`;
       watch (Watch): passed to
+        :class:`~asynciojobs.purescheduler.PureScheduler`;
+      verbose (bool): passed to
         :class:`~asynciojobs.purescheduler.PureScheduler`;
       kwds: all other named arguments are sent
         to the :class:`~asynciojobs.job.AbstractJob` constructor.
@@ -78,10 +82,12 @@ class Scheduler(PureScheduler, AbstractJob):
 
     """
     def __init__(self, *jobs_or_sequences,
-                 verbose=False,
-                 watch=None,
+                 jobs_window=None, timeout=None,
+                 watch=None, verbose=False,
                  **kwds):
+
         PureScheduler.__init__(self, *jobs_or_sequences,
+                               jobs_window=jobs_window, timeout=timeout,
                                verbose=verbose, watch=watch)
         AbstractJob.__init__(self, **kwds)
 
