@@ -1,5 +1,18 @@
 # ChangeLog
 
+## 0.10.1 - 2018 Apr 30
+
+* make schedulers nestable by default - see issue #3
+  * `Scheduler` is now the nestable class (formerly known as SchedulerJob);
+  * `PureScheduler` is the new name for what was formerly known as `Scheduler`
+
+* see issue #1 : `jobs_window` and `timeout` are no longer parameters
+  to `co_run()`, but attributes of a `PureScheduler` object
+
+* graphical layout - see issue #4
+  * critical jobs or schedulers are shown with a red border
+  * forever jobs or schedulers are shown with a dashed line
+
 ## 0.9.1 - 2018 Apr 25
 
 * graphical output should now properly show nested schedulers in all cases of imbrications
