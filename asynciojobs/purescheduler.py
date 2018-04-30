@@ -14,6 +14,7 @@ from .job import AbstractJob
 from .sequence import Sequence
 from .window import Window
 from .watch import Watch
+from .dotstyle import DotStyle
 
 #
 # will hopefully go away some day
@@ -913,13 +914,6 @@ class PureScheduler:                                    # pylint: disable=r0902
                         self._show_task_stack(
                             j, "non-critical job exception stack")
 
-    @staticmethod
-    def _dot_protect(string):
-        # escape any double quote
-        result = string.replace('"', r'\"')
-        # and put double quotes around all this
-        return '"' + result + '"'
-
     # graphical outputs
     #
     # in a first attempt we had one function to store a dot format into a file
@@ -963,9 +957,9 @@ DOT_%28graph_description_language%29
         """
         self._set_sched_ids()
         # xxx should maybe use/show scheduler's label if set
-        return "digraph asynciojobs" + self._dot_body()
+        return "digraph asynciojobs" + self._dot_body(DotStyle())
 
-    def _dot_body(self):
+    def _dot_body(self, dot_style):
         """
         Creates the dot body for a scheduler, i.e the part between
         brackets, without the surrounding ``digraph`` or ``subgraph``
@@ -977,15 +971,15 @@ DOT_%28graph_description_language%29
         result = ""
         result += "{\n"
         result += "compound=true;\n"
+        result += "graph [{}];\n".format(dot_style)
         for job in self.topological_order():
 
             # regular jobs
             if not isinstance(job, PureScheduler):
-                # declare node and attach label
-                result += ("{} [label=".format(job.repr_id()))
-                result += self._dot_protect(
-                    job._get_graph_label())             # pylint: disable=W0212
-                result += "]\n"
+                # declare node, attach label, and set visual attributes
+                result += job.repr_id()
+                result += ' [{}]\n'.format(job.dot_style())
+
                 # add edges
                 for req in job.required:
 
@@ -1010,7 +1004,7 @@ DOT_%28graph_description_language%29
 
                 cluster_name = job.dot_cluster_name()
                 result += "subgraph {}".format(cluster_name)
-                result += job._dot_body()  # pylint: disable=W0212
+                result += job._dot_body(job.dot_style())
 
                 for req in job.required:
 

@@ -11,6 +11,8 @@ It also defines a couple of simple job classes.
 import sys
 import asyncio
 
+from .dotstyle import DotStyle
+
 debug = False                                           # pylint: disable=C0103
 debug = True                                            # pylint: disable=C0103
 
@@ -243,6 +245,40 @@ class AbstractJob:                                      # pylint: disable=R0902
         then the :meth:`text_label()` method is used instead.
         """
         pass
+
+    def dot_style(self):                                # pylint: disable=c0111
+        """
+        This method computes the DOT attributes
+        which are used to style boxes according to
+        critical / forever / and similar.
+
+        Legend is quite simply that:
+
+        * critical jobs have a red border, and
+        * the border of forever jobs is made of a dashed line.
+
+        Returns:
+          DotStyle: a dict-like mapping that sets DOT
+          attributes for that job.
+        """
+        # see also https://graphviz.gitlab.io/_pages/doc/info/attrs.html
+        data = DotStyle()
+        # style; DotStyle known how to deal with lists
+        data['style'] = []
+        # label
+        label = self._get_graph_label()
+        if label != 'NOLABEL':
+            data['label'] = label
+        # common attributes : rounded box
+        data['shape'] = 'box'
+        data['style'].append('rounded')
+        # forever items have a dashed line
+        if self.forever:
+            data['style'].append('dashed')
+        # critical elements have a red border
+        if self.is_critical():
+            data['color'] = 'red'
+        return data
 
     ##########
     _has_support_for_unicode = None  # type: bool

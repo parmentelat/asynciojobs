@@ -60,3 +60,61 @@ class Tests(unittest.TestCase):
             watch=watch
         )
         produce_png(sched, "test_png_simple")
+
+    def test_png_styles1(self):
+        """
+        trying the rendering of critical and forever jobs
+        """
+        watch = Watch()
+        sched = Scheduler(
+            Sequence(
+                Job(co_print_sleep(watch, .1, "regular"),
+                    label="regular",
+                    critical=False, forever=False),
+                Job(co_print_sleep(watch, .1, "critical"),
+                    label="critical",
+                    critical=True, forever=False),
+                Job(co_print_sleep(watch, .1, "forever"),
+                    label="forever",
+                    critical=False, forever=True),
+                Job(co_print_sleep(watch, .1, "both"),
+                    label="both",
+                    critical=True, forever=True),
+            ),
+            watch=watch,
+        )
+
+        produce_png(sched, "test_png_styles1")
+
+    def test_png_styles2(self):
+        """
+        trying the rendering of critical and forever jobs
+        """
+        watch = Watch()
+
+        j1 = pipes(watch, .5, "none", nb_pipes=6)
+        j1.critical = False
+        j1.forever = False
+        j1.label = "label-none"
+
+        j2 = diamond_scheduler(watch, .5, "critical")
+        j2.critical = True
+        j2.forever = False
+        j2.label = "label-critical"
+
+        j3 = diamond_scheduler(watch, .5, "forever")
+        j3.critical = False
+        j3.forever = True
+        j3.label = "label-forever"
+
+        j4 = diamond_scheduler(watch, .5, "both")
+        j4.critical = True
+        j4.forever = True
+        j4.label = "label-both"
+
+        sched = Scheduler(
+            Sequence(j1, j2, j3, j4),
+            watch=watch,
+        )
+
+        produce_png(sched, "test_png_styles2")

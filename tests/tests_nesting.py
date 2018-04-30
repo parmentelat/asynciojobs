@@ -154,11 +154,14 @@ class Tests(unittest.TestCase):
                 Job(co_print_sleep(watch, .2, "three")),
             ),
             watch=watch,
+            label = "sub-scheduler\non several lines",
+            critical=True, forever=True,
         )
 
-        main = PureScheduler(
+        main = Scheduler(
             Sequence(
-                Job(co_print_sleep(watch, .2, "BEGIN")),
+                Job(co_print_sleep(watch, .2, "BEGIN"),
+                    label="job-label"),
                 subjob,
                 Job(co_print_sleep(watch, .2, "END")),
             ),
