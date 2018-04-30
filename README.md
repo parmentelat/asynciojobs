@@ -105,9 +105,9 @@ sa = Scheduler(a1, a2, a3)
 sa.run()
 ```
 
-    -> in_out(0.25)
     -> in_out(0.1)
     -> in_out(0.2)
+    -> in_out(0.25)
     <- in_out(0.1)
     <- in_out(0.2)
     <- in_out(0.25)
@@ -163,8 +163,8 @@ sb = Scheduler(b1, b2, b3)
 sb.run()
 ```
 
-    -> in_out(0.1)
     -> in_out(0.25)
+    -> in_out(0.1)
     <- in_out(0.1)
     -> in_out(0.2)
     <- in_out(0.25)
@@ -246,9 +246,9 @@ To see an overview of a scheduler, just use the `list()` method that will give y
 sb.list()
 ```
 
-    1   ☉ ☓   <Job `b1`> [[ -> 100.0]] 
-    2   ☉ ☓   <Job `b2`> [[ -> 200.0]] requires={1}
-    3   ☉ ☓   <Job `Job[in_out (...)]`> [[ -> 250.0]] 
+    1   ☉ ☓   <Job `Job[in_out (...)]`> [[ -> 250.0]] 
+    2   ☉ ☓   <Job `b1`> [[ -> 100.0]] 
+    3   ☉ ☓   <Job `b2`> [[ -> 200.0]] requires={2}
 
 
 Here is a complete list of the symbols used, with their meaning 
@@ -333,8 +333,8 @@ sc = Scheduler(c1, c2, c3, c4)
 sc.run()
 ```
 
-    BUS: -> in_out(0.4)
     BUS: -> in_out(0.2)
+    BUS: -> in_out(0.4)
     BUS: <- in_out(0.2)
     BUS: -> in_out(0.3)
     BUS: <- in_out(0.4)
@@ -355,10 +355,10 @@ Note that `run()` always terminates as soon as all the non-`forever` jobs are co
 sc.list()
 ```
 
-    1   ☉ ↺ ∞ <Job `monitor`> [not done] 
-    2   ☉ ☓   <Job `c2`> [[ -> 4.0]] 
-    3   ☉ ☓   <Job `c1`> [[ -> 2.0]] 
-    4   ☉ ☓   <Job `c3`> [[ -> 3.0]] requires={3}
+    1   ☉ ☓   <Job `c1`> [[ -> 2.0]] 
+    2   ☉ ↺ ∞ <Job `monitor`> [not done] 
+    3   ☉ ☓   <Job `c2`> [[ -> 4.0]] 
+    4   ☉ ☓   <Job `c3`> [[ -> 3.0]] requires={1}
 
 
 ### Example D : specifying a global timeout
@@ -379,10 +379,10 @@ sd = Scheduler(j, timeout=0.25)
 sd.run()
 ```
 
-    16:24:40: forever 0
-    16:24:40: forever 1
-    16:24:40: forever 2
-    16:24:40.854 SCHEDULER(None): PureScheduler.co_run: TIMEOUT occurred
+    11:28:32: forever 0
+    11:28:32: forever 1
+    11:28:32: forever 2
+    11:28:32.345 SCHEDULER(None): PureScheduler.co_run: TIMEOUT occurred
 
 
 
@@ -467,7 +467,7 @@ sf.list()
 
     -> in_out(0.2)
     <- in_out(0.2)
-    16:24:42.15 SCHEDULER(None): Emergency exit upon exception in critical job
+    11:28:33.510 SCHEDULER(None): Emergency exit upon exception in critical job
     run: False
     1   ☉ ☓   <Job `Job[in_out (...)]`> [[ -> 200.0]] 
     2 ⚠ ★ ☓   <Job `boom`> !! CRIT. EXC. => Exception:boom after 0.2s!! requires={1}
@@ -517,7 +517,7 @@ print("total duration = {}s".format(end-beg))
     8-th job
     1-th job
     4-th job
-    total duration = 1.001410961151123s
+    total duration = 1.0073628425598145s
 
 
 ## Customizing jobs
@@ -568,8 +568,8 @@ Here's a simple example:
 # and a simple scheduler with an initialization and 2 concurrent tasks
 s = Scheduler()
 j1 = Job(aprint("j1"), label="init", scheduler=s)
-j2 = Job(aprint("j2"), label="part1", scheduler=s, required=j1)
-j3 = Job(aprint("j3"), label="part2", scheduler=s, required=j1)
+j2 = Job(aprint("j2"), label="critical job", critical=True, scheduler=s, required=j1)
+j3 = Job(aprint("j3"), label="forever job", forever=True, scheduler=s, required=j1)
 s.graph()
 ```
 
@@ -646,7 +646,7 @@ Let us consider the following example:
 # we start with the creation of an internal scheduler
 # that has a simple diamond structure
 
-sub_sched = Scheduler()
+sub_sched = Scheduler(label="critical nested", critical=True)
 subj1 = Job(aprint("subj1"), label='subj1', scheduler=sub_sched)
 subj2 = Job(aprint("subj2"), label='subj2', required=subj1, scheduler=sub_sched)
 subj3 = Job(aprint("subj3"), label='subj3', required=subj1, scheduler=sub_sched)
@@ -658,7 +658,6 @@ We can now create a main scheduler, in which **one of the jobs is this low-level
 
 ```python
 # the main scheduler
-sub_sched.label = "nested"
 main_sched = Scheduler(
     Sequence(
         Job(aprint("main-start"), label="main-start"),
@@ -679,12 +678,12 @@ main_sched.list()
 ```
 
     1     ⚐   <Job `main-start`> [not done] 
-    2     ⚐   > <Scheduler `nested`> requires={1} -> entries={3}
+    2 ⚠   ⚐   > <Scheduler `critical nested`> requires={1} -> entries={3}
     3     ⚐   <Job `subj1`> [not done] 
     4     ⚐   <Job `subj2`> [not done] requires={3}
     5     ⚐   <Job `subj3`> [not done] requires={3}
-    6     ⚐   <Job `subj4`> [not done] requires={5, 4}
-    2   end   < <Scheduler `nested`> exits={6}
+    6     ⚐   <Job `subj4`> [not done] requires={4, 5}
+    2   end   < <Scheduler `critical nested`> exits={6}
     7     ⚐   <Job `main-end`> [not done] requires={2}
 
 
@@ -733,8 +732,8 @@ main_sched.run()
 
     main-start
     subj1
-    subj3
     subj2
+    subj3
     subj4
     main-end
 
