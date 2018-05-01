@@ -1008,7 +1008,8 @@ DOT_%28graph_description_language%29
 
                 cluster_name = job.dot_cluster_name()
                 result += "subgraph {}".format(cluster_name)
-                result += job._dot_body(job.dot_style())
+                result += job._dot_body(                # pylint: disable=w0212
+                    job.dot_style())
 
                 for req in job.required:
 

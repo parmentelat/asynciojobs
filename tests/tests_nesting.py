@@ -154,7 +154,7 @@ class Tests(unittest.TestCase):
                 Job(co_print_sleep(watch, .2, "three")),
             ),
             watch=watch,
-            label = "sub-scheduler\non several lines",
+            label="sub-scheduler\non several lines",
             critical=True, forever=True,
         )
 
