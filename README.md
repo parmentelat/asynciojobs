@@ -810,7 +810,3 @@ In particular, if you take one job instance that has completed, and try to inser
 ### You can't run the same scheduler twice
 
 In much the same way, once a scheduler is done - assuming all went well - essentially all of its jobs are marked as done, and trying to run it again will either do nothing, or raise an exception.
-
-### You can't run an empty scheduler
-
-As of this writing, trying to run an empty scheduler results in an exception, as no entry point can be found in the requirements graph. This might change in the future though.

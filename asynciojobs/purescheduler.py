@@ -655,6 +655,10 @@ class PureScheduler:                                    # pylint: disable=r0902
         self._failed_critical = False
         self._failed_timeout = False
 
+        # empty schedulers are fine too
+        if not self.jobs:
+            return True
+
         # how many jobs do we expect to complete: the ones that don't run
         # forever
         nb_jobs_finite = len([j for j in self.jobs if not j.forever])

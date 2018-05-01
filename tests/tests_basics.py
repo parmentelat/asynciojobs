@@ -147,12 +147,7 @@ class Tests(unittest.TestCase):
         s = PureScheduler()
         s.list()
         s.list(details=True)
-
-        # assertRaises requires a function object,
-        # not the result, since there is no result of course
-        def closure():
-            return s.run()
-        self.assertRaises(ValueError, closure)
+        self.assertTrue(s.run())
 
     ####################
     def test_cycle(self):
