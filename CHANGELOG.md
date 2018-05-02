@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.10.2 - 2018 May 2
+
+* empty schedulers now run fine
+
 ## 0.10.1 - 2018 Apr 30
 
 * make schedulers nestable by default - see issue #3
