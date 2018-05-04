@@ -161,7 +161,7 @@ class Tests(unittest.TestCase):
 
         # these lines seem to trigger a nasty message about a coro not being
         # waited
-        self.assertFalse(sched.rain_check())
+        self.assertFalse(sched.check_cycles())
 
     ####################
     # Job(asyncio.sleep(0.4))
@@ -181,7 +181,7 @@ class Tests(unittest.TestCase):
 
         sched = PureScheduler(*jobs)
         list_sep(sched, common_sep + "LIST BEFORE")
-        self.assertTrue(sched.rain_check())
+        self.assertTrue(sched.check_cycles())
         self.assertTrue(sched.run())
         for j in jobs:
             self.assertFalse(j.raised_exception())
@@ -429,7 +429,7 @@ class Tests(unittest.TestCase):
         # even later on are also added to the scheduler
         s.append(J(sl(.5)))
         self.assertEqual(len(sched.jobs), 4)
-        self.assertTrue(sched.rain_check())
+        self.assertTrue(sched.check_cycles())
         self.assertTrue(sched.run())
 
     def test_loop(self):

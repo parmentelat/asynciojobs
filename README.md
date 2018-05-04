@@ -544,9 +544,9 @@ You can easily define your own `Job` class by specializing `job.AbstractJob`. As
 
 In some cases like esp. test scenarios, it can be helpful to add requirements to jobs that are not in the scheduler. The `sanitize` method removes such extra requirements, and unless you are certain it is not your case, it might be a good idea to call it explcitly before an orchestration.
 
-### Early checks : `Scheduler.rain_check()`
+### Early checks : `Scheduler.check_cycles()`
 
-`rain_check` will check for cycles in the requirements graph. It returns a boolean. It's a good idea to call it before running an orchestration.
+`check_cycles` will check for cycles in the requirements graph. It returns a boolean. It's a good idea to call it before running an orchestration.
 
 ### Need a coroutine instead ? : `Scheduler.co_run()` 
 

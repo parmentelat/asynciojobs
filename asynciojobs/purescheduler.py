@@ -229,7 +229,7 @@ class PureScheduler:                                    # pylint: disable=r0902
         return not changes
 
     ####################
-    def rain_check(self):
+    def check_cycles(self):
         """
         Performs a minimal sanity check.
         The purpose of this is primarily to check for cycles,
@@ -252,7 +252,7 @@ class PureScheduler:                                    # pylint: disable=r0902
             return True
         except Exception as exc:                        # pylint: disable=W0703
             if self.verbose:
-                print("rain_check failed", exc)
+                print("check_cycles failed", exc)
             return False
 
     ####################
@@ -828,7 +828,7 @@ class PureScheduler:                                    # pylint: disable=r0902
         Prints a complete list of jobs in topological order, with their status
         summarized with a few signs. See the README for examples and a legend.
 
-        Beware that this might raise an exception if :meth:`rain_check()`
+        Beware that this might raise an exception if :meth:`check_cycles()`
         would return ``False``, i.e. if the graph is not acyclic.
         """
         # so now we can refer to other jobs by their id when showing
