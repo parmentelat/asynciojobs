@@ -80,6 +80,55 @@ class Scheduler(PureScheduler, AbstractJob):
                                verbose=verbose, watch=watch)
         AbstractJob.__init__(self, **kwds)
 
+    async def co_run(self, loop=None):
+        """
+        Supersedes the :meth:`~asynciojobs.puresheduler.PureScheduler.co_run`
+        method in order to account for **critical** schedulers.
+
+        `Scheduler` being a subclass of `AbstractJob`, we need to account
+        for the possibility that a scheduler is defined as ``critical``.
+
+        If the inherited ``co_run()`` method fails because
+        of an exception of a timeout, a critical Scheduler will trigger an
+        exception, instead of returning ``False``:
+
+        * if orchestration failed because an internal job has raised an
+          exception, raise that exception;
+        * if it failed because of a timeout, raise ``TimeoutError``
+
+        Returns:
+          bool: ``True`` if everything went well;
+            ``False`` for non-critical schedulers that go south.
+
+        Raises:
+          TimeoutError: for critical schedulers that do not complete in time,
+          Exception: for a critical scheduler that has a critical job that
+            triggers an exception, in which case it bubbles up.
+        """
+        # run as a pure scheduler, will always return True or False
+        pure = await PureScheduler.co_run(self, loop=loop)
+        # fine
+        if pure is True:
+            return pure
+        # non-critical : we're done
+        if not self.critical:
+            return pure
+        # a timeout
+        if self.failed_time_out():
+            raise TimeoutError("critical scheduler took too long")
+        # a critical job has exploded
+        if self.failed_critical():
+            # need to find at least one critical job
+            # that has raised an exception
+            for job in self.jobs:
+                if not job.critical:
+                    continue
+                exc = job.raised_exception()
+                if exc:
+                    raise exc
+        # we should not reach this point
+        raise ValueError("Internal error in Scheduler.co_run()")
+
     def _set_sched_id(self, start, id_format):
         """
         Works as a complicit to PureScheduler._set_sched_ids.

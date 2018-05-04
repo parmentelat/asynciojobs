@@ -11,6 +11,14 @@ from asynciojobs import Watch
 from .util import co_print_sleep, produce_png, diamond_scheduler
 
 
+class BoomError(Exception):
+    pass
+
+
+async def boom(message):
+    raise BoomError(message)
+
+
 class Tests(unittest.TestCase):
 
     # xxx probably useless
@@ -174,3 +182,66 @@ class Tests(unittest.TestCase):
         self.assertAlmostEqual(watch.seconds(), expected_duration, delta=.05)
 
         produce_png(main, "test_nesting_sequence")
+
+    def test_critical_exc(self):
+
+        def sched_boom(s_crit, j_crit):
+            return Scheduler(
+                    Job(boom(str(j_crit)), critical=j_crit),
+                    critical=s_crit)
+
+        # regular non-critical schedulers should not raise anything
+        # returns True as Job is not critical
+        s = sched_boom(False, False)
+        self.assertTrue(s.run())
+        # returns False as Job is critical
+        s = sched_boom(False, True)
+        self.assertFalse(s.run())
+
+        # it's a different business for critical schedulers
+        # Job is not critical, so returns True
+        s = sched_boom(True, False)
+        self.assertTrue(s.run())
+
+        # Job is not critical, so raise BoomError
+        with self.assertRaises(BoomError):
+            s = sched_boom(True, True)
+            s.run()
+
+
+    def test_critical_exc2(self):
+
+        def sched_sched_boom(s1_crit, s2_crit, j_crit):
+            return Scheduler(
+                    Scheduler(
+                        Job(boom("ok"), critical=j_crit,
+                            label=f"boom {j_crit}"),
+                        critical=s2_crit,
+                        label=f"internal {s2_crit}"
+                        ),
+                    critical=s1_crit,
+                    label=f"external {s1_crit}")
+
+        # regular non-critical schedulers should not raise anything
+        # returns True as Job is not critical
+        s = sched_sched_boom(False, False, False)
+        self.assertTrue(s.run())
+        s = sched_sched_boom(False, False, True)
+        self.assertTrue(s.run())
+        s = sched_sched_boom(False, True, False)
+        self.assertTrue(s.run())
+        s = sched_sched_boom(False, True, True)
+        self.assertFalse(s.run())
+
+
+        # it's a different business for critical schedulers
+        # Job is not critical, so returns True
+        s = sched_sched_boom(True, False, False)
+        self.assertTrue(s.run())
+        s = sched_sched_boom(True, False, True)
+        self.assertTrue(s.run())
+        s = sched_sched_boom(True, True, False)
+        self.assertTrue(s.run())
+        with self.assertRaises(BoomError):
+            s = sched_sched_boom(True, True, True)
+            s.run()

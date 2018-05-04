@@ -637,9 +637,8 @@ class PureScheduler:                                    # pylint: disable=r0902
 
         Proceeds to the end no matter what, except if either:
 
-        1. one critical job raises an exception, or
-
-        2. a timeout occurs.
+        * one critical job raises an exception, or
+        * a timeout occurs.
 
         Returns:
           bool: `True` if none of these 2 conditions occur, `False` otherwise.
@@ -858,6 +857,7 @@ class PureScheduler:                                    # pylint: disable=r0902
         """
         Print jobs in no specific order, the advantage being that it
         works even if scheduler is broken wrt :meth:`check_cycles()`.
+        On the other hand, this method is not able to list requirements.
         """
         for i, job in enumerate(self.jobs):
             # pass as stack a list of indexes
