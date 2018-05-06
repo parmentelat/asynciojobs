@@ -161,20 +161,34 @@ class AbstractJob:                                      # pylint: disable=R0902
         """
         return 1
 
-    # we don't use depth
-    def _list(self, details, _):
+    # don't use parameter recursive
+    def _list(self, details, depth, _):
         """
-        Complicit to Scheduler.list()
+        Complicit to PureScheduler.list()
         """
-        print(self.repr_id(),
-              self.repr_short(),
-              self.repr_main(),
-              self.repr_result(),
-              self.repr_requires())
+        indent = ('>'*depth + ' ') if depth else ''
+        print("{} {} {}{} {} {}"
+              .format(self.repr_id(),
+                      self.repr_short(),
+                      indent,
+                      self.repr_main(),
+                      self.repr_result(),
+                      self.repr_requires()))
         if details and hasattr(self, 'details'):
             details = self.details()
             if details is not None:
                 print(details)
+
+    # don't use parameter recursive
+    def _list_safe(self, stack, _):
+        """
+        Complicit to PureScheduler.list_safe()
+        """
+        number = ".".join(str(i) for i in stack)
+        print("{} {} {}"
+              .format(self.repr_short(),
+                      number,
+                      self.repr_main()))
 
     def _get_text_label(self):
         # In terms of labelling, things have become a little tricky over

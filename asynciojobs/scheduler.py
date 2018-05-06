@@ -102,24 +102,42 @@ class Scheduler(PureScheduler, AbstractJob):
         """
         return 1 + self._total_length()
 
-    def _list(self, details, depth):
+    def _list(self, details, depth, recursive):
         """
         Complicit to PureScheduler.list()
         """
-        print(self.repr_id(),
-              self.repr_short(),
-              '>'*(depth+1),
-              self.repr_main(),
-              "{} -> {}".format(self.repr_requires(),
-                                self.repr_entries()))
-        for job in self.topological_order():
-            job._list(details, depth+1)                 # pylint: disable=W0212
-        print(self.repr_id(),
-              # this should be 7-spaces like repr_short()
-              '  end  ',
-              '<'*(depth+1),
-              self.repr_main(),
-              self.repr_exits())
+        indent = ('>'*depth + ' ') if depth else ''
+        print("{} {} {}{} {} {} -> {}"
+              .format(self.repr_id(),
+                      self.repr_short(),
+                      indent,
+                      self.repr_main(),
+                      self.repr_result(),
+                      self.repr_requires(),
+                      self.repr_entries()))
+        if recursive:
+            for job in self.topological_order():
+                job._list(details, depth+1, recursive)  # pylint: disable=W0212
+            print(self.repr_id(),
+                  # this should be 7-spaces like repr_short()
+                  '--end--',
+                  '<'*(depth+1),
+                  self.repr_main(),
+                  self.repr_exits())
+
+    def _list_safe(self, stack, recursive):
+        """
+        Complicit to PureScheduler.list_safe()
+        """
+        number = ".".join(str(i) for i in stack)
+        print("{} {} {}"
+              .format(self.repr_short(),
+                      number,
+                      self.repr_main()))
+        if recursive:
+            for i, job in enumerate(self.jobs):
+                job._list_safe(stack+[i], recursive)    # pylint: disable=W0212
+            print('--end--', number)
 
     def dot_cluster_name(self):
         """

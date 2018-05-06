@@ -835,15 +835,16 @@ class PureScheduler:                                    # pylint: disable=r0902
         # requirements
         self._set_sched_ids()
         for job in self.topological_order():
-            job._list(details, 0)                       # pylint: disable=W0212
+            job._list(details, 0, True)                 # pylint: disable=W0212
 
     def list_safe(self):
         """
         Print jobs in no specific order, the advantage being that it
-        works even if scheduler is broken wrt :meth:`rain_check()`
+        works even if scheduler is broken wrt :meth:`check_cycles()`.
         """
         for i, job in enumerate(self.jobs):
-            print(i, job)
+            # pass as stack a list of indexes
+            job._list_safe([i], True)                   # pylint: disable=W0212
 
     def __repr__(self):
         # linter says unused variable but it is indeed used in f-string
