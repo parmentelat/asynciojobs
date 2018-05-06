@@ -444,11 +444,15 @@ class AbstractJob:                                      # pylint: disable=R0902
                     self.repr_result(),
                     self.repr_requires()))
 
-    def requires(self, *requirements):
+    def requires(self, *requirements, remove=False):
         """
         Arguments:
           requirements: an iterable of `AbstractJob`
             instances that are added to the requirements.
+          remove(bool): if set, the requirement are dropped rather than added.
+
+        Raises:
+          KeyError: when trying to remove dependencies that were not present.
 
         For convenience, any nested structure made of job instances
         can be provided, and if None objects are found, they are silently
@@ -464,23 +468,31 @@ class AbstractJob:                                      # pylint: disable=R0902
         * ``j1.requires(j2, [j3, j4])``
         * ``j1.requires((j2, j3))``
         * ``j1.requires(([j2], [[[j3]]]))``
+
+        * Any of the above with ``remove=True``.
+
+        For dropping dependencies instead of adding them, use ``remove=True``
+
         """
         from .sequence import Sequence
         for requirement in requirements:
             if requirement is None:
                 continue
             if isinstance(requirement, AbstractJob):
-                self.required.add(requirement)
+                if not remove:
+                    self.required.add(requirement)
+                else:
+                    self.required.remove(requirement)
             elif isinstance(requirement, Sequence):
                 if requirement.jobs:
                     self.required.add(requirement.jobs[-1])
             elif isinstance(requirement, (tuple, list)):
                 for req in requirement:
-                    self.requires(req)
+                    self.requires(req, remove=remove)
             # not quite sure about what do to here in fact
             else:
                 print("WARNING: fishy requirement in AbstractJob.requires")
-                self.requires(list(requirement))
+                self.requires(list(requirement), remove=remove)
 
     def is_idle(self):
         """
