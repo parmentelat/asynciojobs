@@ -1,4 +1,4 @@
-# pylint: disable=c0111, c0103, c0330
+# pylint: disable=c0111, c0103, c0330, r0201
 
 import unittest
 
@@ -11,7 +11,7 @@ from .util import co_print_sleep, produce_png, diamond_scheduler, pipes
 
 class Tests(unittest.TestCase):
 
-    def test_png_easy(self):                            # pylint: disable=r0201
+    def test_png_easy(self):
         """
         start with an easy one, a sequence that has a diamond inside
         """
@@ -27,7 +27,7 @@ class Tests(unittest.TestCase):
         )
         produce_png(sched, "test_png_easy")
 
-    def test_png_easy2(self):                           # pylint: disable=r0201
+    def test_png_easy2(self):
         """
         same but with a multi-entry/multi-exit sub-sched
         """
@@ -43,7 +43,7 @@ class Tests(unittest.TestCase):
         )
         produce_png(sched, "test_png_easy2")
 
-    def test_png_simple(self):                          # pylint: disable=r0201
+    def test_png_simple(self):
         """
         a sequence that has 2 subscheds in a row
         """
