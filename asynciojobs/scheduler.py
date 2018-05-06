@@ -147,3 +147,23 @@ class Scheduler(PureScheduler, AbstractJob):
         """
         return "cluster_{}"\
                .format(self._sched_id)
+
+    def check_cycles(self):
+        """
+        Supersedes
+        :meth:`~asynciojobs.puresheduler.PureScheduler.check_cycles`
+        to account for nested schedulers.
+
+        Returns:
+          bool: True if this scheduler, and all its nested schedulers
+            at any depth, has no cycle and can be safely scheduled.
+        """
+        try:
+            for job in self.topological_order():
+                if isinstance(job, Scheduler) and not job.check_cycles():
+                    return False
+            return True
+        except Exception as exc:                        # pylint: disable=W0703
+            if self.verbose:
+                print("check_cycles failed", exc)
+            return False
