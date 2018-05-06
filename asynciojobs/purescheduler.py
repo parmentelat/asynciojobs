@@ -155,6 +155,23 @@ class PureScheduler:                                    # pylint: disable=r0902
         self.update([job])
         return self
 
+    def remove(self, job):
+        """
+        Removes a single ``Schedulable`` object;
+        this method name is inspired from plain python ``set.remove()``
+
+        Parameters:
+          job: a single ``Schedulable`` object.
+
+        Raises:
+          KeyError: if job not in scheduler.
+
+        Returns:
+          self: the scheduler object, for cascading insertions if needed.
+        """
+        self.jobs.remove(job)
+        return self
+
     def __len__(self):
         """
         You can call len() on a PureScheduler object.
