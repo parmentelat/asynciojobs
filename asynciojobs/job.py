@@ -289,9 +289,12 @@ class AbstractJob:                                      # pylint: disable=R0902
         # forever items have a dashed line
         if self.forever:
             data['style'].append('dashed')
-        # critical elements have a red border
+        # critical elements have a thicker red border
         if self.is_critical():
             data['color'] = 'red'
+            data['penwidth'] = 2
+        else:
+            data['penwidth'] = 0.5
         return data
 
     ##########

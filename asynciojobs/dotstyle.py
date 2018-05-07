@@ -37,7 +37,8 @@ class DotStyle(dict):
 #            for key, value_s in self.items())
 
     @staticmethod
-    def protect(string):
+    def protect(data):
+        string = str(data)
         # escape any double quote
         result = string.replace('"', r'\"')
         # and put double quotes around all this
