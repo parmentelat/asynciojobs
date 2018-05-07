@@ -536,34 +536,6 @@ class PureScheduler:                                    # pylint: disable=r0902
         print(sep, 'END ' + msg)
         print(sep)
 
-    async def co_shutdown(self):
-        """
-        Shut down the scheduler, by sending a message to all the jobs when
-        orchestration is over.
-
-        Typically for example, several jobs sharing the same ssh connection
-        will arrange for that connection to be kept alive across an entire
-        scheduler lifespan, but there is a need to tear these connections
-        down eventually.
-
-        Returns:
-          None
-        """
-
-        await self._feedback(None, "scheduler is shutting down...")
-        tasks = [asyncio.ensure_future(job.co_shutdown())
-                 for job in self.jobs]
-        # the done part is of no use here
-        _, pending = await asyncio.wait(
-            tasks, timeout=self._remaining_timeout())
-        if pending:
-            print("WARNING: {}/{} co_shutdown() methods"
-                  " have not returned within timeout"
-                  .format(len(pending), len(self.jobs)))
-            await self._tidy_tasks(pending)
-        # xxx should consume any exception as well ?
-        # self._tidy_tasks_exception(done)
-
     async def _feedback(self, jobs, state, force=False):
         """
         When self.verbose is set, provide feedback about the mentioned
@@ -608,6 +580,34 @@ class PureScheduler:                                    # pylint: disable=r0902
                               job.repr_requires()),
                       end="")
             print()
+
+    async def co_shutdown(self):
+        """
+        Shut down the scheduler, by sending a message to all the jobs when
+        orchestration is over.
+
+        Typically for example, several jobs sharing the same ssh connection
+        will arrange for that connection to be kept alive across an entire
+        scheduler lifespan, but there is a need to tear these connections
+        down eventually.
+
+        Returns:
+          None
+        """
+
+        await self._feedback(None, "scheduler is shutting down...")
+        tasks = [asyncio.ensure_future(job.co_shutdown())
+                 for job in self.jobs]
+        # the done part is of no use here
+        _, pending = await asyncio.wait(
+            tasks, timeout=self._remaining_timeout())
+        if pending:
+            print("WARNING: {}/{} co_shutdown() methods"
+                  " have not returned within timeout"
+                  .format(len(pending), len(self.jobs)))
+            await self._tidy_tasks(pending)
+        # xxx should consume any exception as well ?
+        # self._tidy_tasks_exception(done)
 
     ####################
     def run(self, *args, loop=None, **kwds):
