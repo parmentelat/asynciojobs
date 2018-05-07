@@ -589,7 +589,7 @@ class PureScheduler:                                    # pylint: disable=r0902
 
         """
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.co_shutdown(depth=0))
+        return loop.run_until_complete(self.co_shutdown(depth=0))
 
     async def co_shutdown(self, depth):
         """
@@ -603,32 +603,49 @@ class PureScheduler:                                    # pylint: disable=r0902
         down eventually.
 
         Returns:
-          bool: True if everything went well, False otherwise.
+          bool: True if all the co_shutdown methods attached to the jobs
+          (recursively) in the scheduler complete within ``shutdown_timeout``,
+          which is an attribute of the scheduler.
 
-        Reasons for this method returning ``False`` are:
-
-          * one of the `co_shutdown()` methods returned an exception,
-          * or the total duration of shutting down all jobs exceeds the
-            scheduler's attribute ``shutdown_timeout`` that defaults to 1s.
+        Note:
+          right now ``shutdown_timeout`` is hard-wired and defaults to 1s.
         """
 
-        # xxx timeout needs more work
-
-        await self._feedback(None, "scheduler is shutting down...")
         tasks = [asyncio.ensure_future(job.co_shutdown(depth+1))
                  for job in self.jobs]
-        await self._feedback(None,
-                             f"{self.label}: wait() with {len(tasks)} tasks")
+
+        # main scheduler is in charge of protecting against
+        # timeouts happening globally
+        if depth == 0:
+            # xxx hard-wired for now
+            # should be an attribute of PureScheduler
+            shutdown_timeout = 1
+            self._record_beginning(shutdown_timeout)
+            timeout = self._remaining_timeout()
+        else:
+            timeout = None
+
+        await self._feedback(None, "scheduler is shutting down...")
+
         # the done part is of no use here
-        _, pending = await asyncio.wait(
-            tasks, timeout=self._remaining_timeout())
-        if pending:
-            print("WARNING: {}/{} co_shutdown() methods"
-                  " have not returned within timeout"
-                  .format(len(pending), len(self.jobs)))
-            await self._tidy_tasks(pending)
+        _, pending = await asyncio.wait(tasks, timeout=timeout)
+        # everything went fine
+        if not pending:
+            return True
+
+        # with nested schedulers, this message would not be helpful
+        # because it is only guaranteed to show up at the toplevel
+        # and in addition the jobs count is local to the scheduler
+        # this is why this it's a verbose/feedback thing
+        await self._feedback(
+            None,
+            "WARNING: {}/{} co_shutdown() methods"
+            " have not returned within timeout"
+            .format(len(pending), len(self.jobs)))
+        await self._tidy_tasks(pending)
         # xxx should consume any exception as well ?
         # self._tidy_tasks_exception(done)
+        return False
 
     ####################
     def run(self, *args, **kwds):
