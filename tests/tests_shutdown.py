@@ -6,13 +6,16 @@ from unittest import TestCase
 
 from asynciojobs import Scheduler, Job, Sequence
 
+
+VERBOSE = False
+
 async def aprint(*messages):
     print(messages)
 
 
 class CounterScheduler(Scheduler):
     def __init__(self, *a, **k):
-        super().__init__(*a, **k)
+        super().__init__(*a, verbose=VERBOSE, **k)
         self.counter = 0
 
 
@@ -80,21 +83,21 @@ class Tests(TestCase):
 
         # so here we create 16 jobs for which the shutdown
         # durations will be
-        # 0.1 0.2 0.3 0.4 - 1.1 1.2 1.3 1.4
-        # 2.1 2.2 2.3 2.4 - 3.1 3.2 3.3 3.4
-        # so if we set shutdown_timeout = 1s, we should
+        # 0.0 0.1 0.2 0.3 - 1.0 1.1 1.2 1.3
+        # 2.0 2.1 2.2 2.3 - 3.0 3.1 3.2 3.3
+        # so if we set shutdown_timeout = 0.9s, we should
         # still find counter == 12
 
         cardinal = 4
 
         # same to the square
-        top = CounterScheduler(label="TOP")
+        top = CounterScheduler(label="TOP", shutdown_timeout=0.9)
         subs = []
         for i in range(cardinal):
             sub = Scheduler(label=f"SUB {i}")
             subs.append(sub)
-            sub.add(Sequence(*[CounterJob(top, 10*i+j+1, aprint('ok'),
-                                          label=10*i+j+1)
+            sub.add(Sequence(*[CounterJob(top, 10*i+j, aprint('ok'),
+                                          label=10*i+j)
                                for j in range(cardinal)]))
         top.add(Sequence(*subs))
 

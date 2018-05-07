@@ -25,6 +25,8 @@ class Scheduler(PureScheduler, AbstractJob):
         :class:`~asynciojobs.purescheduler.PureScheduler`;
       timeout: passed to
         :class:`~asynciojobs.purescheduler.PureScheduler`;
+      shutdown_timeout: passed to
+        :class:`~asynciojobs.purescheduler.PureScheduler`;
       watch (Watch): passed to
         :class:`~asynciojobs.purescheduler.PureScheduler`;
       verbose (bool): passed to
@@ -72,12 +74,14 @@ class Scheduler(PureScheduler, AbstractJob):
     """
     def __init__(self, *jobs_or_sequences,
                  jobs_window=None, timeout=None,
+                 shutdown_timeout=1,
                  watch=None, verbose=False,
                  **kwds):
 
         PureScheduler.__init__(self, *jobs_or_sequences,
                                jobs_window=jobs_window, timeout=timeout,
-                               verbose=verbose, watch=watch)
+                               shutdown_timeout=shutdown_timeout,
+                               watch=watch, verbose=verbose)
         AbstractJob.__init__(self, **kwds)
 
     async def co_run(self):

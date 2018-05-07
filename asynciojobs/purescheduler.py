@@ -108,6 +108,7 @@ class PureScheduler:                                    # pylint: disable=r0902
 
     def __init__(self, *jobs_or_sequences,
                  jobs_window=None, timeout=None,
+                 shutdown_timeout=1,
                  watch=None, verbose=False):
 
         self.jobs = set(Sequence._flatten(              # pylint: disable=W0212
@@ -115,6 +116,7 @@ class PureScheduler:                                    # pylint: disable=r0902
         self.jobs_window = jobs_window
         # timeout is in seconds
         self.timeout = timeout
+        self.shutdown_timeout = shutdown_timeout
         self.watch = watch
         self.verbose = verbose
         # why does it fail ?
@@ -606,9 +608,6 @@ class PureScheduler:                                    # pylint: disable=r0902
           bool: True if all the co_shutdown methods attached to the jobs
           (recursively) in the scheduler complete within ``shutdown_timeout``,
           which is an attribute of the scheduler.
-
-        Note:
-          right now ``shutdown_timeout`` is hard-wired and defaults to 1s.
         """
 
         tasks = [asyncio.ensure_future(job.co_shutdown(depth+1))
@@ -617,10 +616,7 @@ class PureScheduler:                                    # pylint: disable=r0902
         # main scheduler is in charge of protecting against
         # timeouts happening globally
         if depth == 0:
-            # xxx hard-wired for now
-            # should be an attribute of PureScheduler
-            shutdown_timeout = 1
-            self._record_beginning(shutdown_timeout)
+            self._record_beginning(self.shutdown_timeout)
             timeout = self._remaining_timeout()
         else:
             timeout = None
