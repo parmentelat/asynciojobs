@@ -106,8 +106,8 @@ sa.run()
 ```
 
     -> in_out(0.1)
-    -> in_out(0.2)
     -> in_out(0.25)
+    -> in_out(0.2)
     <- in_out(0.1)
     <- in_out(0.2)
     <- in_out(0.25)
@@ -251,7 +251,13 @@ sb.list()
     3   ☉ ☓   <Job `b2`> [[ -> 200.0]] requires={2}
 
 
-Here is a complete list of the symbols used, with their meaning 
+The individual lifecycle for a job instance is:
+
+idle → scheduled → running → done
+
+where the 'scheduled' state is for cases where a maximal number of simulataneous jobs has been reached, so the job essentially has all its requirements fulfilled but still waits for its turn.
+
+With that in mind, here is a complete list of the symbols used, with their meaning:
 
 * `⚐` : idle (read: requirements are not fulfilled)
 * `⚑` : scheduled (read: waiting for a slot in the jobs window)
@@ -261,7 +267,6 @@ Here is a complete list of the symbols used, with their meaning
 * `☉` : went through fine (no exception raised)
 * `⚠` : defined as critical
 * `∞` : defined as forever  
-
 
 And and here's an example of output for `list()` with all possible combinations of jobs:
 
@@ -304,7 +309,7 @@ async def monitor_loop(bus):
         print("BUS: {}".format(message))
 ```
 
-Now we need a modified version of the previous coroutine, that interacts with this message bus instead of printing anything itself&nbsp;:
+Now we need a modified version of the `in_out` coroutine, that interacts with this message bus instead of printing anything itself&nbsp;:
 
 
 ```python
@@ -318,7 +323,7 @@ async def in_out_bus(timeout, bus):
 
 We can replay the prevous scenario, adding the monitoring loop as a separate job.
 
-However, we need to declare this extra job with `forever=True`, so that the scheduler knows it **does not have to wait** for the monitoring loop, as we know in advance that it will never return.
+However, we need to declare this extra job with `forever=True`, so that the scheduler knows it **does not have to wait** for the monitoring loop, as we know in advance that this monitoring loop will, by design, never return.
 
 
 ```python
@@ -333,8 +338,8 @@ sc = Scheduler(c1, c2, c3, c4)
 sc.run()
 ```
 
-    BUS: -> in_out(0.2)
     BUS: -> in_out(0.4)
+    BUS: -> in_out(0.2)
     BUS: <- in_out(0.2)
     BUS: -> in_out(0.3)
     BUS: <- in_out(0.4)
@@ -355,10 +360,10 @@ Note that `run()` always terminates as soon as all the non-`forever` jobs are co
 sc.list()
 ```
 
-    1   ☉ ☓   <Job `c1`> [[ -> 2.0]] 
+    1   ☉ ☓   <Job `c2`> [[ -> 4.0]] 
     2   ☉ ↺ ∞ <Job `monitor`> [not done] 
-    3   ☉ ☓   <Job `c2`> [[ -> 4.0]] 
-    4   ☉ ☓   <Job `c3`> [[ -> 3.0]] requires={1}
+    3   ☉ ☓   <Job `c1`> [[ -> 2.0]] 
+    4   ☉ ☓   <Job `c3`> [[ -> 3.0]] requires={3}
 
 
 ### Example D : specifying a global timeout
@@ -379,10 +384,10 @@ sd = Scheduler(j, timeout=0.25)
 sd.run()
 ```
 
-    11:28:32: forever 0
-    11:28:32: forever 1
-    11:28:32: forever 2
-    11:28:32.345 SCHEDULER(None): PureScheduler.co_run: TIMEOUT occurred
+    15:27:48: forever 0
+    15:27:48: forever 1
+    15:27:48: forever 2
+    15:27:48.990 SCHEDULER(None): PureScheduler.co_run: TIMEOUT occurred
 
 
 
@@ -467,7 +472,7 @@ sf.list()
 
     -> in_out(0.2)
     <- in_out(0.2)
-    11:28:33.510 SCHEDULER(None): Emergency exit upon exception in critical job
+    15:27:50.153 SCHEDULER(None): Emergency exit upon exception in critical job
     run: False
     1   ☉ ☓   <Job `Job[in_out (...)]`> [[ -> 200.0]] 
     2 ⚠ ★ ☓   <Job `boom`> !! CRIT. EXC. => Exception:boom after 0.2s!! requires={1}
@@ -509,16 +514,26 @@ end = time.time()
 print("total duration = {}s".format(end-beg))
 ```
 
+    3-th job
+    1-th job
+    8-th job
+    4-th job
     5-th job
     6-th job
     2-th job
     7-th job
-    3-th job
-    8-th job
-    1-th job
-    4-th job
-    total duration = 1.0073628425598145s
+    total duration = 1.0053417682647705s
 
+
+### Cleaning up - the `shutdown()` method.
+
+Scheduler objects expose the `shutdown()` method. 
+
+This method should be called explicitly by the user when resources are attached to the various jobs, and they can be released.
+
+Contrary to what was done in older versions of `asynciojobs`, where nested schedulers were not yet as massively useful, this call **needs to be explicit** and is not automatically invoked by `run()` when the orchestration is over.
+
+Although such a cleanup is not really useful in the case of local `Job` instances, some application libraries like `apssh` define jobs that are attached to network connections, ssh connections in the case of `apssh`, and it is convenient to be able to terminate those connections explicitly.
 
 ## Customizing jobs
 
@@ -528,7 +543,7 @@ print("total duration = {}s".format(end-beg))
 
 ### `AbstractJob.co_shutdown()`
 
-Before returning, `run()` sends the `co_shutdown()` method on all jobs. The default behaviour - in the `Job` class - is to do nothing, but this can be redefined when relevant. Typically, an implementation of an `SshJob` will allow for a given SSH connection to be shared amongs several `SshJob` instances, and so `co_shutdown()` may be used to  close the underlying SSH connections at the end of the scenario.
+The `shutdown()` method on a scheduler sends `co_shutdown()` method on all - possibly nested - jobs. The default behaviour - in the `Job` class - is to do nothing, but this can be redefined by daughter classes of `AbstractJob` when relevant. Typically, an implementation of an `SshJob` will allow for a given SSH connection to be shared amongst several `SshJob` instances, and so `co_shutdown()` may be used to  close the underlying SSH connections.
 
 ### The `apssh`  library and the ` SshJob` class
 
@@ -576,7 +591,7 @@ s.graph()
 
 
 
-![svg](README-eval_files/README-eval_82_0.svg)
+![svg](README-eval_files/README-eval_85_0.svg)
 
 
 
@@ -678,12 +693,12 @@ main_sched.list()
 ```
 
     1     ⚐   <Job `main-start`> [not done] 
-    2 ⚠   ⚐   > <Scheduler `critical nested`> requires={1} -> entries={3}
-    3     ⚐   <Job `subj1`> [not done] 
-    4     ⚐   <Job `subj2`> [not done] requires={3}
-    5     ⚐   <Job `subj3`> [not done] requires={3}
-    6     ⚐   <Job `subj4`> [not done] requires={4, 5}
-    2   end   < <Scheduler `critical nested`> exits={6}
+    2 ⚠   ⚐   <Scheduler `critical nested`> [not done] requires={1} -> entries={3}
+    3     ⚐   > <Job `subj1`> [not done] 
+    4     ⚐   > <Job `subj2`> [not done] requires={3}
+    5     ⚐   > <Job `subj3`> [not done] requires={3}
+    6     ⚐   > <Job `subj4`> [not done] requires={4, 5}
+    2 --end-- < <Scheduler `critical nested`> exits={6}
     7     ⚐   <Job `main-end`> [not done] requires={2}
 
 
@@ -699,7 +714,7 @@ main_sched.graph()
 
 
 
-![svg](README-eval_files/README-eval_100_0.svg)
+![svg](README-eval_files/README-eval_103_0.svg)
 
 
 
