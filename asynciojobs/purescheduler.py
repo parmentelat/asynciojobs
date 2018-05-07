@@ -584,14 +584,18 @@ class PureScheduler:                                    # pylint: disable=r0902
         A synchroneous wrapper around :meth:`co_shutdown()`.
 
         Returns:
-          None
+          bool: True if everything went well, False otherwise;
+          see :meth:`co_shutdown()` for details.
+
         """
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.co_shutdown())
+        loop.run_until_complete(self.co_shutdown(depth=0))
 
-    async def co_shutdown(self):
+    async def co_shutdown(self, depth):
         """
-        Shut down the scheduler, by sending a message to all the jobs.
+        Shut down the scheduler, by sending the
+        :meth:`~asynciojobs.job.AbstractJob.co_shutdown()`
+        method to all the jobs, possibly nested.
 
         Typically for example, several jobs sharing the same ssh connection
         will arrange for that connection to be kept alive across an entire
@@ -599,13 +603,19 @@ class PureScheduler:                                    # pylint: disable=r0902
         down eventually.
 
         Returns:
-          None
+          bool: True if everything went well, False otherwise.
+
+        Reasons for this method returning ``False`` are:
+
+          * one of the `co_shutdown()` methods returned an exception,
+          * or the total duration of shutting down all jobs exceeds the
+            scheduler's attribute ``shutdown_timeout`` that defaults to 1s.
         """
 
         # xxx timeout needs more work
 
         await self._feedback(None, "scheduler is shutting down...")
-        tasks = [asyncio.ensure_future(job.co_shutdown())
+        tasks = [asyncio.ensure_future(job.co_shutdown(depth+1))
                  for job in self.jobs]
         await self._feedback(None,
                              f"{self.label}: wait() with {len(tasks)} tasks")
@@ -655,9 +665,7 @@ class PureScheduler:                                    # pylint: disable=r0902
         Jobs marked as ``forever`` are not waited for.
 
         No automatic shutdown is performed, user needs to explicitly call
-        :meth:`co_shutdown()` or :meth:`shutdown()` to send
-        :meth:`~asynciojobs.job.AbstractJob.co_shutdown()` method to all jobs
-        in the scheduler.
+        :meth:`co_shutdown()` or :meth:`shutdown()`.
         """
         loop = asyncio.get_event_loop()
         # create a Window no matter what; it will know what to do

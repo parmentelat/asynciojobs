@@ -86,7 +86,7 @@ class SleepJob(AbstractJob):
         result = await _sl(self.timeout, middle=self.middle, emergency=False)
         return result
 
-    async def co_shutdown(self):
+    async def co_shutdown(self, depth):
         pass
 
 
@@ -107,7 +107,7 @@ class TickJob(AbstractJob):
             counter += 1
             await asyncio.sleep(self.cycle)
 
-    async def co_shutdown(self):
+    async def co_shutdown(self, depth):
         pass
 
 

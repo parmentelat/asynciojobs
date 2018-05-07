@@ -50,7 +50,7 @@ class PrintJob(AbstractJob):
             import traceback
             traceback.print_exc()
 
-    async def co_shutdown(self):
+    async def co_shutdown(self, depth):
         """
         Implementation of the method expected by :class:`AbstractJob`;
         does nothing.

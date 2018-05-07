@@ -123,7 +123,7 @@ class AbstractJob:                                      # pylint: disable=R0902
         # convenience again
         if scheduler is not None:
             scheduler.add(self)
-        # once submitted in the asyncio event loop,
+        # once submitted in the asyncio loop/scheduler,
         # `co_run()` gets embedded in a Task object,
         # that is our handle when talking to asyncio.wait
         self._task = None
@@ -575,9 +575,15 @@ class AbstractJob:                                      # pylint: disable=R0902
         print("AbstractJob.co_run() needs to be implemented on class {}"
               .format(self.__class__.__name__))
 
-    async def co_shutdown(self):
+    async def co_shutdown(self, depth):
         """
-        Abstract virtual - needs to be implemented
+        Abstract virtual - needs to be implemented.
+
+        Parameters:
+          depth(int): is the nesting depth of this scheduler. Its value is `0`
+            only on the toplevel scheduler. Typically non-scheduler jobs
+            do not need to behave differently depending on this parameter,
+            but it is mandatory to accept that parameter.
         """
         print("AbstractJob.co_shutdown() needs to be implemented on class {}"
               .format(self.__class__.__name__))
@@ -650,7 +656,7 @@ class Job(AbstractJob):
         result = await self.corun
         return result
 
-    async def co_shutdown(self):
+    async def co_shutdown(self, depth):
         """
         Implementation of the method expected by :class:`AbstractJob`,
         or more exactly by :meth:`asynciojobs.purescheduler.PureScheduler.list`

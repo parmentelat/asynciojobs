@@ -262,7 +262,7 @@ class Tests(unittest.TestCase):
             self.scheduler.counter += 1
             #print(f"after run : counter = {self.scheduler.counter}")
 
-        async def co_shutdown(self):
+        async def co_shutdown(self, depth):
             self.scheduler.counter -= 1
             #print(f"after shutdown : counter = {self.scheduler.counter}")
 
