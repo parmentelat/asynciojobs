@@ -120,7 +120,7 @@ class PureScheduler:                                    # pylint: disable=r0902
         # why does it fail ?
         # bool
         self._failed_critical = False
-        # False, or the intial timeout
+        # False, or the initial timeout
         self._failed_timeout = False
         # see also _record_beginning
         self._expiration = None
@@ -498,9 +498,6 @@ class PureScheduler:                                    # pylint: disable=r0902
         Similar but in order to clear the exceptions,
         we need to run gather() instead
         """
-        # do not use task._job.raised_exception()
-        # so we can use this with co_shutdown() tasks as well
-        # (these are not attached to a job)
         exception_tasks = [task for task in tasks
                            if task._exception]          # pylint: disable=W0212
         for task in exception_tasks:
@@ -581,10 +578,20 @@ class PureScheduler:                                    # pylint: disable=r0902
                       end="")
             print()
 
+    ####################
+    def shutdown(self):
+        """
+        A synchroneous wrapper around :meth:`co_shutdown()`.
+
+        Returns:
+          None
+        """
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.co_shutdown())
+
     async def co_shutdown(self):
         """
-        Shut down the scheduler, by sending a message to all the jobs when
-        orchestration is over.
+        Shut down the scheduler, by sending a message to all the jobs.
 
         Typically for example, several jobs sharing the same ssh connection
         will arrange for that connection to be kept alive across an entire
@@ -595,9 +602,13 @@ class PureScheduler:                                    # pylint: disable=r0902
           None
         """
 
+        # xxx timeout needs more work
+
         await self._feedback(None, "scheduler is shutting down...")
         tasks = [asyncio.ensure_future(job.co_shutdown())
                  for job in self.jobs]
+        await self._feedback(None,
+                             f"{self.label}: wait() with {len(tasks)} tasks")
         # the done part is of no use here
         _, pending = await asyncio.wait(
             tasks, timeout=self._remaining_timeout())
@@ -610,7 +621,7 @@ class PureScheduler:                                    # pylint: disable=r0902
         # self._tidy_tasks_exception(done)
 
     ####################
-    def run(self, *args, loop=None, **kwds):
+    def run(self, *args, **kwds):
         """
         A synchroneous wrapper around :meth:`co_run()`,
         please refer to that link for details on parameters and return value.
@@ -618,15 +629,13 @@ class PureScheduler:                                    # pylint: disable=r0902
         Also, the canonical name for this is ``run()`` but for historical
         reasons you can also use ``orchestrate()`` as an alias for ``run()``.
         """
-        if loop is None:
-            loop = asyncio.get_event_loop()
-        return loop.run_until_complete(
-            self.co_run(loop=loop, *args, **kwds))
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(self.co_run(*args, **kwds))
 
     # define the alias for legacy
     orchestrate = run
 
-    async def co_run(self, loop=None):            # pylint: disable=R0912,R0915
+    async def co_run(self):                       # pylint: disable=R0912,R0915
 
         """
         The primary entry point for running a scheduler.
@@ -643,17 +652,14 @@ class PureScheduler:                                    # pylint: disable=r0902
         Returns:
           bool: `True` if none of these 2 conditions occur, `False` otherwise.
 
-        Jobs marked as ``forever`` are not waited for. All jobs get
-        terminated through their `co_shutdown()` method.
+        Jobs marked as ``forever`` are not waited for.
 
-        Parameters:
-          loop: an asyncio event loop, it defaults to
-            ``asyncio.get_event_loop()``, which is almost certainly
-            the right value to use.
-
+        No automatic shutdown is performed, user needs to explicitly call
+        :meth:`co_shutdown()` or :meth:`shutdown()` to send
+        :meth:`~asynciojobs.job.AbstractJob.co_shutdown()` method to all jobs
+        in the scheduler.
         """
-        if loop is None:
-            loop = asyncio.get_event_loop()
+        loop = asyncio.get_event_loop()
         # create a Window no matter what; it will know what to do
         # also if jobs_window is None
         window = Window(self.jobs_window, loop)
@@ -722,7 +728,7 @@ class PureScheduler:                                    # pylint: disable=r0902
                 # clean up
                 await self._feedback(pending, "ABORTING")
                 await self._tidy_tasks(pending)
-                await self.co_shutdown()
+# removed in 1.0                await self.co_shutdown()
                 self._failed_timeout = self.timeout
                 return False
 
@@ -744,7 +750,7 @@ class PureScheduler:                                    # pylint: disable=r0902
                         self._show_task_stack(done_task, "DEBUG")
             if critical_failure:
                 await self._tidy_tasks(pending)
-                await self.co_shutdown()
+# removed in 1.0                await self.co_shutdown()
                 self._failed_critical = True
                 await self._feedback(
                     None, "Emergency exit upon exception in critical job",
@@ -769,7 +775,7 @@ class PureScheduler:                                    # pylint: disable=r0902
                           .format(nb_jobs_forever, len(pending)))
                 await self._feedback(pending, "TIDYING forever")
                 await self._tidy_tasks(pending)
-                await self.co_shutdown()
+# removed in 1.0                await self.co_shutdown()
                 return True
 
             # go on : find out the jobs that can be added to the mix

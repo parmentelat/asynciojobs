@@ -19,6 +19,10 @@ async def boom(message):
     raise BoomError(message)
 
 
+async def aprint(*messages):
+    print(messages)
+
+
 class Tests(unittest.TestCase):
 
     # xxx probably useless
@@ -208,7 +212,6 @@ class Tests(unittest.TestCase):
             s = sched_boom(True, True)
             s.run()
 
-
     def test_critical_exc2(self):
 
         def sched_sched_boom(s1_crit, s2_crit, j_crit):
@@ -233,7 +236,6 @@ class Tests(unittest.TestCase):
         s = sched_sched_boom(False, True, True)
         self.assertFalse(s.run())
 
-
         # it's a different business for critical schedulers
         # Job is not critical, so returns True
         s = sched_sched_boom(True, False, False)
@@ -245,3 +247,56 @@ class Tests(unittest.TestCase):
         with self.assertRaises(BoomError):
             s = sched_sched_boom(True, True, True)
             s.run()
+
+    class CounterScheduler(Scheduler):
+        def __init__(self, *a, **k):
+            super().__init__(*a, **k)
+            self.counter = 0
+
+    class CounterJob(Job):
+        def __init__(self, scheduler, *a, **k):
+            self.scheduler = scheduler
+            super().__init__(*a, **k)
+
+        async def co_run(self):
+            self.scheduler.counter += 1
+            #print(f"after run : counter = {self.scheduler.counter}")
+
+        async def co_shutdown(self):
+            self.scheduler.counter -= 1
+            #print(f"after shutdown : counter = {self.scheduler.counter}")
+
+    def test_shutdown_simple(self):
+
+        cardinal = 5
+
+        s = Tests.CounterScheduler()
+        s.add(Sequence(*[Tests.CounterJob(s, aprint(i))
+                       for i in range(cardinal)]))
+
+        self.assertEqual(s.counter, 0)
+        s.run()
+        self.assertEqual(s.counter, cardinal)
+        s.shutdown()
+        self.assertEqual(s.counter, 0)
+
+    def test_shutdown_nested(self):
+
+        cardinal = 4
+
+        # same to the square
+        top = Tests.CounterScheduler(label="TOP")
+        subs = []
+        for i in range(cardinal):
+            sub = Scheduler(label=f"SUB {i}")
+            subs.append(sub)
+            sub.add(Sequence(*[Tests.CounterJob(top, aprint(10*i+j),
+                                                label=str(10*i+j))
+             for j in range(cardinal)]))
+        top.add(Sequence(*subs))
+
+        self.assertEqual(top.counter, 0)
+        top.run()
+        self.assertEqual(top.counter, cardinal*cardinal)
+        top.shutdown()
+        self.assertEqual(top.counter, 0)

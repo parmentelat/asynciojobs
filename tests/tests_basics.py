@@ -432,12 +432,11 @@ class Tests(unittest.TestCase):
         self.assertTrue(sched.check_cycles())
         self.assertTrue(sched.run())
 
-    def test_loop(self):
+    def test_seq(self):
         s = PureScheduler()
         Seq(J(sl(.1)), J(sl(.2)),
             scheduler=s)
-        loop = asyncio.get_event_loop()
-        self.assertTrue(s.run(loop=loop))
+        self.assertTrue(s.run())
 
     # if window is defined, total should be a multiple of window
     def _test_window(self, total, window):

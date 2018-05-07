@@ -67,7 +67,7 @@ class Tests(unittest.TestCase):
         # add one level down
         s3 = Scheduler()
         jss1, jss2, jss3 = [job(i) for i in range(111, 114)]
-        Sequence(jss1, jss2, jss3, scheduler = s3)
+        Sequence(jss1, jss2, jss3, scheduler=s3)
 
         # surgery in s2; no cycles
         s2.remove(js2)

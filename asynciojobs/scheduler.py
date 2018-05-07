@@ -80,7 +80,7 @@ class Scheduler(PureScheduler, AbstractJob):
                                verbose=verbose, watch=watch)
         AbstractJob.__init__(self, **kwds)
 
-    async def co_run(self, loop=None):
+    async def co_run(self):
         """
         Supersedes the :meth:`~asynciojobs.puresheduler.PureScheduler.co_run`
         method in order to account for **critical** schedulers.
@@ -106,7 +106,7 @@ class Scheduler(PureScheduler, AbstractJob):
             triggers an exception, in which case it bubbles up.
         """
         # run as a pure scheduler, will always return True or False
-        pure = await PureScheduler.co_run(self, loop=loop)
+        pure = await PureScheduler.co_run(self)
         # fine
         if pure is True:
             return pure

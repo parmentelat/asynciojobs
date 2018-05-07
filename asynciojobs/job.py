@@ -123,7 +123,7 @@ class AbstractJob:                                      # pylint: disable=R0902
         # convenience again
         if scheduler is not None:
             scheduler.add(self)
-        # once submitted in the asyncio loop/scheduler,
+        # once submitted in the asyncio event loop,
         # `co_run()` gets embedded in a Task object,
         # that is our handle when talking to asyncio.wait
         self._task = None
