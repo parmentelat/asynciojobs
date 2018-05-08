@@ -107,7 +107,7 @@ class AbstractJob:                                      # pylint: disable=R0902
     """
 
     def __init__(self, *,                               # pylint: disable=R0913
-                 forever=False, critical=False, label=None,
+                 forever=False, critical=True, label=None,
                  required=None, scheduler=None):
         self.forever = forever
         self.critical = critical
