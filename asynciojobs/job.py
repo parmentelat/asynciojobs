@@ -13,9 +13,6 @@ import asyncio
 
 from .dotstyle import DotStyle
 
-debug = False                                           # pylint: disable=C0103
-debug = True                                            # pylint: disable=C0103
-
 # pylint settings
 # W0212: we have a lot of accesses to protected members of other classes
 # R0914 Too many local variables
