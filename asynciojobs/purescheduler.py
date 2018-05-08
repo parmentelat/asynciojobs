@@ -245,6 +245,9 @@ class PureScheduler:                                    # pylint: disable=r0902
                     print(20 * '*',
                           "WARNING: job {} has had {} requirements removed"
                           .format(job, before - after))
+            # recursively scan nested schedulers
+            if isinstance(job, PureScheduler):
+                changes = job.sanitize() or changes
         return not changes
 
     ####################

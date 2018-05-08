@@ -243,3 +243,53 @@ class Tests(unittest.TestCase):
         with self.assertRaises(BoomError):
             s = sched_sched_boom(True, True, True)
             s.run()
+
+    def test_sanitize(self):
+
+        watch = Watch()
+
+        def job(i):
+            return Job(co_print_sleep(watch, 0.1, f"job{i}"),
+                       label=i)
+
+        def simple():
+            j1, j2, j3, j4, j5 = [job(i) for i in range(1, 6)]
+            s1 = Scheduler(j1, j2, j3, label='top simple')
+            j2.requires(j4)
+            j3.requires(j5)
+            self.assertEqual(len(j2.required), 1)
+            self.assertEqual(len(j3.required), 1)
+            s1.sanitize()
+            self.assertEqual(len(j2.required), 0)
+            self.assertEqual(len(j3.required), 0)
+
+        def nested():
+            j11, j12, j13, j14, j15 = [job(i) for i in range(11, 16)]
+            s2 = Scheduler(Sequence(j11, j12, j13), label="nested internal")
+            j12.requires(j14)
+            j13.requires(j15)
+
+            j1, j2, j3, j4, j5 = [job(i) for i in range(1, 6)]
+            s1 = Scheduler(Sequence(j1, s2, j3), label="nested top")
+            j1.requires(j4)
+            j1.requires(j11)
+
+            s2.requires(j13)
+
+            # j2 not included in sched, untouched
+            j2.requires(j1)
+
+            self.assertEqual(len(j12.required), 2)
+            self.assertEqual(len(j13.required), 2)
+            self.assertEqual(len(j1.required), 2)
+            self.assertEqual(len(s2.required), 2)
+            self.assertEqual(len(j3.required), 1)
+            s1.sanitize()
+            self.assertEqual(len(j12.required), 1)
+            self.assertEqual(len(j13.required), 1)
+            self.assertEqual(len(j1.required), 0)
+            self.assertEqual(len(s2.required), 1)
+            self.assertEqual(len(j3.required), 1)
+
+        simple()
+        nested()
