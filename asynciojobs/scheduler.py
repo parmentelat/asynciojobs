@@ -178,19 +178,19 @@ class Scheduler(PureScheduler, AbstractJob):
                   self.repr_main(),
                   self.repr_exits())
 
-    def _list_safe(self, stack, recursive):
+    def _list_safe(self, recursive):
         """
         Complicit to PureScheduler.list_safe()
         """
-        number = ".".join(str(i) for i in stack)
-        print("{} {} {}"
+        print("{} {} {} {}"
               .format(self.repr_short(),
-                      number,
-                      self.repr_main()))
+                      self.repr_id(),
+                      self.repr_main(),
+                      self.repr_requires()))
         if recursive:
-            for i, job in enumerate(self.jobs):
-                job._list_safe(stack+[i], recursive)    # pylint: disable=W0212
-            print('--end--', number)
+            for job in self.jobs:
+                job._list_safe(recursive)               # pylint: disable=W0212
+            print('--end--', self.repr_id())
 
     def dot_cluster_name(self):
         """

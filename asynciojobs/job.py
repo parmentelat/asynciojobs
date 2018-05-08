@@ -180,15 +180,15 @@ class AbstractJob:                                      # pylint: disable=R0902
                 print(details)
 
     # don't use parameter recursive
-    def _list_safe(self, stack, _):
+    def _list_safe(self, _):
         """
         Complicit to PureScheduler.list_safe()
         """
-        number = ".".join(str(i) for i in stack)
-        print("{} {} {}"
+        print("{} {} {} {}"
               .format(self.repr_short(),
-                      number,
-                      self.repr_main()))
+                      self.repr_id(),
+                      self.repr_main(),
+                      self.repr_requires()))
 
     def _get_text_label(self):
         # In terms of labelling, things have become a little tricky over

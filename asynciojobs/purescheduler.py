@@ -865,6 +865,22 @@ class PureScheduler:                                    # pylint: disable=r0902
             i = job._set_sched_id(i, id_format)         # pylint: disable=w0212
         return i
 
+    def _set_sched_ids_safe(self, stack):
+        """
+        Similar to _set_sched_ids, in that the member jobs get their
+        internal sched_id set, for identifying jobs when expliciting
+        internal relationships in list_safe().
+
+        The difference here is that the numbering is not based on topological
+        order: jobs in a scheduler are scanned in random order, and jobs in
+        nested schedulers get prefixed.
+        """
+        root = ".".join(str(index) for index in stack)
+        for i, job in enumerate(self.jobs, 1):
+            job._sched_id = "{}.{}".format(root, i)     # pylint: disable=W0212
+            if isinstance(job, PureScheduler):
+                job._set_sched_ids_safe(stack+[i])      # pylint: disable=W0212
+
     ####################
     def list(self, details=False):
         """
@@ -886,9 +902,10 @@ class PureScheduler:                                    # pylint: disable=r0902
         works even if scheduler is broken wrt :meth:`check_cycles()`.
         On the other hand, this method is not able to list requirements.
         """
-        for i, job in enumerate(self.jobs):
+        self._set_sched_ids_safe([])
+        for job in self.jobs:
             # pass as stack a list of indexes
-            job._list_safe([i], True)                   # pylint: disable=W0212
+            job._list_safe(True)                        # pylint: disable=W0212
 
     def __repr__(self):
         # linter says unused variable but it is indeed used in f-string
