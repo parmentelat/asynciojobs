@@ -49,15 +49,10 @@ tests test:
 # * for coroutines - useful to mark async def's as *coroutine*
 # http://pythonhosted.org/sphinxcontrib-asyncio/
 # pip3 install sphinxcontrib-asyncio
-readme-strip readme html:
+readme-strip readme html doc:
 	$(MAKE) -C sphinx $@
 
-doc: html
-	$(MAKE) -C sphinx html
-
-sphinx: readme-strip readme doc
-
-.PHONY: readme-strip readme html doc sphinx
+.PHONY: readme-strip readme html doc
 
 ##########
 pyfiles:

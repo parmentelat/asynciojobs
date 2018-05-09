@@ -7,7 +7,7 @@ asyncio-friendly programs, whose dependencies are directed acyclic graphs
 (DAGs).
 
 Schedulers can be nested, i.e. a scheduler can be used as a job;
-functions can be written, that return pieces of scenarios.
+this features allows functions to be written, that return pieces of scenarios.
 
 # Read more at readthedocs
 

@@ -1,6 +1,10 @@
 # the readme target is not intended to run on readthedocs, but locally
 # and then by-products are managed under git
 
+all: doc
+doc: readme-strip readme htmlhelp
+.PHONY: all doc
+
 ########## recompute toplevel README.md from sphinx/README.ipynb
 CONVERT = jupyter nbconvert --ExecutePreprocessor.enabled=True --ExecutePreprocessor.allow_errors=True
 

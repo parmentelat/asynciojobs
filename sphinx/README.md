@@ -1,7 +1,7 @@
 
 # README
 
-## A simplistic orchestration engine
+## A simple orchestration engine for `asyncio`
 
 The main and single purpose of this library is to allow for the static description of scenarii involving `asyncio`-compliant jobs, that have dependencies in the sense that a given job cannot start until its requirements have not completed.
 
@@ -101,9 +101,9 @@ sa = Scheduler(a1, a2, a3)
 sa.run()
 ```
 
+    -> in_out(0.1)
     -> in_out(0.2)
     -> in_out(0.25)
-    -> in_out(0.1)
     <- in_out(0.1)
     <- in_out(0.2)
     <- in_out(0.25)
@@ -291,6 +291,46 @@ And and here's an example of output for `list()` with all possible combinations 
 
 Note that if your locale/terminal cannot output these, the code will tentatively resort to pure ASCII output.
 
+### Graphical output
+
+It is easy to get a graphical representation of a scheduler. 
+
+We start with a rustic and simple workflow, that first creates the graph as a dot file, and then uses an external tool to produce a png file that we can include in this documentation.
+
+
+```python
+# this can always be done, it does not require any extra dependency
+sb2.export_as_dotfile("readme-example-b.dot")
+```
+
+
+
+
+    '(Over)wrote readme-example-b.dot'
+
+
+
+
+```python
+# assuming you have the 'dot' program installed
+# it is part of graphviz
+
+import os
+
+os.system("dot -Tpng readme-example-b.dot -o readme-example-b.png")
+```
+
+
+
+
+    0
+
+
+
+We can now look at the result:
+
+![example B as a png file](readme-example-b.png)
+
 ### Example C : infinite loops, or coroutines that don't return
 
 Sometimes it is useful to deal with a endless loop; for example if we want to separate completely actions and printing, we can use an `asyncio.Queue` to implement a simple message bus as follows:
@@ -380,10 +420,10 @@ sd = Scheduler(j, timeout=0.25)
 sd.run()
 ```
 
-    12:19:16: forever 0
-    12:19:16: forever 1
-    12:19:16: forever 2
-    12:19:16.491 SCHEDULER(None): PureScheduler.co_run: TIMEOUT occurred
+    12:46:51: forever 0
+    12:46:52: forever 1
+    12:46:52: forever 2
+    12:46:52.211 SCHEDULER(None): PureScheduler.co_run: TIMEOUT occurred
 
 
 
@@ -468,7 +508,7 @@ sf.list()
 
     -> in_out(0.2)
     <- in_out(0.2)
-    12:19:17.655 SCHEDULER(None): Emergency exit upon exception in critical job
+    12:46:53.361 SCHEDULER(None): Emergency exit upon exception in critical job
     run: False
     1   ☉ ☓   <Job `Job[in_out (...)]`> [[ -> 200.0]] 
     2 ⚠ ★ ☓   <Job `boom`> !! CRIT. EXC. => Exception:boom after 0.2s!! requires={1}
@@ -510,15 +550,15 @@ end = time.time()
 print("total duration = {}s".format(end-beg))
 ```
 
+    2-th job
+    7-th job
     3-th job
-    1-th job
     8-th job
+    1-th job
     4-th job
     5-th job
     6-th job
-    2-th job
-    7-th job
-    total duration = 1.00518798828125s
+    total duration = 1.003814935684204s
 
 
 ### Cleaning up - the `shutdown()` method.
@@ -587,7 +627,7 @@ s.graph()
 
 
 
-![svg](README-eval_files/README-eval_85_0.svg)
+![svg](README-eval_files/README-eval_90_0.svg)
 
 
 
@@ -600,13 +640,13 @@ If visualizing in a notebook is not an option, or if you do not have graphviz in
 
 
 ```python
-s.export_as_dotfile('readme.dot')
+s.export_as_dotfile('readme-dotfile.dot')
 ```
 
 
 
 
-    '(Over)wrote readme.dot'
+    '(Over)wrote readme-dotfile.dot'
 
 
 
@@ -615,7 +655,7 @@ Then later on - and possibly on another host - you can use this dot file as an i
 
 ```python
 import os
-os.system("dot -Tpng readme.dot -o readme.png")
+os.system("dot -Tpng readme-dotfile.dot -o readme-dotfile.png")
 ```
 
 
@@ -627,7 +667,16 @@ os.system("dot -Tpng readme.dot -o readme.png")
 
 Which now allows us to render the graph for our last scheduler as a png file:
 
-![manually inserted readme](readme.png)
+![manually inserted readme](readme-dotfile.png)
+
+**Legend**: on this small example we can see that:
+
+* critical jobs come with a thick red border;
+* while non-critical jobs have a finer, black border;
+* forever jobs have a dotted border;
+* while usual jobs have a continuous border.
+
+Although this is not illustrated here, the same graphical legend is applicable to nested schedulers as well.
 
 Note that if you do have `graphviz` available, you can produce a png file more simply, i.e. without the need for creating the dot file, as shown below:
 
@@ -673,7 +722,7 @@ main_sched = Scheduler(
     Sequence(
         Job(aprint("main-start"), label="main-start"),
         # the way to graft the low-level logic in this main workflow
-        # is to just use the ShcdulerJOb instance as a job
+        # is to just use the ShcdulerJob instance as a job
         sub_sched,
         Job(aprint("main-end"), label="main-end"),
     )
@@ -710,7 +759,7 @@ main_sched.graph()
 
 
 
-![svg](README-eval_files/README-eval_103_0.svg)
+![svg](README-eval_files/README-eval_109_0.svg)
 
 
 
