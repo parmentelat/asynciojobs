@@ -1,3 +1,28 @@
+# the readme target is not intended to run on readthedocs, but locally
+# and then by-products are managed under git
+
+########## recompute toplevel README.md from sphinx/README.ipynb
+CONVERT = jupyter nbconvert --ExecutePreprocessor.enabled=True --ExecutePreprocessor.allow_errors=True
+
+readme: readme-strip README.md
+
+readme-strip:
+	nbstripout README.ipynb
+
+README.md: README-eval.ipynb
+	$(CONVERT) --to markdown README-eval.ipynb --stdout > $@ || rm $@
+
+README-eval.ipynb: readme-strip README.ipynb
+	jupyter nbconvert --ExecutePreprocessor.timeout=600 --to notebook --execute README.ipynb
+	mv -f README.nbconvert.ipynb README-eval.ipynb
+
+readme-clean:
+	rm -f README.md README-eval.ipynb
+
+.PHONY: readme readme-clean readme-strip
+
+##########
+
 # Makefile for Sphinx documentation
 #
 

@@ -1,25 +1,3 @@
-CONVERT = jupyter nbconvert --ExecutePreprocessor.enabled=True --ExecutePreprocessor.allow_errors=True
-NBNORM = ../flotpython/tools/nbnorm.py
-
-norm:
-	$(NBNORM) --author "Thierry Parmentelat - Inria" README.ipynb -l media/inria-25.png
-
-# readme is NOT expected to be redone on a doc-publishing website
-# remember that README.md is part of the git repo
-all: readme
-readme: README.md
-README.md: README-eval.ipynb
-	$(CONVERT) --to markdown README-eval.ipynb --stdout > $@ || rm $@
-
-README-eval.ipynb: README.ipynb
-	jupyter nbconvert --ExecutePreprocessor.timeout=600 --to notebook --execute README.ipynb
-	mv -f README.nbconvert.ipynb README-eval.ipynb
-
-readme-clean:
-	rm -f README.md README-eval.ipynb
-
-.PHONY: all readme readme-clean
-
 ########## for uploading onto pypi
 # this assumes you have an entry 'pypi' in your .pypirc
 # see pypi documentation on how to create .pypirc
@@ -50,6 +28,8 @@ pypi:
 testpypi:
 	./setup.py sdist upload -r testpypi
 
+.PHONY: pypi testpypi
+
 ##############################
 tags:
 	git ls-files | xargs etags
@@ -69,15 +49,15 @@ tests test:
 # * for coroutines - useful to mark async def's as *coroutine*
 # http://pythonhosted.org/sphinxcontrib-asyncio/
 # pip3 install sphinxcontrib-asyncio
-sphinx html doc:
+readme-strip readme html:
+	$(MAKE) -C sphinx $@
+
+doc: html
 	$(MAKE) -C sphinx html
 
-sphinx-clean:
-	$(MAKE) -C sphinx clean
+sphinx: readme-strip readme doc
 
-all-sphinx: readme-clean readme sphinx
-
-.PHONY: sphinx html doc sphinx-clean all-sphinx
+.PHONY: readme-strip readme html doc sphinx
 
 ##########
 pyfiles:
