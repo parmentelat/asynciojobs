@@ -13,23 +13,22 @@ So in a nutshell you would:
 
 Further features allow to
 
-* define a job as running `forever`, in which case the scheduler of course won't wait for it, but instead will terminate it when all other jobs are done;
-* define a job as `critical`; a critical job that raises an exception causes the orchestration to terminate abruptly;
+* define a job as *critical* or not; a critical job that raises an exception causes the orchestration to terminate abruptly;
+* define a job as running *forever*, in which case the scheduler of course won't wait for it, but instead will terminate it when all other jobs are done;
 * define a global `timeout` for the whole scheduler;
-* define a *window* in terms of a maximal number of simultaneous jobs that are allowed to run.
-
-Finally, knowing that a `Scheduler` instance is also a job, nested schedulers can be very easily created, allowing for re-usable pieces to be returned by regular python functions.
+* define a *window* in terms of a maximal number of simultaneous jobs that are allowed to run;
+* define *nested* schedulers: a `Scheduler` instance being also a job, a scheduler can be inserted in another scheduler just as if it were a re gular job; nested schedulers allow for reusability, since workflow pieces can be for example returned by regular python functions.
 
 A job object can be created:
 
-* either as a `Job` instance from a regular asyncio coroutine
-* or by specializing the `AbstractJob` class, and defining its `co_run()` method
+* either as a `Job` instance from a regular asyncio coroutine;
+* or by specializing the `AbstractJob` class, and defining its `co_run()` method; this is for example the case for the `SshJob` in the [`apssh` library](http://apssh.readthedocs.io).
 
-As a convenience, the `Sequence` class is mostly a helper class that can free you from manually managing the `requires` deps in long strings of jobs.
+As a convenience, the `Sequence` class is a helper class that can free you from manually managing the `requires` deps in long strings of jobs that must run sequentially.
 
 ## Full documentation
 
-This document, along with API reference doc, and changelog, is available at <http://asynciojobs.readthedocs.io>
+This document, along with `asynciojobs`'s API reference documentation, and changelog, is available at <http://asynciojobs.readthedocs.io>
 
 **Contact author**: *thierry dot parmentelat at inria dot fr*
 
@@ -55,6 +54,12 @@ if (major, minor) < (3, 5):
 pip3 install asynciojobs
 ```
 
+### Extra dependency to `graphviz`
+
+This installation method will not try to install the `graphviz` python package, that can be cumbersome to install, and that is not strictly necessary at run-time for orchestrating a scheduler.
+
+We recommend to install it for developping scenarios though since, as we will see shortly, `asynciojobs` provides a graphical representation of schedulers, that is very convenient for debugging.
+
 ## Examples
 
 
@@ -62,24 +67,45 @@ pip3 install asynciojobs
 import asyncio
 ```
 
-Let's consider a simple coroutine for the sake of illustration
+In all our examples, we will use the `Watch` class, it is a helper class that works like a stopwatch; instead of printing the current time, we prefer to display running time from the *beginning*, which corresponds to the time where the watch instance is created or reset:
+
+
+```python
+import time
+from asynciojobs import Watch
+
+watch = Watch()
+time.sleep(0.5)
+watch.print_elapsed('some')
+```
+
+    000.000  
+    000.504 some
+
+We can now write a simple coroutine for illustrating schedulers through small examples:
 
 
 ```python
 import time
 
+watch = Watch()
+
 # just print a message when entering and exiting, and sleep in the middle
 async def in_out(timeout):
-    print("-> in_out({})".format(timeout))
+    global watch
+    watch.print_elapsed("-> in_out({})\n".format(timeout))
     await asyncio.sleep(timeout)
-    print("<- in_out({})".format(timeout))
+    watch.print_elapsed("<- in_out({})\n".format(timeout))
     # return something easy to recognize: the number of milliseconds
     return 1000 * timeout
 ```
 
+    000.000  
+
+
 ### Example A : running in parallel
 
-Running a series of coroutines in parallel - a la `gather` - can be done like this
+Running a series of coroutines in parallel - a la `gather` - can be done like this:
 
 
 ```python
@@ -97,16 +123,80 @@ So when we run them, we would start all 3 coroutines at once, and return once th
 
 
 ```python
+# this is required in our case because our coroutines
+# use watch to show time elapsed since reset()
+watch.reset()
+
 sa = Scheduler(a1, a2, a3)
+sa
+```
+
+
+
+
+    Scheduler with 0 done + 0 ongoing + 3 idle = 3 job(s)
+
+
+
+
+```python
 sa.run()
 ```
 
-    -> in_out(0.1)
-    -> in_out(0.2)
-    -> in_out(0.25)
-    <- in_out(0.1)
-    <- in_out(0.2)
-    <- in_out(0.25)
+    000.016 -> in_out(0.25)
+    000.016 -> in_out(0.1)
+    000.016 -> in_out(0.2)
+    000.117 <- in_out(0.1)
+    000.217 <- in_out(0.2)
+    000.267 <- in_out(0.25)
+
+
+
+
+
+    True
+
+
+
+**Note**: the `run()` method is a regular python function, which is easier to illustrate in this README, but in practical terms it is only a wrapper around the `co_run()` coroutine method.
+
+### Several programming styles
+
+The library offers great flexibility for creating schedulers and jobs. In particular in the example above, we have created the jobs first, and then added them to the scheduler; it is possible to do it the other way around, like this totally equivalent construction:
+
+
+```python
+# if it is more to your taste, you can as well
+# create the scheduler first
+sa2 = Scheduler()
+
+# and then add jobs in it as you create them
+a1, a2 = Job(in_out(0.1), scheduler=sa2), Job(in_out(0.2), scheduler=sa2)
+
+# or add them later on
+a3 = Job(in_out(0.25))
+sa2.add(a3)
+```
+
+
+
+
+    Scheduler with 0 done + 0 ongoing + 3 idle = 3 job(s)
+
+
+
+
+```python
+watch.reset()
+sa2.run()
+```
+
+    000.000 -> in_out(0.2)
+    000.000 -> in_out(0.25)
+    000.000 -> in_out(0.1)
+    000.101 <- in_out(0.1)
+    000.204 <- in_out(0.2)
+    000.253 <- in_out(0.25)
 
 
 
@@ -134,12 +224,12 @@ a1.result()
 
 ### Example B : adding requirements (dependencies)
 
-Now we can add *requirements* dependencies between jobs, like in the following example. Here we want to run:
+Now we can add *requirements* dependencies between jobs, as follows. Here we want to run:
  
-* Job 1 followed by job 2
+* job 1 followed by job 2
 * all this in parallel with job 3
 
-We take this chance to show that jobs can be tagged with a label, which can be convenient sometimes.
+We take this chance to show that jobs can be tagged with a label, which can be convenient for a more friendly display.
 
 
 ```python
@@ -154,17 +244,19 @@ Now `b2` needs `b1` to be finished before it can start. And so only the 2 first 
 
 
 ```python
+watch.reset()
+
 # with this setup we are certain that b3 ends in the middle of b2
 sb = Scheduler(b1, b2, b3)
 sb.run()
 ```
 
-    -> in_out(0.25)
-    -> in_out(0.1)
-    <- in_out(0.1)
-    -> in_out(0.2)
-    <- in_out(0.25)
-    <- in_out(0.2)
+    000.000 -> in_out(0.1)
+    000.000 -> in_out(0.25)
+    000.105 <- in_out(0.1)
+    000.106 -> in_out(0.2)
+    000.256 <- in_out(0.25)
+    000.310 <- in_out(0.2)
 
 
 
@@ -176,7 +268,7 @@ sb.run()
 
 ### Example B' : exact same using a `Sequence`
 
-The code above in example B is exactly identical to this
+The code above in example B is exactly identical to this:
 
 
 ```python
@@ -186,16 +278,21 @@ sb2 = Scheduler(
     Sequence(Job(in_out(0.1), label="bp1"),
              Job(in_out(0.2), label="bp2")),
     Job(in_out(0.25)))
+```
+
+
+```python
+watch.reset()
 
 sb2.run()
 ```
 
-    -> in_out(0.1)
-    -> in_out(0.25)
-    <- in_out(0.1)
-    -> in_out(0.2)
-    <- in_out(0.25)
-    <- in_out(0.2)
+    000.000 -> in_out(0.25)
+    000.000 -> in_out(0.1)
+    000.103 <- in_out(0.1)
+    000.103 -> in_out(0.2)
+    000.255 <- in_out(0.25)
+    000.306 <- in_out(0.2)
 
 
 
@@ -209,8 +306,22 @@ sb2.run()
 
 Note that because `sb.run()` had returned `True`, we could have inferred that all jobs have completed. As a matter of fact, `run()` returns `True` **if and only if**:
 
-* all jobs have completed during the allocated timeout
-* no critical job has raised an exception
+* all jobs have completed during the allocated timeout, if specified, and
+* no critical job has raised an exception.
+
+**Note**:
+
+What happens if these two conditions are not met depends on the `critical` attribute on the scheduler object:
+
+* if scheduler is **not critical**: then if any of these conditions is not met, `run()` **returns `False`**;
+* if scheduler is itself **critical**, then `run()` will **raise an exception**, depending on the reason behind the failure, see [co_run()](http://asynciojobs.readthedocs.io/en/latest/API.html#asynciojobs.scheduler.Scheduler.co_run) for details.
+
+This behaviour has been chosen so that nested schedulers do the right thing: it allows exceptions to bubble from inner schedulers up to the toplevel one, and to trigger its abrupt termination.
+
+See also [failed_critical()](http://asynciojobs.readthedocs.io/en/latest/API.html#asynciojobs.purescheduler.PureScheduler.failed_critical), 
+[failed_time_out()](http://asynciojobs.readthedocs.io/en/latest/API.html#asynciojobs.purescheduler.PureScheduler.failed_time_out),
+[debrief()](http://asynciojobs.readthedocs.io/en/latest/API.html#asynciojobs.purescheduler.PureScheduler.debrief)
+and [why()](http://asynciojobs.readthedocs.io/en/latest/API.html#asynciojobs.purescheduler.PureScheduler.why).
 
 ### Inspecting scheduler and results - `Scheduler.list()`
 
@@ -235,23 +346,30 @@ print(b3.raised_exception())
     None
 
 
-To see an overview of a scheduler, just use the `list()` method that will give you an overview - whether the scheduler has run or not, by the way:
+To see an overview of a scheduler, just use the `list()` method that will summarize the contents of a scheduler:
 
 
 ```python
 sb.list()
 ```
 
-    1   ☉ ☓   <Job `Job[in_out (...)]`> [[ -> 250.0]] 
-    2   ☉ ☓   <Job `b1`> [[ -> 100.0]] 
-    3   ☉ ☓   <Job `b2`> [[ -> 200.0]] requires={2}
+    1   ☉ ☓   <Job `b1`> [[ -> 100.0]] 
+    2   ☉ ☓   <Job `Job[in_out (...)]`> [[ -> 250.0]] 
+    3   ☉ ☓   <Job `b2`> [[ -> 200.0]] requires={1}
 
+
+The textual representation displayed by `list()` shows all the jobs, with:
+* its rank in the topological order of the graph (graphs with cycles will need to use `list_safe()`)
+* its progress wrt the job's lifecycle,
+* its label, or some computed label if not specified,
+* its result or exception if the job has run
+* its requirements.
 
 The individual lifecycle for a job instance is:
 
 idle → scheduled → running → done
 
-where the 'scheduled' state is for cases where a maximal number of simulataneous jobs has been reached, so the job essentially has all its requirements fulfilled but still waits for its turn.
+where the 'scheduled' state is for cases where a maximal number of simulataneous jobs has been reached - see `jobs_window` - so the job essentially has all its requirements fulfilled but still waits for its turn.
 
 With that in mind, here is a complete list of the symbols used, with their meaning:
 
@@ -291,15 +409,17 @@ And and here's an example of output for `list()` with all possible combinations 
 
 Note that if your locale/terminal cannot output these, the code will tentatively resort to pure ASCII output.
 
-### Graphical output
+### Graphical representation
 
-It is easy to get a graphical representation of a scheduler. 
+It is easy to get a graphical representation of a scheduler. From inside a jupyter notebook, you would just need to do e.g.
 
-We start with a rustic and simple workflow, that first creates the graph as a dot file, and then uses an external tool to produce a png file that we can include in this documentation.
+    sb2.graph()
+
+However, in the context of readthedocs, this notebook is translated into a static markdown file, so we cannot use this elegant approach. Instead, we use a more rustic workflow, that first creates the graph as a dot file, and then uses an external tool to produce a png file:
 
 
 ```python
-# this can always be done, it does not require any extra dependency
+# this can always be done, it does not require graphviz to be installed
 sb2.export_as_dotfile("readme-example-b.dot")
 ```
 
@@ -312,8 +432,7 @@ sb2.export_as_dotfile("readme-example-b.dot")
 
 
 ```python
-# assuming you have the 'dot' program installed
-# it is part of graphviz
+# assuming you have the 'dot' program installed (it ships with graphviz)
 
 import os
 
@@ -327,7 +446,7 @@ os.system("dot -Tpng readme-example-b.dot -o readme-example-b.png")
 
 
 
-We can now look at the result:
+We can now look at the result, where you can recognize the logic of example B:
 
 ![example B as a png file](readme-example-b.png)
 
@@ -350,9 +469,10 @@ Now we need a modified version of the `in_out` coroutine, that interacts with th
 
 ```python
 async def in_out_bus(timeout, bus):
-    await bus.put("-> in_out({})".format(timeout))
+    global watch
+    await bus.put("{} -> in_out({})".format(watch.elapsed(), timeout))
     await asyncio.sleep(timeout)
-    await bus.put("<- in_out({})".format(timeout))
+    await bus.put("{} <- in_out({})".format(watch.elapsed(), timeout))
     # return something easy to recognize
     return 10 * timeout
 ```
@@ -369,17 +489,22 @@ c1, c2, c3, c4 = (Job(in_out_bus(0.2, message_bus), label="c1"),
                   Job(monitor_loop(message_bus), forever=True, label="monitor"))
 
 c3.requires(c1)
+```
+
+
+```python
+watch.reset()
 
 sc = Scheduler(c1, c2, c3, c4)
 sc.run()
 ```
 
-    BUS: -> in_out(0.4)
-    BUS: -> in_out(0.2)
-    BUS: <- in_out(0.2)
-    BUS: -> in_out(0.3)
-    BUS: <- in_out(0.4)
-    BUS: <- in_out(0.3)
+    BUS: 000.000 -> in_out(0.4)
+    BUS: 000.000 -> in_out(0.2)
+    BUS: 000.206 <- in_out(0.2)
+    BUS: 000.207 -> in_out(0.3)
+    BUS: 000.405 <- in_out(0.4)
+    BUS: 000.509 <- in_out(0.3)
 
 
 
@@ -402,28 +527,59 @@ sc.list()
     4   ☉ ☓   <Job `c3`> [[ -> 3.0]] requires={2}
 
 
+Forever jobs appear with a dotted border on a graphical representation:
+
+
+```python
+# a function to materialize the rustic way of producing a graphical representation
+def make_png(scheduler, prefix):
+    dotname = "{}.dot".format(prefix)
+    pngname = "{}.png".format(prefix)
+    scheduler.export_as_dotfile(dotname)
+    os.system("dot -Tpng {dotname} -o {pngname}".format(**locals()))
+    print(pngname)
+```
+
+
+```python
+make_png(sc, "readme-example-c")
+```
+
+    readme-example-c.png
+
+
+![example-c](readme-example-c.png)
+
+**Note**: a scheduler being essentially a **set** of jobs, the order of creation of jobs in the scheduler is not preserved in memory.
+
 ### Example D : specifying a global timeout
 
-A `Scheduler` object has a `timeout` attribute, that can be set to a duration (in seconds). When provided, `run()` will ensure its global duration does not exceed this value, and will return `False` if the timeout triggers.
+A `Scheduler` object has a `timeout` attribute, that can be set to a duration (in seconds). When provided, `run()` will ensure its global duration does not exceed this value, and will return `False` or raise `TimeoutError` if the timeout triggers.
 
 Of course this can be used with any number of jobs and dependencies, but for the sake of simplicity let us see this in action with just one job that loops forever:
 
 
 ```python
 async def forever():
+    global watch
     for i in range(100000):
-        print("{}: forever {}".format(time.strftime("%H:%M:%S"), i))
+        print("{}: forever {}".format(watch.elapsed(), i))
         await asyncio.sleep(.1)
         
 j = Job(forever(), forever=True)
-sd = Scheduler(j, timeout=0.25)
+```
+
+
+```python
+watch.reset()
+sd = Scheduler(j, timeout=0.25, critical=False)
 sd.run()
 ```
 
-    12:46:51: forever 0
-    12:46:52: forever 1
-    12:46:52: forever 2
-    12:46:52.211 SCHEDULER(None): PureScheduler.co_run: TIMEOUT occurred
+    000.000: forever 0
+    000.106: forever 1
+    000.208: forever 2
+    01:28:10.543 SCHEDULER(None): PureScheduler.co_run: TIMEOUT occurred
 
 
 
@@ -449,14 +605,18 @@ j
 
 ### Handling exceptions
 
-A job instance can be **critical** or not; what this means is as follows
+A job instance can be **critical** or not; what this means is as follows:
 
- * if a critical job raises an exception, the whole scheduler aborts immediately and returns False
- * if a non-critical job raises an exception, the whole scheduler proceeds regardless
+ * if a critical job raises an exception, the whole scheduler aborts immediately and returns `False`;
+ * if a non-critical job raises an exception, the whole scheduler proceeds regardless.
  
-In both cases the exception can be retrieved in the corresponding Job object with `raised_exception()`
+In both cases the exception can be retrieved in the corresponding Job object with `raised_exception()`.
 
-For convenience, the **critical** property can be set either at the `Job` or at the `Scheduler` level. Of course the former takes precedence if set. The default for an scheduler object is `critical=False`. Let us see this below.
+XXX: this section needs to be reviewd after merging of branch critical-default
+
+also check that the graphical legend is introduced properly (esp. regarding critical, it should show up much earlier)
+
+Since `asynciojobs` version 1.0, the default for all jobs and schedulers is **critical=True**. 
 
 ### Example E : non critical jobs
 
@@ -470,26 +630,57 @@ async def boom(n):
 
 ```python
 # by default everything is non critical
-e1 = Job(in_out(0.2))
+e1 = Job(in_out(0.2), label='begin')
 e2 = Job(boom(0.2), label="boom")
-e3 = Job(in_out(0.3))
-e2.requires(e1)
-e3.requires(e2)
+e3 = Job(in_out(0.3), label='end')
 
-se = Scheduler(e1, e2, e3)
-print("orch:", se.run())
+se = Scheduler(Sequence(e1, e2, e3))
+```
+
+
+```python
+# with these settings, jobs 'end' is not hindered 
+# by the middle job raising an exception
+watch.reset()
+se.run()
+```
+
+    000.000 -> in_out(0.2)
+    000.202 <- in_out(0.2)
+    000.406 -> in_out(0.3)
+    000.707 <- in_out(0.3)
+
+
+
+
+
+    True
+
+
+
+
+```python
+# in this listing you can see that job 'end' 
+# has been running and has returned '300' as expected
 se.list()
 ```
 
-    -> in_out(0.2)
-    <- in_out(0.2)
-    -> in_out(0.3)
-    <- in_out(0.3)
-    orch: True
-    1   ☉ ☓   <Job `Job[in_out (...)]`> [[ -> 200.0]] 
+    1   ☉ ☓   <Job `begin`> [[ -> 200.0]] 
     2   ★ ☓   <Job `boom`> !! exception => Exception:boom after 0.2s!! requires={1}
-    3   ☉ ☓   <Job `Job[in_out (...)]`> [[ -> 300.0]] requires={2}
+    3   ☉ ☓   <Job `end`> [[ -> 300.0]] requires={2}
 
+
+Non-critical jobs and schedulers show up with a thin and black border:
+
+
+```python
+make_png(se, "readme-example-e")
+```
+
+    readme-example-e.png
+
+
+![example E](readme-example-e.png)
 
 ### Example F : critical jobs
 
@@ -497,23 +688,56 @@ Making the *boom* job critical would instead cause the scheduler to bail out:
 
 
 ```python
-f1 = Job(in_out(0.2))
+f1 = Job(in_out(0.2), label="begin")
 f2 = Job(boom(0.2), label="boom", critical=True)
-f3 = Job(in_out(0.3))
+f3 = Job(in_out(0.3), label="end")
 
 sf = Scheduler(Sequence(f1, f2, f3))
-print("run:", sf.run())
+```
+
+
+```python
+# with this setup, orchestration stops immediately
+# when the exception triggers in boom()
+# and the last job does not run at all
+watch.reset()
+sf.run()
+```
+
+    000.000 -> in_out(0.2)
+    000.204 <- in_out(0.2)
+    01:28:11.796 SCHEDULER(None): Emergency exit upon exception in critical job
+
+
+
+
+
+    False
+
+
+
+
+```python
+# as you can see, job 'end' has not even started here
 sf.list()
 ```
 
-    -> in_out(0.2)
-    <- in_out(0.2)
-    12:46:53.361 SCHEDULER(None): Emergency exit upon exception in critical job
-    run: False
-    1   ☉ ☓   <Job `Job[in_out (...)]`> [[ -> 200.0]] 
+    1   ☉ ☓   <Job `begin`> [[ -> 200.0]] 
     2 ⚠ ★ ☓   <Job `boom`> !! CRIT. EXC. => Exception:boom after 0.2s!! requires={1}
-    3     ⚐   <Job `Job[in_out (...)]`> [not done] requires={2}
+    3     ⚐   <Job `end`> [not done] requires={2}
 
+
+Critical jobs and schedulers show up with a thick and red border:
+
+
+```python
+make_png(sf, "readme-example-f")
+```
+
+    readme-example-f.png
+
+
+![example F](readme-example-f.png)
 
 ### Limiting the number of simultaneous jobs
 
@@ -535,55 +759,173 @@ async def aprint(message, delay=0.5):
 s = Scheduler(jobs_window=4)
 
 for i in range(1, 9):
-    s.add(Job(aprint("{}-th job".format(i), 0.5)))
+    s.add(Job(aprint("{} {}-th job".format(watch.elapsed(), i), 0.5)))
 ```
 
 
 ```python
 # so running them with a window of 4 means approx. 1 second
-import time
-beg = time.time()
+watch.reset()
 s.run()
-end = time.time()
-
 # expect around 1 second
-print("total duration = {}s".format(end-beg))
+print("total duration = {}s".format(watch.elapsed()))
 ```
 
-    2-th job
-    7-th job
-    3-th job
-    8-th job
-    1-th job
-    4-th job
-    5-th job
-    6-th job
-    total duration = 1.003814935684204s
+    000.500 3-th job
+    000.500 1-th job
+    000.500 8-th job
+    000.500 4-th job
+    000.500 6-th job
+    000.500 7-th job
+    000.500 5-th job
+    000.500 2-th job
+    total duration = 001.003s
 
 
-### Cleaning up - the `shutdown()` method.
+## Nesting schedulers
 
-Scheduler objects expose the `shutdown()` method. 
+As mentioned in the introduction, a `Scheduler` instance can itself be used as a job. This makes it easy to split complex scenarii into pieces, and to combine them in a modular way.
 
-This method should be called explicitly by the user when resources are attached to the various jobs, and they can be released.
+Let us consider the following example:
 
-Contrary to what was done in older versions of `asynciojobs`, where nested schedulers were not yet as massively useful, this call **needs to be explicit** and is not automatically invoked by `run()` when the orchestration is over.
 
-Although such a cleanup is not really useful in the case of local `Job` instances, some application libraries like `apssh` define jobs that are attached to network connections, ssh connections in the case of `apssh`, and it is convenient to be able to terminate those connections explicitly.
+```python
+# we start with the creation of an internal scheduler
+# that has a simple diamond structure
 
-## Customizing jobs
+sub_sched = Scheduler(label="critical nested", critical=True)
+subj1 = Job(aprint("subj1"), label='subj1', scheduler=sub_sched)
+subj2 = Job(aprint("subj2"), label='subj2', required=subj1, scheduler=sub_sched)
+subj3 = Job(aprint("subj3"), label='subj3', required=subj1, scheduler=sub_sched)
+subj4 = Job(aprint("subj4"), label='subj4', required=(subj2, subj3), scheduler=sub_sched)
+```
 
-### Customizing the `Job` class
+We can now create a main scheduler, in which **one of the jobs is this low-level scheduler**:
 
-`Job` actually is a specializtion of `AbstractJob`, and the specification is that the `co_run()` method should denote a coroutine itself, as that is what is triggered by `Scheduler` when running said job.
 
-### `AbstractJob.co_shutdown()`
+```python
+# the main scheduler
+main_sched = Scheduler(
+    Sequence(
+        Job(aprint("main-start"), label="main-start"),
+        # the way to graft the low-level logic in this main workflow
+        # is to just use the ShcdulerJob instance as a job
+        sub_sched,
+        Job(aprint("main-end"), label="main-end"),
+    )
+)
+```
 
-The `shutdown()` method on a scheduler sends `co_shutdown()` method on all - possibly nested - jobs. The default behaviour - in the `Job` class - is to do nothing, but this can be redefined by daughter classes of `AbstractJob` when relevant. Typically, an implementation of an `SshJob` will allow for a given SSH connection to be shared amongst several `SshJob` instances, and so `co_shutdown()` may be used to  close the underlying SSH connections.
+This nested structure is rendered by both `list()` and `graph()`:
 
-### The `apssh`  library and the ` SshJob` class
 
-You can easily define your own `Job` class by specializing `job.AbstractJob`. As an example, which was the primary target when developping `asynciojobs`, you can find [in the `apssh` library](https://github.com/parmentelat/apssh) a `SshJob` class, with which you can easily orchestrate scenarios involving several hosts that you interact with using ssh.
+```python
+# list() shows the contents of sub-schedulers implemented as Scheduler instances
+main_sched.list()
+```
+
+    1     ⚐   <Job `main-start`> [not done] 
+    2 ⚠   ⚐   <Scheduler `critical nested`> [not done] requires={1} -> entries={3}
+    3     ⚐   > <Job `subj1`> [not done] 
+    4     ⚐   > <Job `subj3`> [not done] requires={3}
+    5     ⚐   > <Job `subj2`> [not done] requires={3}
+    6     ⚐   > <Job `subj4`> [not done] requires={4, 5}
+    2 --end-- < <Scheduler `critical nested`> exits={6}
+    7     ⚐   <Job `main-end`> [not done] requires={2}
+
+
+When using a `Scheduler` to describe nested schedulers, `asynciojobs` will also produce a graphical output that properly exhibits the overall structure:
+
+
+```python
+# the easiest way to see 
+# a scheduler as a graph is from a notebook:
+main_sched.graph()
+```
+
+
+
+
+![svg](README-eval_files/README-eval_116_0.svg)
+
+
+
+Let us do this again another way, so that this shows up properly in *readthedocs*:
+
+
+```python
+main_dot = main_sched.graph()
+main_dot.format = 'png'
+main_dot.render("readme-nested")
+```
+
+
+
+
+    'readme-nested.png'
+
+
+
+That we now visualize again, using the produced png:
+
+![](readme-nested.png)
+
+Which when executed produces this output:
+
+
+```python
+main_sched.run()
+```
+
+    main-start
+    subj1
+    subj3
+    subj2
+    subj4
+    main-end
+
+
+
+
+
+    True
+
+
+
+### Benefits of nesting schedulers
+
+This feature can can come in handy to deal with issues like:
+
+* you want to be able to re-use code - as in writing a library - and nesting schedulers is a convenient way to address that; functions can return pieces of workflows implemented as schedulers, that can be easily mixed within a larger scenario;
+
+* in another dimension, nested schedulers can be a solution if
+  * you want the `jobs_window` attribute to apply to only a subset of your jobs;
+  * or you need the `timeout` attribute to apply to only a subset of your jobs;
+  * you have `forever` jobs that need to be terminated sooner than the very end of the overall scenario.
+
+
+### Historical note
+
+Internally, `asynciojobs` comes with the `PureScheduler` class. 
+
+A `PureScheduler` instance is a fully functional scheduler, but it cannot be used as a nested scheduler.
+
+In terms of implementation, `Scheduler` is a mixin class that inherits from both `PureScheduler` and `AbstractJob`.
+
+In previous versions of this library, the `Scheduler` class could not be nested, and a specific class was required for the purpose of creating nestable schedulers, like is shown in this table:
+
+<table>
+  <thead>
+      <tr><th>version</th><th>just scheduling</th><th>nestable scheduler</th></tr>
+  </thead>
+  <tbody>
+      <tr><td><= 0.8</td><td><code>Scheduler</code></td><td>no class available</td></tr>
+      <tr><td>== 0.9</td><td><code>Scheduler</code></td><td><code>SchedulerJob</code></td></tr>
+      <tr><td>>= 0.10</td><td><code>PureScheduler</code></td><td><code>Scheduler</code></td></tr>
+  </tbody>
+</table>
+
+The bottom line is that, starting with version 0.10, users primarily do not need to worry about that, and creating only nestable `Scheduler` objects is the recommended approach.
 
 ## Other useful features on the `Scheduler` class
 
@@ -603,10 +945,20 @@ In some cases like esp. test scenarios, it can be helpful to add requirements to
 
 `run()` is a regular `def` function (i.e. not an `async def`), but in fact just a wrapper around the native coroutine called `co_run()`.
 
-    def run(self, loop=None, *args, **kwds):
-        if loop is None:
-            loop = asyncio.get_event_loop()
-        return loop.run_until_complete(self.co_run(loop=loop, *args, **kwds))
+    def run(self, *args, **kwds):
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(self.co_run(*args, **kwds))
+
+
+### Cleaning up - the `shutdown()` method.
+
+Scheduler objects expose the `shutdown()` method. 
+
+This method should be called explicitly by the user when resources are attached to the various jobs, and they can be released.
+
+Contrary to what was done in older versions of `asynciojobs`, where nested schedulers were not yet as massively useful, this call **needs to be explicit**, it is no longer automatically invoked by `run()` when the orchestration is over.
+
+Although such a cleanup is not really useful in the case of local `Job` instances, some application libraries like `apssh` define jobs that are attached to network connections, ssh connections in the case of `apssh`, and it is convenient to be able to terminate those connections explicitly.
 
 ### Visualization - in a notebook : `Scheduler.graph()`
 
@@ -627,7 +979,7 @@ s.graph()
 
 
 
-![svg](README-eval_files/README-eval_90_0.svg)
+![svg](README-eval_files/README-eval_131_0.svg)
 
 
 
@@ -695,151 +1047,6 @@ g.render('readme')
 
 
 
-## Nesting schedulers
-
-As mentioned in the introduction, a `Scheduler` instance can itself be used as a job. This makes it easy to split complex scenarii into pieces, and to combine them in a modular way.
-
-Let us consider the following example:
-
-
-```python
-# we start with the creation of an internal scheduler
-# that has a simple diamond structure
-
-sub_sched = Scheduler(label="critical nested", critical=True)
-subj1 = Job(aprint("subj1"), label='subj1', scheduler=sub_sched)
-subj2 = Job(aprint("subj2"), label='subj2', required=subj1, scheduler=sub_sched)
-subj3 = Job(aprint("subj3"), label='subj3', required=subj1, scheduler=sub_sched)
-subj4 = Job(aprint("subj4"), label='subj4', required=(subj2, subj3), scheduler=sub_sched)
-```
-
-We can now create a main scheduler, in which **one of the jobs is this low-level scheduler**:
-
-
-```python
-# the main scheduler
-main_sched = Scheduler(
-    Sequence(
-        Job(aprint("main-start"), label="main-start"),
-        # the way to graft the low-level logic in this main workflow
-        # is to just use the ShcdulerJob instance as a job
-        sub_sched,
-        Job(aprint("main-end"), label="main-end"),
-    )
-)
-```
-
-This nested structure is rendered by both `list()` and `graph()`:
-
-
-```python
-# list() shows the contents of sub-schedulers implemented as Scheduler instances
-main_sched.list()
-```
-
-    1     ⚐   <Job `main-start`> [not done] 
-    2 ⚠   ⚐   <Scheduler `critical nested`> [not done] requires={1} -> entries={3}
-    3     ⚐   > <Job `subj1`> [not done] 
-    4     ⚐   > <Job `subj2`> [not done] requires={3}
-    5     ⚐   > <Job `subj3`> [not done] requires={3}
-    6     ⚐   > <Job `subj4`> [not done] requires={4, 5}
-    2 --end-- < <Scheduler `critical nested`> exits={6}
-    7     ⚐   <Job `main-end`> [not done] requires={2}
-
-
-When using a `Scheduler` to describe nested schedulers, `asynciojobs` will also produce a graphical output that properly exhibits the overall structure:
-
-
-```python
-# the easiest way to see 
-# a scheduler as a graph is from a notebook:
-main_sched.graph()
-```
-
-
-
-
-![svg](README-eval_files/README-eval_109_0.svg)
-
-
-
-Let us do this again another way, so that this shows up properly in *readthedocs*:
-
-
-```python
-main_dot = main_sched.graph()
-main_dot.format = 'png'
-main_dot.render("readme-nested")
-```
-
-
-
-
-    'readme-nested.png'
-
-
-
-That we now visualize again, using the produced png:
-
-![](readme-nested.png)
-
-Which when executed produces this output:
-
-
-```python
-main_sched.run()
-```
-
-    main-start
-    subj1
-    subj2
-    subj3
-    subj4
-    main-end
-
-
-
-
-
-    True
-
-
-
-### Benefits of nesting schedulers
-
-This feature can can come in handy to deal with issues like:
-
-* you want to be able to re-use code - as in writing a library - and nesting schedulers is a convenient way to address that; functions can return pieces of workflows implemented as schedulers, that can be easily mixed within a larger scenario;
-
-* in another dimension, nested schedulers can be a solution if
-  * you want the `jobs_window` attribute to apply to only a subset of your jobs;
-  * or you need the `timeout` attribute to apply to only a subset of your jobs;
-  * you have `forever` jobs that need to be terminated sooner than the very end of the overall scenario.
-
-
-### Historical note
-
-Internally, `asynciojobs` comes with the `PureScheduler` class. 
-
-A `PureScheduler` instance is a fully functional scheduler, but it cannot be used as a nested scheduler.
-
-In terms of implementation, `Scheduler` is a mixin class that inherits from both `PureScheduler` and `AbstractJob`.
-
-In previous versions of this library, the `Scheduler` class could not be nested, and a specific class was required for the purpose of creating nestable schedulers, like is shown in this table:
-
-<table>
-  <thead>
-      <tr><th>version</th><th>just scheduling</th><th>nestable scheduler</th></tr>
-  </thead>
-  <tbody>
-      <tr><td><= 0.8</td><td><code>Scheduler</code></td><td>no class available</td></tr>
-      <tr><td>== 0.9</td><td><code>Scheduler</code></td><td><code>SchedulerJob</code></td></tr>
-      <tr><td>>= 0.10</td><td><code>PureScheduler</code></td><td><code>Scheduler</code></td></tr>
-  </tbody>
-</table>
-
-The bottom line is that, starting with version 0.10, users primarily do not need to worry about that, and creating only nestable `Scheduler` objects is the recommended approach.
-
 ## Troubleshooting
 
 As a general rule, and maybe especially when dealing with nested schedulers, it is important to keep in mind the following constraints.
@@ -870,3 +1077,17 @@ In particular, if you take one job instance that has completed, and try to inser
 ### You can't run the same scheduler twice
 
 In much the same way, once a scheduler is done - assuming all went well - essentially all of its jobs are marked as done, and trying to run it again will either do nothing, or raise an exception.
+
+## Customizing jobs
+
+### Customizing the `Job` class
+
+`Job` actually is a specializtion of `AbstractJob`, and the specification is that the `co_run()` method should denote a coroutine itself, as that is what is triggered by `Scheduler` when running said job.
+
+### `AbstractJob.co_shutdown()`
+
+The `shutdown()` method on a scheduler sends `co_shutdown()` method on all - possibly nested - jobs. The default behaviour - in the `Job` class - is to do nothing, but this can be redefined by daughter classes of `AbstractJob` when relevant. Typically, an implementation of an `SshJob` will allow for a given SSH connection to be shared amongst several `SshJob` instances, and so `co_shutdown()` may be used to  close the underlying SSH connections.
+
+### The `apssh`  library and the ` SshJob` class
+
+You can easily define your own `Job` class by specializing `job.AbstractJob`. As an example, which was the primary target when developping `asynciojobs`, you can find [in the `apssh` library](https://github.com/parmentelat/apssh) a `SshJob` class, with which you can easily orchestrate scenarios involving several hosts that you interact with using ssh.

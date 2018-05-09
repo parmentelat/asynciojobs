@@ -1025,7 +1025,6 @@ class PureScheduler:                                    # pylint: disable=r0902
 DOT_%28graph_description_language%29
         """
         self._set_sched_ids()
-        # xxx should maybe use/show scheduler's label if set
         return "digraph asynciojobs" + self._dot_body(DotStyle())
 
     def _dot_body(self, dot_style):
@@ -1068,7 +1067,6 @@ DOT_%28graph_description_language%29
 
             # nested scheduler
             else:
-                # xxx should maybe use/show scheduler's label if set
                 # insert a subgraph instead
 
                 cluster_name = job.dot_cluster_name()
