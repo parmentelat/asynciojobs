@@ -58,6 +58,14 @@ class Watch:
         """
         return (datetime.now() - self.start).total_seconds()
 
+    def elapsed(self):
+        """
+        Returns:
+          str: number of seconds elapsed since start, formatted
+          on 7 characters: 3 for seconds, a dot, 3 for milliseconds
+        """
+        return "{:07.3f}".format(self.seconds())
+
     def print_elapsed(self, suffix=" "):
         """
         Print the elapsed time since start in format
@@ -67,7 +75,7 @@ class Watch:
           suffix(str): is appended to the output; to be explicit,
             by default no newline is added.
         """
-        print("{:07.3f} {}".format(self.seconds(), suffix),
+        print("{} {}".format(self.elapsed(), suffix),
               end="")
 
     @staticmethod
