@@ -196,7 +196,7 @@ class Scheduler(PureScheduler, AbstractJob):
         """
         assigns a name to the subgraph that will represent
         a nested scheduler; dot format imposes this name to start
-        with ``cluster_`
+        with ``cluster_``
         """
         return "cluster_{}"\
                .format(self._sched_id)
