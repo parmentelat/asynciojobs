@@ -212,7 +212,8 @@ class Tests(unittest.TestCase):
     def _test_exc_non_critical(self, verbose):
 
         print("verbose = {}".format(verbose))
-        a1, a2 = SLJ(1), J(co_exception(0.5), label='non critical boom')
+        a1, a2 = SLJ(1), J(co_exception(0.5), label='non critical boom',
+                           critical=False)
         sched = PureScheduler(a1, a2, verbose=verbose)
         self.assertTrue(sched.run())
         print(common_sep + 'debrief()')
