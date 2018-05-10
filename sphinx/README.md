@@ -143,12 +143,12 @@ sa
 sa.run()
 ```
 
-    000.015 -> in_out(0.25)
-    000.015 -> in_out(0.1)
-    000.015 -> in_out(0.2)
-    000.116 <- in_out(0.1)
-    000.216 <- in_out(0.2)
-    000.265 <- in_out(0.25)
+    000.020 -> in_out(0.25)
+    000.021 -> in_out(0.1)
+    000.021 -> in_out(0.2)
+    000.121 <- in_out(0.1)
+    000.224 <- in_out(0.2)
+    000.271 <- in_out(0.25)
 
 
 
@@ -191,12 +191,12 @@ watch.reset()
 sa2.run()
 ```
 
-    000.000 -> in_out(0.2)
     000.000 -> in_out(0.1)
+    000.000 -> in_out(0.2)
     000.000 -> in_out(0.25)
-    000.102 <- in_out(0.1)
-    000.203 <- in_out(0.2)
-    000.254 <- in_out(0.25)
+    000.103 <- in_out(0.1)
+    000.201 <- in_out(0.2)
+    000.252 <- in_out(0.25)
 
 
 
@@ -251,12 +251,12 @@ sb = Scheduler(b1, b2, b3)
 sb.run()
 ```
 
-    000.000 -> in_out(0.1)
     000.000 -> in_out(0.25)
-    000.101 <- in_out(0.1)
-    000.101 -> in_out(0.2)
-    000.251 <- in_out(0.25)
-    000.305 <- in_out(0.2)
+    000.001 -> in_out(0.1)
+    000.102 <- in_out(0.1)
+    000.102 -> in_out(0.2)
+    000.255 <- in_out(0.25)
+    000.306 <- in_out(0.2)
 
 
 
@@ -287,12 +287,12 @@ watch.reset()
 sb2.run()
 ```
 
-    000.000 -> in_out(0.1)
     000.000 -> in_out(0.25)
+    000.000 -> in_out(0.1)
     000.103 <- in_out(0.1)
-    000.103 -> in_out(0.2)
-    000.251 <- in_out(0.25)
-    000.304 <- in_out(0.2)
+    000.104 -> in_out(0.2)
+    000.254 <- in_out(0.25)
+    000.308 <- in_out(0.2)
 
 
 
@@ -353,9 +353,9 @@ To see an overview of a scheduler, just use the `list()` method that will summar
 sb.list()
 ```
 
-    1 ⚠ ☉ ☓   <Job `b1`> [[ -> 100.0]] 
-    2 ⚠ ☉ ☓   <Job `Job[in_out (...)]`> [[ -> 250.0]] 
-    3 ⚠ ☉ ☓   <Job `b2`> [[ -> 200.0]] requires={1}
+    1 ⚠ ☉ ☓   <Job `Job[in_out (...)]`> [[ -> 250.0]] 
+    2 ⚠ ☉ ☓   <Job `b1`> [[ -> 100.0]] 
+    3 ⚠ ☉ ☓   <Job `b2`> [[ -> 200.0]] requires={2}
 
 
 The textual representation displayed by `list()` shows all the jobs, with:
@@ -499,12 +499,12 @@ sc = Scheduler(c1, c2, c3, c4)
 sc.run()
 ```
 
-    BUS: 000.000 -> in_out(0.2)
     BUS: 000.000 -> in_out(0.4)
-    BUS: 000.206 <- in_out(0.2)
-    BUS: 000.206 -> in_out(0.3)
-    BUS: 000.404 <- in_out(0.4)
-    BUS: 000.512 <- in_out(0.3)
+    BUS: 000.000 -> in_out(0.2)
+    BUS: 000.201 <- in_out(0.2)
+    BUS: 000.201 -> in_out(0.3)
+    BUS: 000.401 <- in_out(0.4)
+    BUS: 000.503 <- in_out(0.3)
 
 
 
@@ -521,10 +521,10 @@ Note that `run()` always terminates as soon as all the non-`forever` jobs are co
 sc.list()
 ```
 
-    1 ⚠ ☉ ☓   <Job `c1`> [[ -> 2.0]] 
+    1 ⚠ ☉ ☓   <Job `c2`> [[ -> 4.0]] 
     2 ⚠ ☉ ↺ ∞ <Job `monitor`> [not done] 
-    3 ⚠ ☉ ☓   <Job `c2`> [[ -> 4.0]] 
-    4 ⚠ ☉ ☓   <Job `c3`> [[ -> 3.0]] requires={1}
+    3 ⚠ ☉ ☓   <Job `c1`> [[ -> 2.0]] 
+    4 ⚠ ☉ ☓   <Job `c3`> [[ -> 3.0]] requires={3}
 
 
 Forever jobs appear with a dotted border on a graphical representation:
@@ -577,9 +577,9 @@ sd.run()
 ```
 
     000.000: forever 0
-    000.101: forever 1
-    000.204: forever 2
-    10:24:52.481 SCHEDULER(None): PureScheduler.co_run: TIMEOUT occurred
+    000.103: forever 1
+    000.203: forever 2
+    10:46:24.321 SCHEDULER(None): PureScheduler.co_run: TIMEOUT occurred
 
 
 
@@ -647,8 +647,8 @@ se.run()
 
     000.000 -> in_out(0.2)
     000.201 <- in_out(0.2)
-    000.402 -> in_out(0.3)
-    000.706 <- in_out(0.3)
+    000.405 -> in_out(0.3)
+    000.707 <- in_out(0.3)
 
 
 
@@ -705,8 +705,8 @@ sf.run()
 ```
 
     000.000 -> in_out(0.2)
-    000.205 <- in_out(0.2)
-    10:24:53.701 SCHEDULER(None): Emergency exit upon exception in critical job
+    000.201 <- in_out(0.2)
+    10:46:25.624 SCHEDULER(None): Emergency exit upon exception in critical job
 
 
 
@@ -771,14 +771,14 @@ s.run()
 print("total duration = {}s".format(watch.elapsed()))
 ```
 
-    000.502 6-th job
-    000.502 1-th job
-    000.502 8-th job
-    000.502 3-th job
-    000.502 5-th job
-    000.502 4-th job
-    000.502 2-th job
-    000.502 7-th job
+    000.515 7-th job
+    000.514 3-th job
+    000.515 6-th job
+    000.514 2-th job
+    000.515 8-th job
+    000.514 1-th job
+    000.515 5-th job
+    000.514 4-th job
     total duration = 001.003s
 
 
@@ -799,6 +799,16 @@ subj2 = Job(aprint("subj2"), label='subj2', required=subj1, scheduler=sub_sched)
 subj3 = Job(aprint("subj3"), label='subj3', required=subj1, scheduler=sub_sched)
 subj4 = Job(aprint("subj4"), label='subj4', required=(subj2, subj3), scheduler=sub_sched)
 ```
+
+
+```python
+make_png(sub_sched, "readme-subscheduler")
+```
+
+    readme-subscheduler.png
+
+
+![internal scheduler](readme-subscheduler.png)
 
 We can now create a main scheduler, in which **one of the jobs is this low-level scheduler**:
 
@@ -836,37 +846,17 @@ main_sched.list()
 
 When using a `Scheduler` to describe nested schedulers, `asynciojobs` will also produce a graphical output that properly exhibits the overall structure:
 
-
-```python
-# the easiest way to see 
-# a scheduler as a graph is from a notebook:
-main_sched.graph()
-```
-
-
-
-
-![svg](README-eval_files/README-eval_116_0.svg)
-
-
-
 Let us do this again another way, so that this shows up properly in *readthedocs*:
 
 
 ```python
-main_dot = main_sched.graph()
-main_dot.format = 'png'
-main_dot.render("readme-nested")
+make_png(main_sched, "readme-nested")
 ```
 
+    readme-nested.png
 
 
-
-    'readme-nested.png'
-
-
-
-That we now visualize again, using the produced png:
+Here's how the main scheduler would be rendered by `graph()`:
 
 ![](readme-nested.png)
 
@@ -979,7 +969,7 @@ s.graph()
 
 
 
-![svg](README-eval_files/README-eval_131_0.svg)
+![svg](README-eval_files/README-eval_132_0.svg)
 
 
 
@@ -1030,7 +1020,7 @@ Which now allows us to render the graph for our last scheduler as a png file:
 
 Although this is not illustrated here, the same graphical legend is applicable to nested schedulers as well.
 
-Note that if you do have `graphviz` available, you can produce a png file more simply, i.e. without the need for creating the dot file, as shown below:
+Note that if you do have `graphviz` available, you can produce a *png* file a little more simply, i.e. without the need for creating the dot file, like this:
 
 
 ```python
