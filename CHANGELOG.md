@@ -1,5 +1,30 @@
 # ChangeLog
 
+## 0.11.1 - 2018 May 10
+
+This is a release candidate for 1.0:
+
+### major changes
+
+* default value for `critical` is now `True` for all species, jobs and schedulers alike - see #7
+* shutdown() is no longer implicitly called by `run()`, it is now up to the caller to call this method - see #10
+* critical schedulers now propagate exceptions so they can bubble up the nested schedulers tree - see #12
+* co_shutdown() now must accept mandatory argument depth
+* `rain_check()` renamed into `check_cycles()`
+
+### enhancements
+
+* schedulers have a new attribute `shutdown_timeout`, defaults to 1s
+* `list()`, `list_safe()`, `check_cycles()` and `sanitize()` know about nested schedulers
+* new method `PureScheduler.remove(job)`
+* AbstractJob.requires() accepts kwarg `remove=True` to allow for removal of requirements
+* enhance border width of critical jobs in dot representation for colorblind people
+* `list_safe()` now shows requirements too
+* more graphs in the README
+
+### minor
+* scheduler methods no longer accept a loop parameter
+
 ## 0.10.2 - 2018 May 2
 
 * empty schedulers now run fine
