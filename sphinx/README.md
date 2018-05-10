@@ -80,7 +80,7 @@ watch.print_elapsed('some')
 ```
 
     000.000  
-    000.504 some
+    000.501 some
 
 We can now write a simple coroutine for illustrating schedulers through small examples:
 
@@ -143,12 +143,12 @@ sa
 sa.run()
 ```
 
-    000.016 -> in_out(0.25)
-    000.016 -> in_out(0.1)
-    000.016 -> in_out(0.2)
-    000.117 <- in_out(0.1)
-    000.217 <- in_out(0.2)
-    000.267 <- in_out(0.25)
+    000.015 -> in_out(0.25)
+    000.015 -> in_out(0.1)
+    000.015 -> in_out(0.2)
+    000.116 <- in_out(0.1)
+    000.216 <- in_out(0.2)
+    000.265 <- in_out(0.25)
 
 
 
@@ -192,11 +192,11 @@ sa2.run()
 ```
 
     000.000 -> in_out(0.2)
-    000.000 -> in_out(0.25)
     000.000 -> in_out(0.1)
-    000.101 <- in_out(0.1)
-    000.204 <- in_out(0.2)
-    000.253 <- in_out(0.25)
+    000.000 -> in_out(0.25)
+    000.102 <- in_out(0.1)
+    000.203 <- in_out(0.2)
+    000.254 <- in_out(0.25)
 
 
 
@@ -253,10 +253,10 @@ sb.run()
 
     000.000 -> in_out(0.1)
     000.000 -> in_out(0.25)
-    000.105 <- in_out(0.1)
-    000.106 -> in_out(0.2)
-    000.256 <- in_out(0.25)
-    000.310 <- in_out(0.2)
+    000.101 <- in_out(0.1)
+    000.101 -> in_out(0.2)
+    000.251 <- in_out(0.25)
+    000.305 <- in_out(0.2)
 
 
 
@@ -287,12 +287,12 @@ watch.reset()
 sb2.run()
 ```
 
-    000.000 -> in_out(0.25)
     000.000 -> in_out(0.1)
+    000.000 -> in_out(0.25)
     000.103 <- in_out(0.1)
     000.103 -> in_out(0.2)
-    000.255 <- in_out(0.25)
-    000.306 <- in_out(0.2)
+    000.251 <- in_out(0.25)
+    000.304 <- in_out(0.2)
 
 
 
@@ -353,9 +353,9 @@ To see an overview of a scheduler, just use the `list()` method that will summar
 sb.list()
 ```
 
-    1   ☉ ☓   <Job `b1`> [[ -> 100.0]] 
-    2   ☉ ☓   <Job `Job[in_out (...)]`> [[ -> 250.0]] 
-    3   ☉ ☓   <Job `b2`> [[ -> 200.0]] requires={1}
+    1 ⚠ ☉ ☓   <Job `b1`> [[ -> 100.0]] 
+    2 ⚠ ☉ ☓   <Job `Job[in_out (...)]`> [[ -> 250.0]] 
+    3 ⚠ ☉ ☓   <Job `b2`> [[ -> 200.0]] requires={1}
 
 
 The textual representation displayed by `list()` shows all the jobs, with:
@@ -499,12 +499,12 @@ sc = Scheduler(c1, c2, c3, c4)
 sc.run()
 ```
 
-    BUS: 000.000 -> in_out(0.4)
     BUS: 000.000 -> in_out(0.2)
+    BUS: 000.000 -> in_out(0.4)
     BUS: 000.206 <- in_out(0.2)
-    BUS: 000.207 -> in_out(0.3)
-    BUS: 000.405 <- in_out(0.4)
-    BUS: 000.509 <- in_out(0.3)
+    BUS: 000.206 -> in_out(0.3)
+    BUS: 000.404 <- in_out(0.4)
+    BUS: 000.512 <- in_out(0.3)
 
 
 
@@ -521,10 +521,10 @@ Note that `run()` always terminates as soon as all the non-`forever` jobs are co
 sc.list()
 ```
 
-    1   ☉ ☓   <Job `c2`> [[ -> 4.0]] 
-    2   ☉ ☓   <Job `c1`> [[ -> 2.0]] 
-    3   ☉ ↺ ∞ <Job `monitor`> [not done] 
-    4   ☉ ☓   <Job `c3`> [[ -> 3.0]] requires={2}
+    1 ⚠ ☉ ☓   <Job `c1`> [[ -> 2.0]] 
+    2 ⚠ ☉ ↺ ∞ <Job `monitor`> [not done] 
+    3 ⚠ ☉ ☓   <Job `c2`> [[ -> 4.0]] 
+    4 ⚠ ☉ ☓   <Job `c3`> [[ -> 3.0]] requires={1}
 
 
 Forever jobs appear with a dotted border on a graphical representation:
@@ -577,9 +577,9 @@ sd.run()
 ```
 
     000.000: forever 0
-    000.106: forever 1
-    000.208: forever 2
-    01:28:10.543 SCHEDULER(None): PureScheduler.co_run: TIMEOUT occurred
+    000.101: forever 1
+    000.204: forever 2
+    10:24:52.481 SCHEDULER(None): PureScheduler.co_run: TIMEOUT occurred
 
 
 
@@ -599,7 +599,7 @@ j
 
 
 
-      ☉ ↺ ∞ <Job `Job[forever (...)]`> [not done] 
+    ⚠ ☉ ↺ ∞ <Job `Job[forever (...)]`> [not done] 
 
 
 
@@ -631,10 +631,10 @@ async def boom(n):
 ```python
 # by default everything is non critical
 e1 = Job(in_out(0.2), label='begin')
-e2 = Job(boom(0.2), label="boom")
+e2 = Job(boom(0.2), label="boom", critical=False)
 e3 = Job(in_out(0.3), label='end')
 
-se = Scheduler(Sequence(e1, e2, e3))
+se = Scheduler(Sequence(e1, e2, e3), critical=False)
 ```
 
 
@@ -646,9 +646,9 @@ se.run()
 ```
 
     000.000 -> in_out(0.2)
-    000.202 <- in_out(0.2)
-    000.406 -> in_out(0.3)
-    000.707 <- in_out(0.3)
+    000.201 <- in_out(0.2)
+    000.402 -> in_out(0.3)
+    000.706 <- in_out(0.3)
 
 
 
@@ -665,9 +665,9 @@ se.run()
 se.list()
 ```
 
-    1   ☉ ☓   <Job `begin`> [[ -> 200.0]] 
+    1 ⚠ ☉ ☓   <Job `begin`> [[ -> 200.0]] 
     2   ★ ☓   <Job `boom`> !! exception => Exception:boom after 0.2s!! requires={1}
-    3   ☉ ☓   <Job `end`> [[ -> 300.0]] requires={2}
+    3 ⚠ ☉ ☓   <Job `end`> [[ -> 300.0]] requires={2}
 
 
 Non-critical jobs and schedulers show up with a thin and black border:
@@ -692,7 +692,7 @@ f1 = Job(in_out(0.2), label="begin")
 f2 = Job(boom(0.2), label="boom", critical=True)
 f3 = Job(in_out(0.3), label="end")
 
-sf = Scheduler(Sequence(f1, f2, f3))
+sf = Scheduler(Sequence(f1, f2, f3), critical=False)
 ```
 
 
@@ -705,8 +705,8 @@ sf.run()
 ```
 
     000.000 -> in_out(0.2)
-    000.204 <- in_out(0.2)
-    01:28:11.796 SCHEDULER(None): Emergency exit upon exception in critical job
+    000.205 <- in_out(0.2)
+    10:24:53.701 SCHEDULER(None): Emergency exit upon exception in critical job
 
 
 
@@ -722,9 +722,9 @@ sf.run()
 sf.list()
 ```
 
-    1   ☉ ☓   <Job `begin`> [[ -> 200.0]] 
+    1 ⚠ ☉ ☓   <Job `begin`> [[ -> 200.0]] 
     2 ⚠ ★ ☓   <Job `boom`> !! CRIT. EXC. => Exception:boom after 0.2s!! requires={1}
-    3     ⚐   <Job `end`> [not done] requires={2}
+    3 ⚠   ⚐   <Job `end`> [not done] requires={2}
 
 
 Critical jobs and schedulers show up with a thick and red border:
@@ -771,14 +771,14 @@ s.run()
 print("total duration = {}s".format(watch.elapsed()))
 ```
 
-    000.500 3-th job
-    000.500 1-th job
-    000.500 8-th job
-    000.500 4-th job
-    000.500 6-th job
-    000.500 7-th job
-    000.500 5-th job
-    000.500 2-th job
+    000.502 6-th job
+    000.502 1-th job
+    000.502 8-th job
+    000.502 3-th job
+    000.502 5-th job
+    000.502 4-th job
+    000.502 2-th job
+    000.502 7-th job
     total duration = 001.003s
 
 
@@ -824,14 +824,14 @@ This nested structure is rendered by both `list()` and `graph()`:
 main_sched.list()
 ```
 
-    1     ⚐   <Job `main-start`> [not done] 
+    1 ⚠   ⚐   <Job `main-start`> [not done] 
     2 ⚠   ⚐   <Scheduler `critical nested`> [not done] requires={1} -> entries={3}
-    3     ⚐   > <Job `subj1`> [not done] 
-    4     ⚐   > <Job `subj3`> [not done] requires={3}
-    5     ⚐   > <Job `subj2`> [not done] requires={3}
-    6     ⚐   > <Job `subj4`> [not done] requires={4, 5}
+    3 ⚠   ⚐   > <Job `subj1`> [not done] 
+    4 ⚠   ⚐   > <Job `subj3`> [not done] requires={3}
+    5 ⚠   ⚐   > <Job `subj2`> [not done] requires={3}
+    6 ⚠   ⚐   > <Job `subj4`> [not done] requires={5, 4}
     2 --end-- < <Scheduler `critical nested`> exits={6}
-    7     ⚐   <Job `main-end`> [not done] requires={2}
+    7 ⚠   ⚐   <Job `main-end`> [not done] requires={2}
 
 
 When using a `Scheduler` to describe nested schedulers, `asynciojobs` will also produce a graphical output that properly exhibits the overall structure:
@@ -879,8 +879,8 @@ main_sched.run()
 
     main-start
     subj1
-    subj3
     subj2
+    subj3
     subj4
     main-end
 
@@ -970,9 +970,9 @@ Here's a simple example:
 ```python
 # and a simple scheduler with an initialization and 2 concurrent tasks
 s = Scheduler()
-j1 = Job(aprint("j1"), label="init", scheduler=s)
+j1 = Job(aprint("j1"), label="init", critical=False, scheduler=s)
 j2 = Job(aprint("j2"), label="critical job", critical=True, scheduler=s, required=j1)
-j3 = Job(aprint("j3"), label="forever job", forever=True, scheduler=s, required=j1)
+j3 = Job(aprint("j3"), label="forever job", critical=False, forever=True, scheduler=s, required=j1)
 s.graph()
 ```
 
