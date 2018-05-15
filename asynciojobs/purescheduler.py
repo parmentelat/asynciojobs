@@ -72,7 +72,8 @@ class PureScheduler:                                    # pylint: disable=r0902
         can be run simultaneously. None or 0 means no limit.
       timeout: can be an `int` or `float` and is expressed
        in seconds; it applies to the overall orchestration of that scheduler,
-       not to any individual job.
+       not to any individual job. Can be also ``None``, which means no timeout.
+      shutdown_timeout: same meaning as ``timeout``, but for the shutdown phase.
       watch: if the caller passes a :class:`~asynciojobs.watch.Watch`
         instance, it is used in debugging messages to show the time
         elapsed wrt that watch, instead of using the wall clock.
@@ -594,9 +595,9 @@ class PureScheduler:                                    # pylint: disable=r0902
 
         """
         loop = asyncio.get_event_loop()
-        return loop.run_until_complete(self.co_shutdown(depth=0))
+        return loop.run_until_complete(self.co_shutdown())
 
-    async def co_shutdown(self, depth):
+    async def co_shutdown(self):
         """
         Shut down the scheduler, by sending the
         :meth:`~asynciojobs.job.AbstractJob.co_shutdown()`
@@ -608,27 +609,42 @@ class PureScheduler:                                    # pylint: disable=r0902
         down eventually.
 
         Returns:
-          bool: True if all the co_shutdown methods attached to the jobs
-          (recursively) in the scheduler complete within ``shutdown_timeout``,
-          which is an attribute of the scheduler.
+          bool: True if all the
+          :meth:`~asynciojobs.job.AbstractJob.co_shutdown()`
+          methods attached to the jobs in the scheduler complete
+          within ``shutdown_timeout``, which is an attribute of the scheduler.
+          If the ``shutdown_timeout`` attribute on this object is ``None``,
+          no timeout is implemented.
+
+        Notes:
+
+          There is probably space for a lot of improvement here xxx:
+
+          - behaviour is unspecified if any of the co_shutdown()
+            methods raises an exception;
+          - right now, a subscheduler that sees a timeout expiration
+            does not cause the overall co_shutdown() to return ``False``,
+            which is arguable;
+          - another possible weakness in current implementation is that
+            it does not support to shutdown a scheduler that is still running.
         """
 
-        tasks = [asyncio.ensure_future(job.co_shutdown(depth+1))
+        tasks = [asyncio.ensure_future(job.co_shutdown())
                  for job in self.jobs]
 
-        # main scheduler is in charge of protecting against
-        # timeouts happening globally
-        if depth == 0:
-            self._record_beginning(self.shutdown_timeout)
-            timeout = self._remaining_timeout()
-        else:
-            timeout = None
+        # warning: xxx this use a unique attribute to remember expiration
+        # so things might/probably will get messed up if one attempts
+        # to shutdown a scheduler while it is running.
+        self._record_beginning(self.shutdown_timeout)
+        timeout = self._remaining_timeout()
 
         await self._feedback(None, "scheduler is shutting down...")
 
         # the done part is of no use here
         _, pending = await asyncio.wait(tasks, timeout=timeout)
         # everything went fine
+        # xxx here we say that sub-schedulers that had a timeout expiration
+        # should not impact the overall result; this is an arguable choice
         if not pending:
             return True
 

@@ -572,15 +572,9 @@ class AbstractJob:                                      # pylint: disable=R0902
         print("AbstractJob.co_run() needs to be implemented on class {}"
               .format(self.__class__.__name__))
 
-    async def co_shutdown(self, depth):
+    async def co_shutdown(self):
         """
         Abstract virtual - needs to be implemented.
-
-        Parameters:
-          depth(int): is the nesting depth of this scheduler. Its value is `0`
-            only on the toplevel scheduler. Typically non-scheduler jobs
-            do not need to behave differently depending on this parameter,
-            but it is mandatory to accept that parameter.
         """
         print("AbstractJob.co_shutdown() needs to be implemented on class {}"
               .format(self.__class__.__name__))
@@ -653,7 +647,7 @@ class Job(AbstractJob):
         result = await self.corun
         return result
 
-    async def co_shutdown(self, depth):
+    async def co_shutdown(self):
         """
         Implementation of the method expected by :class:`AbstractJob`,
         or more exactly by :meth:`asynciojobs.purescheduler.PureScheduler.list`

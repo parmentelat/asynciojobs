@@ -36,7 +36,7 @@ class CounterJob(Job):
     async def co_run(self):
         self.scheduler.counter += 1
 
-    async def co_shutdown(self, depth):
+    async def co_shutdown(self):
         # delay in tens of seconds
         await asyncio.sleep(self.delay/10)
         self.scheduler.counter -= 1
