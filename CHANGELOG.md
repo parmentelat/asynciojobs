@@ -1,5 +1,12 @@
 # ChangeLog
 
+## 0.11.2 - 2018 May 15
+
+* alter signature of co_shutdown() to remove argument `depth`, which is
+  not relevant, and creates confusion for user libraries.
+* there is still a need to more accurately specify the expected behaviour
+  of co_shutdown() though, see also notes in PureScheduler.co_shutdown()
+
 ## 0.11.1 - 2018 May 10
 
 This is a release candidate for 1.0:
