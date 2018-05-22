@@ -4,36 +4,41 @@
 package / install
 """
 
-from sys import version_info
-
 import setuptools
 
 from asynciojobs import __version__
 
-# check python version
-MAJOR, MINOR = version_info[0:2]
-if not (MAJOR == 3 and MINOR >= 5):
-    print("python 3.5 or higher is required")
-    exit(1)
-
-
-LONG_DESCRIPTION = \
-                   "See notebook at https://github.com/parmentelat/" \
-                   "asynciojobs/blob/master/README.ipynb"
+LONG_DESCRIPTION = (
+    "See notebook at https://github.com/parmentelat/"
+    "asynciojobs/blob/master/README.ipynb"
+)
 
 REQUIRED_MODULES = []
 
 setuptools.setup(
     name="asynciojobs",
-    version=__version__,
     author="Thierry Parmentelat",
     author_email="thierry.parmentelat@inria.fr",
     description="A simplistic orchestration engine for asyncio-based jobs",
     long_description=LONG_DESCRIPTION,
     license="CC BY-SA 4.0",
-    url="http://asynciojobs.readthedocs.io/",
+    keywords=['asyncio', 'dependency', 'dependencies',
+              'jobs', 'scheduling', 'orchestration'],
+
     packages=['asynciojobs'],
+    version=__version__,
+    python_requires='>=3.5',
+
     install_requires=REQUIRED_MODULES,
+    extras_require={
+        'graph': ['graphviz'],
+    },
+
+    project_urls={
+        'source': 'http://github.com/parmentelat/asynciojobs',
+        'documentation': 'http://asynciojobs.readthedocs.io/',
+    },
+
     classifiers=[
         "Development Status :: 4 - Beta",
         "Environment :: Console",
