@@ -18,8 +18,8 @@ from .dotstyle import DotStyle
 
 #
 # will hopefully go away some day
-debug = False                                           # pylint: disable=C0103
-# debug = True
+DEBUG = False                                           # pylint: disable=C0103
+# DEBUG = True
 
 # pylint settings
 # W0212: we have a lot of accesses to protected members of other classes
@@ -508,8 +508,8 @@ class PureScheduler:                                    # pylint: disable=r0902
                            if task._exception]          # pylint: disable=W0212
         for task in exception_tasks:
             task.cancel()
-            # if debug is turned on, provide details on the exceptions
-            if debug:
+            # if DEBUG is turned on, provide details on the exceptions
+            if DEBUG:
                 job = task._job                         # pylint: disable=W0212
                 self._show_task_stack(
                     task,
@@ -786,7 +786,7 @@ class PureScheduler:                                    # pylint: disable=r0902
                         done_job, "EXCEPTION occurred - on {}critical job"
                         .format("non-" if not done_job.is_critical() else ""))
                     # make sure these ones show up even if not in debug mode
-                    if debug:
+                    if DEBUG:
                         self._show_task_stack(done_task, "DEBUG")
             if critical_failure:
                 await self._tidy_tasks(pending)
@@ -806,7 +806,7 @@ class PureScheduler:                                    # pylint: disable=r0902
             nb_jobs_done += len(done_jobs_not_forever)
 
             if nb_jobs_done == nb_jobs_finite:
-                if debug:
+                if DEBUG:
                     print("PureScheduler.co_run: {} CLEANING UP at iter. {}/{}"
                           .format(4 * '-', nb_jobs_done, nb_jobs_finite))
                 if self.verbose and nb_jobs_forever != len(pending):
