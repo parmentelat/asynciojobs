@@ -1152,7 +1152,8 @@ DOT_%28graph_description_language%29
         for how this works.
 
         The dependency from ``asynciojobs`` to ``graphviz`` is limited
-        to this method, as it is the only place that needs it,
+        to this method and :meth:`export_as_pngfile()`,
+        as it these are the only places that need it,
         and as installing ``graphviz`` can be cumbersome.
 
         For example, on MacOS I had to do both::
@@ -1163,3 +1164,30 @@ DOT_%28graph_description_language%29
 
         from graphviz import Source
         return Source(source=self.dot_format())
+
+    def export_as_pngfile(self, filename):
+        """
+        Convenience wrapper that creates a png file. Like :meth:`graph()`,
+        it requires the ``graphviz`` package to be installed.
+
+        Parameters:
+          filename: output filename, without the ``.png`` extension
+        Returns:
+          created file name
+
+        Notes:
+          - This actually uses the binary `dot` program.
+          - A file named as the output but with a ``.dot`` extension
+            is created as an artefact by this method.
+        """
+        # we refrain from using graph.format / graph.render
+        # because with that method we cannot control the location
+        # of the .dot file; that is dangerous when using e.g.
+        #    scheduler.export_as_pngfile(__file__)
+        import os
+        dotfile = "{}.dot".format(filename)
+        pngfile = "{}.png".format(filename)
+        self.export_as_dotfile(dotfile)
+        os.system("dot -Tpng {} -o {}"
+                  .format(dotfile, pngfile))
+        return pngfile
