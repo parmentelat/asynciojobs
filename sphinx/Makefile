@@ -2,7 +2,7 @@
 # and then by-products are managed under git
 
 all: doc
-doc: readme-strip readme htmlhelp
+doc: readme-strip readme html 
 .PHONY: all doc
 
 ########## recompute toplevel README.md from sphinx/README.ipynb
