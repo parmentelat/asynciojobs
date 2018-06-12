@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.11.3 - 2018 June 12
+
+* new convenience method `export_as_pngfile()`
+
 ## 0.11.2 - 2018 May 15
 
 * alter signature of co_shutdown() to remove argument `depth`, which is
