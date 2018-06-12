@@ -265,34 +265,39 @@ class AbstractJob:                                      # pylint: disable=R0902
 
         Legend is quite simply that:
 
-        * critical jobs have a red border, and
-        * the border of forever jobs is made of a dashed line.
+        * schedulers have sharp angles, while other jobs have
+          rounded corners,
+        * critical jobs have a colored and thick border, and
+        * forever jobs have a dashed border.
 
         Returns:
           DotStyle: a dict-like mapping that sets DOT
           attributes for that job.
         """
         # see also https://graphviz.gitlab.io/_pages/doc/info/attrs.html
-        data = DotStyle()
+        style = DotStyle()
         # style; DotStyle known how to deal with lists
-        data['style'] = []
+        style['style'] = []
         # label
         label = self._get_graph_label()
         if label != 'NOLABEL':
-            data['label'] = label
+            style['label'] = label
         # common attributes : rounded box
-        data['shape'] = 'box'
-        data['style'].append('rounded')
+        style['shape'] = 'box'
+        # schedulers keep sharp corners, jobs have rounded corners
+        from .purescheduler import PureScheduler
+        if not isinstance(self, PureScheduler):
+            style['style'].append('rounded')
         # forever items have a dashed line
         if self.forever:
-            data['style'].append('dashed')
+            style['style'].append('dashed')
         # critical elements have a thicker red border
         if self.is_critical():
-            data['color'] = 'red'
-            data['penwidth'] = 2
+            style['color'] = 'lightpink4'
+            style['penwidth'] = 2
         else:
-            data['penwidth'] = 0.5
-        return data
+            style['penwidth'] = 0.5
+        return style
 
     ##########
     _has_support_for_unicode = None  # type: bool

@@ -1022,8 +1022,6 @@ class PureScheduler:                                    # pylint: disable=r0902
         See also `Wikipedia on DOT`_ for a list of tools that support the
         ``dot`` format.
 
-
-
         As a general rule, ``asynciojobs`` has a support for producing
         `DOT Format`_ but stops short of actually importing ``graphviz``
         that can be cumbersome to install, but for the notable exception
