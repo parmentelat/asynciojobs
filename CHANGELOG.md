@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.11.4 - 2018 June 12
+
+* schedulers are graphically rendered with right corners instead of rounded
+* darker color for critical jobs - plain red was too much
+
 ## 0.11.3 - 2018 June 12
 
 * new convenience method `export_as_pngfile()`
