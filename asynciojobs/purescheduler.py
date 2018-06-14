@@ -7,8 +7,9 @@ The PureScheduler class is a set of AbstractJobs, that together with their
 
 import time
 import io
-
 import asyncio
+
+from orderedset import OrderedSet
 
 from .job import AbstractJob
 from .sequence import Sequence
@@ -112,8 +113,8 @@ class PureScheduler:                                    # pylint: disable=r0902
                  shutdown_timeout=1,
                  watch=None, verbose=False):
 
-        self.jobs = set(Sequence._flatten(              # pylint: disable=W0212
-            jobs_or_sequences))
+        self.jobs = OrderedSet(
+            Sequence._flatten(jobs_or_sequences))       # pylint: disable=W0212
         self.jobs_window = jobs_window
         # timeout is in seconds
         self.timeout = timeout
@@ -140,7 +141,7 @@ class PureScheduler:                                    # pylint: disable=r0902
         Returns:
           self: the scheduler object, for cascading insertions if needed.
         """
-        jobs = set(Sequence._flatten(jobs))             # pylint: disable=W0212
+        jobs = OrderedSet(Sequence._flatten(jobs))      # pylint: disable=W0212
         self.jobs.update(jobs)
         return self
 
@@ -442,7 +443,7 @@ class PureScheduler:                                    # pylint: disable=r0902
         as the reverse of Job.required
         """
         for job in self.jobs:
-            job._s_successors = set()                   # pylint: disable=W0212
+            job._s_successors = OrderedSet()            # pylint: disable=W0212
         for job in self.jobs:
             for req in job.required:
                 req._s_successors.add(job)              # pylint: disable=W0212
@@ -566,7 +567,7 @@ class PureScheduler:                                    # pylint: disable=r0902
             print_time()
             print("SCHEDULER{}: {}".format(name, state))
             return
-        if not isinstance(jobs, (list, set, tuple)):
+        if not isinstance(jobs, (list, OrderedSet, set, tuple)):
             jobs = (jobs,)
         for job in jobs:
             if not isinstance(job, AbstractJob):
@@ -821,6 +822,7 @@ class PureScheduler:                                    # pylint: disable=r0902
             # go on : find out the jobs that can be added to the mix
             # only consider the ones that are right behind any of the the jobs
             # that just finished
+            # no need to use and OrderedSet here
             possible_next_jobs = set()
             for done_task in done:
                 possible_next_jobs.update(

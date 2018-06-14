@@ -13,7 +13,9 @@ LONG_DESCRIPTION = (
     "asynciojobs/blob/master/README.ipynb"
 )
 
-REQUIRED_MODULES = []
+REQUIRED_MODULES = [
+    'orderedset',
+]
 
 setuptools.setup(
     name="asynciojobs",
