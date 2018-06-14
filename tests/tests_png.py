@@ -118,3 +118,33 @@ class Tests(unittest.TestCase):
         )
 
         produce_png(sched, "test_png_styles2")
+
+
+    def test_order1(self):
+
+        async def aprint(x):
+            print(x)
+
+        def job(n):
+            return Job(aprint(n), label=n)
+
+        sub1, sub2, sub3, sub4 = Scheduler(), Scheduler(), Scheduler(), Scheduler()
+
+        sched = Scheduler(
+            Sequence(
+                job('top'),
+                sub1,
+                job('middle'),
+                sub2,
+                sub3,
+                sub4))
+
+        for i in range(3):
+            sub1.add(job(i+1))
+            sub2.add(job(i+4))
+            sub3.add(job(i+7))
+            sub4.add(job(i+10))
+
+        sub4.add(job(13))
+
+        produce_png(sched, "test_png_order1")
