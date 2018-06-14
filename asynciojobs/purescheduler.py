@@ -387,12 +387,10 @@ class PureScheduler:                                    # pylint: disable=r0902
             result = "{" + result + "}"
         return result
 
-    def _exit_csv(self, discard_forever=True,
-                  compute_backlinks=False):
+    def _exit_csv(self, **exit_kwds):
+        'accepts same parameters as self.exit_jobs()'
         result = ", ".join(job.repr_id()
-                           for job in self.exit_jobs(
-                               discard_forever=discard_forever,
-                               compute_backlinks=compute_backlinks))
+                           for job in self.exit_jobs(**exit_kwds))
         if result:
             result = "{" + result + "}"
         return result
@@ -406,15 +404,53 @@ class PureScheduler:                                    # pylint: disable=r0902
         """
         for job in self.entry_jobs():
             return job
-        raise ValueError("Internal error")
+        raise ValueError("no entry found")
 
-    def some_exit_job(self):
+    @staticmethod
+    def middle_index(n):
+        return (n-1)//2
+
+    def middle_entry_job(self):
+        """
+        Like some_entry_job, but as an attempt to improve graphical layout
+        we return the job that has its index in the middle of the entry jobs
+        """
+        # scan once
+        number_entries = sum(1 for _ in self.entry_jobs())
+        if not number_entries:
+            raise ValueError("no entry found")
+        # scan again until mid-way
+        entries = self.entry_jobs()
+        index = self.middle_index(number_entries)
+        for _, job in zip(range(index+1), entries):
+            pass
+        print(f"middle entry on {self} -> {job}")
+        return job
+
+    def some_exit_job(self, **exit_kwds):
         """
         Same for exit nodes;
+        accepts same parameters as self.exit_jobs()
         """
-        for job in self.exit_jobs():
+        for job in self.exit_jobs(**exit_kwds):
             return job
-        raise ValueError("Internal error")
+        raise ValueError("No exit found")
+
+    def middle_exit_job(self, **exit_kwds):
+        """
+        ditto for exit nodes
+        """
+        number_exits = sum(1 for _ in self.exit_jobs(**exit_kwds))
+        # no need to do this in any case from now on
+        exit_kwds['compute_backlinks'] = False
+        if not number_exits:
+            raise ValueError("no exit found")
+        exits = self.exit_jobs(**exit_kwds)
+        index = self.middle_index(number_exits)
+        for _, job in zip(range(index+1), exits):
+            pass
+        print(f"middle exit on {self} -> {job}")
+        return job
 
     def repr_entries(self):                             # pylint: disable=c0111
         return "entries={}".format(self._entry_csv())
@@ -1074,7 +1110,7 @@ DOT_%28graph_description_language%29
 
                     # upstream is a scheduler
                     else:
-                        from_node = req.some_exit_job()
+                        from_node = req.middle_exit_job()
                         cluster_name = req.dot_cluster_name()
                         result += ("{} -> {} [ltail={}];\n"
                                    .format(from_node.repr_id(),
@@ -1096,15 +1132,15 @@ DOT_%28graph_description_language%29
                     if not isinstance(req, PureScheduler):
                         result += ("{} -> {} [lhead={}];\n"
                                    .format(req.repr_id(),
-                                           job.some_entry_job().repr_id(),
+                                           job.middle_entry_job().repr_id(),
                                            cluster_name))
 
                     # upstream is a scheduler as well
                     else:
                         src_cluster_name = req.dot_cluster_name()
                         result += ("{} -> {} [lhead={} ltail={}];\n"
-                                   .format(req.some_exit_job().repr_id(),
-                                           job.some_entry_job().repr_id(),
+                                   .format(req.middle_exit_job().repr_id(),
+                                           job.middle_entry_job().repr_id(),
                                            cluster_name,
                                            src_cluster_name))
 
