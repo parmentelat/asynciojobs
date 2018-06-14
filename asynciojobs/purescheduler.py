@@ -424,7 +424,6 @@ class PureScheduler:                                    # pylint: disable=r0902
         index = self.middle_index(number_entries)
         for _, job in zip(range(index+1), entries):
             pass
-        print(f"middle entry on {self} -> {job}")
         return job
 
     def some_exit_job(self, **exit_kwds):
@@ -449,7 +448,6 @@ class PureScheduler:                                    # pylint: disable=r0902
         index = self.middle_index(number_exits)
         for _, job in zip(range(index+1), exits):
             pass
-        print(f"middle exit on {self} -> {job}")
         return job
 
     def repr_entries(self):                             # pylint: disable=c0111

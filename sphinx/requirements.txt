@@ -1,3 +1,4 @@
+orderedset
 sphinx-autodoc-typehints
 sphinxcontrib-napoleon
 sphinxcontrib-asyncio
