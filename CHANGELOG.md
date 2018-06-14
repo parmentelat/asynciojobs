@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.12.1 - 2018 June 14
+
+* use OrderedSet's to preserve creation order
+* more balanced graphical layout in case of nested schedulers
+
 ## 0.11.4 - 2018 June 12
 
 * schedulers are graphically rendered with right corners instead of rounded
