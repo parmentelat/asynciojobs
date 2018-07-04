@@ -6,7 +6,7 @@ package / install
 
 import setuptools
 
-from asynciojobs import __version__
+from asynciojobs.version import __version__
 
 LONG_DESCRIPTION = (
     "See notebook at https://github.com/parmentelat/"
