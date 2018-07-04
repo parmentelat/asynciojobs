@@ -1,8 +1,9 @@
 # ChangeLog
 
-## 0.12.3 - 2018 July 4
+## 0.12.4 - 2018 July 4
 
 * fix packaging, so that `orderedset` can properly be installed as a dependency
+* 0.12.3 is still broken in this respect
 
 ## 0.12.2 - 2018 June 14
 
