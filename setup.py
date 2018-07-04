@@ -10,11 +10,10 @@ import setuptools
 # set __version__ by read & exec of the python code
 # this is better than an import that would otherwise try to
 # import the whole package, and fail if a required module is not yet there
-from pathlib import Path
-VERSION_FILE = Path(__file__).parent / "asynciojobs" / "version.py"
+from pkg_resources import resource_string
+VERSION_CODE = resource_string('asynciojobs', 'version.py')
 ENV = {}
-with open(VERSION_FILE) as f:
-    exec(f.read(), ENV)
+exec(VERSION_CODE, ENV)
 __version__ = ENV['__version__']
 
 LONG_DESCRIPTION = (
@@ -31,7 +30,6 @@ setuptools.setup(
     author="Thierry Parmentelat",
     author_email="thierry.parmentelat@inria.fr",
     description="A simplistic orchestration engine for asyncio-based jobs",
-    long_description=LONG_DESCRIPTION,
     license="CC BY-SA 4.0",
     keywords=['asyncio', 'dependency', 'dependencies',
               'jobs', 'scheduling', 'orchestration'],
