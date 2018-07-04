@@ -19,12 +19,12 @@ import sys, os
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('../..'))
 
-print("current directory is", os.getcwd())
+#print("current directory is", os.getcwd())
 for path in sys.path:
     print("in path", path)
 
 from sys import version_info as python_version
-print("python version", python_version)
+#print("python version", python_version)
 
 from asynciojobs import __version__
 
