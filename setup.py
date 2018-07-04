@@ -13,7 +13,7 @@ import setuptools
 from pathlib import Path
 VERSION_FILE = Path(__file__).parent / "asynciojobs" / "version.py"
 ENV = {}
-with open(VERSION_FILE) as f:
+with VERSION_FILE.open() as f:
     exec(f.read(), ENV)
 __version__ = ENV['__version__']
 
