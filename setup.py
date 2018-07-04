@@ -6,7 +6,16 @@ package / install
 
 import setuptools
 
-from asynciojobs.version import __version__
+# https://packaging.python.org/guides/single-sourcing-package-version/
+# set __version__ by read & exec of the python code
+# this is better than an import that would otherwise try to
+# import the whole package, and fail if a required module is not yet there
+from pathlib import Path
+VERSION_FILE = Path(__file__).parent / "asynciojobs" / "version.py"
+ENV = {}
+with open(VERSION_FILE) as f:
+    exec(f.read(), ENV)
+__version__ = ENV['__version__']
 
 LONG_DESCRIPTION = (
     "See notebook at https://github.com/parmentelat/"

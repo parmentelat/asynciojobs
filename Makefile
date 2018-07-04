@@ -4,7 +4,7 @@
 
 LIBRARY = asynciojobs
 
-VERSION = $(shell python3 -c "from $(LIBRARY).version import __version__; print(__version__)")
+VERSION = $(shell python3 setup.py --version)
 VERSIONTAG = $(LIBRARY)-$(VERSION)
 GIT-TAG-ALREADY-SET = $(shell git tag | grep '^$(VERSIONTAG)$$')
 # to check for uncommitted changes
