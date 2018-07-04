@@ -19,7 +19,7 @@ __version__ = ENV['__version__']
 
 LONG_DESCRIPTION = (
     "See notebook at https://github.com/parmentelat/"
-    "asynciojobs/blob/master/README.ipynb"
+    "asynciojobs/blob/master/sphinx/README.ipynb"
 )
 
 REQUIRED_MODULES = [
