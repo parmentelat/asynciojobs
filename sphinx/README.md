@@ -80,7 +80,7 @@ watch.print_elapsed('some')
 ```
 
     000.000  
-    000.500 some
+    000.505 some
 
 We can now write a simple coroutine for illustrating schedulers through small examples:
 
@@ -143,12 +143,12 @@ sa
 sa.run()
 ```
 
-    000.024 -> in_out(0.25)
-    000.024 -> in_out(0.1)
-    000.025 -> in_out(0.2)
-    000.125 <- in_out(0.1)
-    000.229 <- in_out(0.2)
-    000.277 <- in_out(0.25)
+    000.016 -> in_out(0.1)
+    000.016 -> in_out(0.2)
+    000.016 -> in_out(0.25)
+    000.119 <- in_out(0.1)
+    000.219 <- in_out(0.2)
+    000.269 <- in_out(0.25)
 
 
 
@@ -194,9 +194,9 @@ sa2.run()
     000.000 -> in_out(0.1)
     000.000 -> in_out(0.2)
     000.000 -> in_out(0.25)
-    000.106 <- in_out(0.1)
-    000.201 <- in_out(0.2)
-    000.251 <- in_out(0.25)
+    000.105 <- in_out(0.1)
+    000.205 <- in_out(0.2)
+    000.254 <- in_out(0.25)
 
 
 
@@ -253,10 +253,10 @@ sb.run()
 
     000.000 -> in_out(0.1)
     000.000 -> in_out(0.25)
-    000.105 <- in_out(0.1)
-    000.105 -> in_out(0.2)
-    000.253 <- in_out(0.25)
-    000.310 <- in_out(0.2)
+    000.103 <- in_out(0.1)
+    000.104 -> in_out(0.2)
+    000.255 <- in_out(0.25)
+    000.309 <- in_out(0.2)
 
 
 
@@ -287,12 +287,12 @@ watch.reset()
 sb2.run()
 ```
 
-    000.000 -> in_out(0.25)
     000.000 -> in_out(0.1)
-    000.101 <- in_out(0.1)
-    000.101 -> in_out(0.2)
-    000.253 <- in_out(0.25)
-    000.302 <- in_out(0.2)
+    000.000 -> in_out(0.25)
+    000.104 <- in_out(0.1)
+    000.104 -> in_out(0.2)
+    000.255 <- in_out(0.25)
+    000.309 <- in_out(0.2)
 
 
 
@@ -354,8 +354,8 @@ sb.list()
 ```
 
     1 ⚠ ☉ ☓   <Job `b1`> [[ -> 100.0]] 
-    2 ⚠ ☉ ☓   <Job `Job[in_out (...)]`> [[ -> 250.0]] 
-    3 ⚠ ☉ ☓   <Job `b2`> [[ -> 200.0]] requires={1}
+    2 ⚠ ☉ ☓   <Job `b2`> [[ -> 200.0]] requires={1}
+    3 ⚠ ☉ ☓   <Job `Job[in_out (...)]`> [[ -> 250.0]] 
 
 
 The textual representation displayed by `list()` shows all the jobs, with:
@@ -501,10 +501,10 @@ sc.run()
 
     BUS: 000.000 -> in_out(0.2)
     BUS: 000.000 -> in_out(0.4)
-    BUS: 000.206 <- in_out(0.2)
+    BUS: 000.205 <- in_out(0.2)
     BUS: 000.206 -> in_out(0.3)
-    BUS: 000.401 <- in_out(0.4)
-    BUS: 000.508 <- in_out(0.3)
+    BUS: 000.406 <- in_out(0.4)
+    BUS: 000.509 <- in_out(0.3)
 
 
 
@@ -522,9 +522,9 @@ sc.list()
 ```
 
     1 ⚠ ☉ ☓   <Job `c1`> [[ -> 2.0]] 
-    2 ⚠ ☉ ↺ ∞ <Job `monitor`> [not done] 
+    2 ⚠ ☉ ☓   <Job `c2`> [[ -> 4.0]] 
     3 ⚠ ☉ ☓   <Job `c3`> [[ -> 3.0]] requires={1}
-    4 ⚠ ☉ ☓   <Job `c2`> [[ -> 4.0]] 
+    4 ⚠ ☉ ↺ ∞ <Job `monitor`> [not done] 
 
 
 Forever jobs appear with a dotted border on a graphical representation:
@@ -577,9 +577,9 @@ sd.run()
 ```
 
     000.000: forever 0
-    000.106: forever 1
-    000.207: forever 2
-    23:27:13.371 SCHEDULER(None): PureScheduler.co_run: TIMEOUT occurred
+    000.104: forever 1
+    000.209: forever 2
+    11:34:57.169 SCHEDULER(None): PureScheduler.co_run: TIMEOUT occurred
 
 
 
@@ -640,9 +640,9 @@ se.run()
 ```
 
     000.000 -> in_out(0.2)
-    000.201 <- in_out(0.2)
-    000.402 -> in_out(0.3)
-    000.703 <- in_out(0.3)
+    000.205 <- in_out(0.2)
+    000.409 -> in_out(0.3)
+    000.710 <- in_out(0.3)
 
 
 
@@ -699,8 +699,8 @@ sf.run()
 ```
 
     000.000 -> in_out(0.2)
-    000.201 <- in_out(0.2)
-    23:27:14.589 SCHEDULER(None): Emergency exit upon exception in critical job
+    000.202 <- in_out(0.2)
+    11:34:58.383 SCHEDULER(None): Emergency exit upon exception in critical job
 
 
 
@@ -765,14 +765,14 @@ s.run()
 print("total duration = {}s".format(watch.elapsed()))
 ```
 
-    000.510 8-th job
-    000.510 6-th job
-    000.510 4-th job
-    000.510 3-th job
-    000.510 5-th job
-    000.510 7-th job
-    000.510 2-th job
-    000.510 1-th job
+    000.469 1-th job
+    000.469 2-th job
+    000.469 3-th job
+    000.469 4-th job
+    000.469 5-th job
+    000.469 6-th job
+    000.469 7-th job
+    000.469 8-th job
     total duration = 001.004s
 
 
@@ -833,7 +833,7 @@ main_sched.list()
     3 ⚠   ⚐   > <Job `subj1`> [not done] 
     4 ⚠   ⚐   > <Job `subj2`> [not done] requires={3}
     5 ⚠   ⚐   > <Job `subj3`> [not done] requires={3}
-    6 ⚠   ⚐   > <Job `subj4`> [not done] requires={5, 4}
+    6 ⚠   ⚐   > <Job `subj4`> [not done] requires={4, 5}
     2 --end-- < <Scheduler `critical nested`> exits={6}
     7 ⚠   ⚐   <Job `main-end`> [not done] requires={2}
 
@@ -863,8 +863,8 @@ main_sched.run()
 
     main-start
     subj1
-    subj3
     subj2
+    subj3
     subj4
     main-end
 

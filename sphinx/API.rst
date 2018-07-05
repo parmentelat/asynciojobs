@@ -28,8 +28,15 @@ The Sequence class
 
 --------------------
 
+Notes on ordering
+-----------------
+
+.. automodule:: asynciojobs.bestset
+
+--------------------
+
 Convenience classes
---------------------------------
+-------------------
 
 .. automodule:: asynciojobs.printjob
         :members:
