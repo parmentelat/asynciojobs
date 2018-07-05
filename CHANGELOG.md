@@ -1,11 +1,12 @@
 # ChangeLog
 
-## 0.12.8 - 2018 July 5
+## 0.12.9 - 2018 July 5
 
 * make OrderedSet optional again; too cumbersome on some distros like fedora
 * OrderedSet will be used if present, otherwise use plain sets
 * can install with either `pip3 install asynciojobs[ordered]`
 * or equivalently with `pip3 install orderedset`
+* release 0.12.8 is broken
 
 ## 0.12.7 - 2018 July 4
 
