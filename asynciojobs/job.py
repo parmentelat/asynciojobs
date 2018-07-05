@@ -11,7 +11,7 @@ It also defines a couple of simple job classes.
 import sys
 import asyncio
 
-from orderedset import OrderedSet
+from .bestset import BestSet
 
 from .dotstyle import DotStyle
 
@@ -117,7 +117,7 @@ class AbstractJob:                                      # pylint: disable=R0902
         self.label = label
         # for convenience, one can mention
         # only one, or a collection of, AbstractJobs
-        self.required = OrderedSet()
+        self.required = BestSet()
         self.requires(required)
         # convenience again
         if scheduler is not None:
@@ -132,7 +132,7 @@ class AbstractJob:                                      # pylint: disable=R0902
         # this is for graph browsing algos
         self._s_mark = None
         # the reverse of required
-        self._s_successors = OrderedSet()
+        self._s_successors = BestSet()
         # this attribute is reserved for use by the scheduler
         # that will for example store there an ordering information,
         # which in turn can be used for printing relationships

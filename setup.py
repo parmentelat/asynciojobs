@@ -23,7 +23,8 @@ LONG_DESCRIPTION = (
 )
 
 REQUIRED_MODULES = [
-    'orderedset',
+# this is now optional, see below
+#    'orderedset',
 ]
 
 setuptools.setup(
@@ -43,6 +44,7 @@ setuptools.setup(
     install_requires=REQUIRED_MODULES,
     extras_require={
         'graph': ['graphviz'],
+        'ordered': ['orderedset'],
     },
 
     project_urls={
