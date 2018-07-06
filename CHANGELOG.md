@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.12.10 - 2018 July 5
+
+* iron unicode support detection, primarily for testing apssh within a ubuntu virtualbox
+
 ## 0.12.9 - 2018 July 5
 
 * make OrderedSet optional again; too cumbersome on some distros like fedora
