@@ -308,7 +308,9 @@ class AbstractJob:                                      # pylint: disable=R0902
     def _detect_support_for_unicode(cls):
         if cls._has_support_for_unicode is None:
             try:
-                cls._c_saltire.encode(sys.stdout.encoding)
+                # somehow on the test VB ubuntu box for apssh
+                # sys.stdout.encoding is None
+                cls._c_saltire.encode(sys.stdout.encoding or 'UTF-8')
                 cls._has_support_for_unicode = True
             except UnicodeEncodeError:
                 cls._has_support_for_unicode = False
