@@ -18,6 +18,9 @@ from asynciojobs import PureScheduler
 
 from asynciojobs import PrintJob
 
+from asynciojobs import Watch
+from .util import co_print_sleep, diamond_from_jobs
+
 # pylint: disable=R0904, R0914, R0903, R1710
 # pylint: disable=W0106, W0212, W0201, C0103, C0111, C0321
 
@@ -531,6 +534,37 @@ class Tests(unittest.TestCase):
                             sched.add(j)
                             previous = j
         sched.list()
+
+
+    def test_iterate(self):
+        watch = Watch()
+        s = diamond_from_jobs(
+            watch,
+            J(co_print_sleep(watch, .1, "1")),
+            diamond_from_jobs(
+                watch,
+                J(co_print_sleep(watch, .1, "2.1")),
+                J(co_print_sleep(watch, .1, "2.2")),
+                J(co_print_sleep(watch, .1, "2.3")),
+                J(co_print_sleep(watch, .1, "2.4")),
+                ),
+            diamond_from_jobs(
+                watch,
+                J(co_print_sleep(watch, .1, "3.1")),
+                J(co_print_sleep(watch, .1, "3.2")),
+                J(co_print_sleep(watch, .1, "3.3")),
+                J(co_print_sleep(watch, .1, "3.4")),
+                ),
+            J(co_print_sleep(watch, .1, "4")))
+
+        c1 = sum(1 for job in s.iterate_jobs(scan_schedulers=False))
+        c2 = sum(1 for job in s.iterate_jobs(scan_schedulers=True))
+
+        # without schedulers we expect 10 jobs
+        self.assertEqual(c1, 10)
+        # with schedulers we expect 13 jobs since top scheduler
+        # gets taken into account too
+        self.assertEqual(c2, 13)
 
 
 if __name__ == '__main__':

@@ -31,6 +31,34 @@ def produce_png(scheduler, name):
     print(f"png file produced in {actual_name}{{,.png}}")
 
 
+def diamond_from_jobs(watch, j1, j2, j3, j4, scheduler_class=Scheduler):
+    diamond = scheduler_class(watch=watch)
+    diamond.add(j1)
+    diamond.add(j2)
+    diamond.add(j3)
+    diamond.add(j4)
+    j2.requires(j1)
+    j3.requires(j1)
+    j4.requires(j2)
+    j4.requires(j3)
+    return diamond
+
+def diamond_scheduler(watch, duration, msg, scheduler_class=Scheduler):
+    """
+    create a small diamond scheduler
+    total duration = duration
+    """
+    top = Job(co_print_sleep(watch, duration/4, f"top {msg}"),
+              label=f"top {msg}1")
+    left = Job(co_print_sleep(watch, duration/2, f"left {msg}"),
+               label=f"left {msg}")
+    right = Job(co_print_sleep(watch, duration/2, f"right {msg}", ),
+                label=f"right {msg}")
+    bottom = Job(co_print_sleep(watch, duration / 4, f"bottom {msg}"),
+                label=f"bottom {msg}")
+    return diamond_from_jobs(watch, top, left, right, bottom)
+
+
 def diamond_scheduler(watch, duration, msg, scheduler_class=Scheduler):
     """
     create a small diamond scheduler

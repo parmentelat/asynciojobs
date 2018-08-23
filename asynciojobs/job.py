@@ -189,6 +189,9 @@ class AbstractJob:                                      # pylint: disable=R0902
                       self.repr_main(),
                       self.repr_requires()))
 
+    def _iterate_jobs(self, scan_schedulers):           # pylint: disable=w0613
+        yield self
+
     def _get_text_label(self):
         # In terms of labelling, things have become a little tricky over
         # time. When listing an instance of Scheduler, there are 2 ways

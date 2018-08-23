@@ -1042,6 +1042,22 @@ class PureScheduler:                                    # pylint: disable=r0902
                             j, "non-critical job exception stack")
 
     # ----
+    def iterate_jobs(self, scan_schedulers=False):
+        """
+        A generator that scans all jobs and subjobs
+
+        Parameters:
+          scan_schedulers: if set, nested schedulers are ignored,
+            only actual jobs are reported; otherwise, nested schedulers
+            are listed as well.
+        """
+        if scan_schedulers:
+            yield self
+        for job in self.jobs:
+            yield from job._iterate_jobs(               # pylint: disable=W0212
+                scan_schedulers=scan_schedulers)
+
+    # ----
     # graphical outputs
 
     # in a first attempt we had one function to store a dot format into a file
