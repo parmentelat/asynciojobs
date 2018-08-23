@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.12.11 - 2018 August 23
+
+* new method `iterate_jobs()` on schedulers to scan all jobs in   scheduler and nested sons.
+
 ## 0.12.10 - 2018 July 5
 
 * iron unicode support detection, primarily for testing apssh within a ubuntu virtualbox
