@@ -174,7 +174,7 @@ class AbstractJob:                                      # pylint: disable=R0902
                       self.repr_result(),
                       self.repr_requires()))
         if details and hasattr(self, 'details'):
-            details = self.details()
+            details = self.details()                    # pylint: disable=e1111
             if details is not None:
                 print(details)
 
@@ -207,7 +207,7 @@ class AbstractJob:                                      # pylint: disable=R0902
         if attempt is not None:
             return attempt
         # otherwise, try self.text_label() and use that
-        attempt = self.text_label()
+        attempt = self.text_label()                     # pylint: disable=e1111
         if attempt is not None:
             return attempt
         # otherwise
@@ -218,7 +218,7 @@ class AbstractJob:                                      # pylint: disable=R0902
         # we don't need to bother about _sched_id here though
         # also we try graph_label() first, and resort to text_label()
         # if it's not redefined on the object
-        attempt = self.graph_label()
+        attempt = self.graph_label()                    # pylint: disable=e1111
         if attempt is not None:
             return attempt
         return self._get_text_label()

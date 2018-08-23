@@ -407,8 +407,8 @@ class PureScheduler:                                    # pylint: disable=r0902
         raise ValueError("no entry found")
 
     @staticmethod
-    def middle_index(n):
-        return (n-1)//2
+    def _middle_index(last):
+        return (last-1) // 2
 
     def middle_entry_job(self):
         """
@@ -421,10 +421,13 @@ class PureScheduler:                                    # pylint: disable=r0902
             raise ValueError("no entry found")
         # scan again until mid-way
         entries = self.entry_jobs()
-        index = self.middle_index(number_entries)
+        index = self._middle_index(number_entries)
         for _, job in zip(range(index+1), entries):
             pass
-        return job
+        # pylint detects that job is possibley undefined,
+        # which could only occur if range(index+1) is empty
+        # but index is >= 0 so we're in the clear
+        return job                                      # pylint: disable=w0631
 
     def some_exit_job(self, **exit_kwds):
         """
@@ -445,10 +448,11 @@ class PureScheduler:                                    # pylint: disable=r0902
         if not number_exits:
             raise ValueError("no exit found")
         exits = self.exit_jobs(**exit_kwds)
-        index = self.middle_index(number_exits)
+        index = self._middle_index(number_exits)
         for _, job in zip(range(index+1), exits):
             pass
-        return job
+        # ditto
+        return job                                      # pylint: disable=w0631
 
     def repr_entries(self):                             # pylint: disable=c0111
         return "entries={}".format(self._entry_csv())
@@ -678,7 +682,7 @@ class PureScheduler:                                    # pylint: disable=r0902
         # the done part is of no use here
         _, pending = await asyncio.wait(tasks, timeout=timeout)
         # everything went fine
-        # xxx here we say that sub-schedulers that had a timeout expiration
+        # NOTE however: here we say that sub-schedulers that expired in timeout
         # should not impact the overall result; this is an arguable choice
         if not pending:
             return True
@@ -693,7 +697,7 @@ class PureScheduler:                                    # pylint: disable=r0902
             " have not returned within timeout"
             .format(len(pending), len(self.jobs)))
         await self._tidy_tasks(pending)
-        # xxx should consume any exception as well ?
+        # we might need to consume any exception as well ?
         # self._tidy_tasks_exception(done)
         return False
 
@@ -936,7 +940,7 @@ class PureScheduler:                                    # pylint: disable=r0902
             if isinstance(job, PureScheduler):
                 job._set_sched_ids_safe(stack+[i])      # pylint: disable=W0212
 
-    ####################
+    # ----
     def list(self, details=False):
         """
         Prints a complete list of jobs in topological order, with their status
@@ -962,16 +966,18 @@ class PureScheduler:                                    # pylint: disable=r0902
             # pass as stack a list of indexes
             job._list_safe(True)                        # pylint: disable=W0212
 
+
+    # ----
     def __repr__(self):
         # linter says unused variable but it is indeed used in f-string
-        nb_total = len(self.jobs)                       # pylint: disable=W0612
+        nb_total = len(self.jobs)                       # pylint: disable=W0641
         done = {j for j in self.jobs if j.is_done()}
-        nb_done = len(done)                             # pylint: disable=W0612
+        nb_done = len(done)                             # pylint: disable=W0641
         running = {j for j in self.jobs if j.is_running()}
         ongoing = running - done
-        nb_ongoing = len(ongoing)                       # pylint: disable=W0612
+        nb_ongoing = len(ongoing)                       # pylint: disable=W0641
         idle = self.jobs - running
-        nb_idle = len(idle)                             # pylint: disable=W0612
+        nb_idle = len(idle)                             # pylint: disable=W0641
         return "{type} with {nb_done} done + {nb_ongoing} ongoing" \
                " + {nb_idle} idle = {nb_total} job(s)" \
             .format(type=type(self).__name__, **locals())
@@ -1035,8 +1041,9 @@ class PureScheduler:                                    # pylint: disable=r0902
                         self._show_task_stack(
                             j, "non-critical job exception stack")
 
+    # ----
     # graphical outputs
-    #
+
     # in a first attempt we had one function to store a dot format into a file
     # and another one to build the graph natively; hence duplication of code
     # there are simpler means to do that

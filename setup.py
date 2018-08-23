@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+
 """
 package / install
 """
@@ -10,11 +11,12 @@ import setuptools
 # set __version__ by read & exec of the python code
 # this is better than an import that would otherwise try to
 # import the whole package, and fail if a required module is not yet there
-from pathlib import Path
+from pathlib import Path                                # pylint: disable=c0411
+
 VERSION_FILE = Path(__file__).parent / "asynciojobs" / "version.py"
 ENV = {}
 with VERSION_FILE.open() as f:
-    exec(f.read(), ENV)
+    exec(f.read(), ENV)                                 # pylint: disable=w0122
 __version__ = ENV['__version__']
 
 LONG_DESCRIPTION = (
@@ -23,8 +25,7 @@ LONG_DESCRIPTION = (
 )
 
 REQUIRED_MODULES = [
-# this is now optional, see below
-#    'orderedset',
+    # orderedset is now optional - see extras_require below
 ]
 
 setuptools.setup(
