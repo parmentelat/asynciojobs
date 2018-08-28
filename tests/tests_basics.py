@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# pylint: disable=c0111, c0103
+# pylint: disable=c0111, c0103, r1705
 
 """
 tests for the asynciojobs package
@@ -89,7 +89,7 @@ class SleepJob(AbstractJob):
         result = await _sl(self.timeout, middle=self.middle, emergency=False)
         return result
 
-    async def co_shutdown(self, depth):
+    async def co_shutdown(self):
         pass
 
 
@@ -110,7 +110,7 @@ class TickJob(AbstractJob):
             counter += 1
             await asyncio.sleep(self.cycle)
 
-    async def co_shutdown(self, depth):
+    async def co_shutdown(self):
         pass
 
 
