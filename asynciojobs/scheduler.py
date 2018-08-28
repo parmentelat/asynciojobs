@@ -2,6 +2,8 @@
 The ``Scheduler`` class makes it easier to nest scheduler objects.
 """
 
+# pylint: disable=w0212
+
 from asynciojobs import PureScheduler
 from asynciojobs import AbstractJob
 
@@ -140,10 +142,10 @@ class Scheduler(PureScheduler, AbstractJob):
         for the next job.
         """
         # first set index on the current (kind of fake) node
-        i = AbstractJob._set_sched_id(self,             # pylint: disable=w0212
+        i = AbstractJob._set_sched_id(self,
                                       start, id_format)
         # go on with the jobs in sub scheduler
-        return PureScheduler._set_sched_ids(self,       # pylint: disable=w0212
+        return PureScheduler._set_sched_ids(self,
                                             i, id_format)
 
     def _job_count(self):
@@ -170,7 +172,7 @@ class Scheduler(PureScheduler, AbstractJob):
                       self.repr_entries()))
         if recursive:
             for job in self.topological_order():
-                job._list(details, depth+1, recursive)  # pylint: disable=W0212
+                job._list(details, depth+1, recursive)
             print(self.repr_id(),
                   # this should be 7-spaces like repr_short()
                   '--end--',
@@ -189,7 +191,7 @@ class Scheduler(PureScheduler, AbstractJob):
                       self.repr_requires()))
         if recursive:
             for job in self.jobs:
-                job._list_safe(recursive)               # pylint: disable=W0212
+                job._list_safe(recursive)
             print('--end--', self.repr_id())
 
     def _iterate_jobs(self, scan_schedulers):
@@ -197,7 +199,7 @@ class Scheduler(PureScheduler, AbstractJob):
             yield self
         for job in self.jobs:
             yield from job._iterate_jobs(
-                scan_schedulers=scan_schedulers)        # pylint: disable=W0212
+                scan_schedulers=scan_schedulers)
 
     def dot_cluster_name(self):
         """
