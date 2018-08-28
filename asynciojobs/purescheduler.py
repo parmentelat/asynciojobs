@@ -807,7 +807,7 @@ class PureScheduler:                                    # pylint: disable=r0902
                 # clean up
                 await self._feedback(pending, "ABORTING")
                 await self._tidy_tasks(pending)
-# removed in 1.0                await self.co_shutdown()
+                await self.co_shutdown()
                 self._failed_timeout = self.timeout
                 return False
 
@@ -829,7 +829,7 @@ class PureScheduler:                                    # pylint: disable=r0902
                         self._show_task_stack(done_task, "DEBUG")
             if critical_failure:
                 await self._tidy_tasks(pending)
-# removed in 1.0                await self.co_shutdown()
+                await self.co_shutdown()
                 self._failed_critical = True
                 await self._feedback(
                     None, "Emergency exit upon exception in critical job",
@@ -854,7 +854,7 @@ class PureScheduler:                                    # pylint: disable=r0902
                           .format(nb_jobs_forever, len(pending)))
                 await self._feedback(pending, "TIDYING forever")
                 await self._tidy_tasks(pending)
-# removed in 1.0                await self.co_shutdown()
+                await self.co_shutdown()
                 return True
 
             # go on : find out the jobs that can be added to the mix
