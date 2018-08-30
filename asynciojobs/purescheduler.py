@@ -128,6 +128,8 @@ class PureScheduler:                                    # pylint: disable=r0902
         self._failed_timeout = False
         # see also _record_beginning
         self._expiration = None
+        # avoid multiple shutdowns
+        self._did_shutdown = False
 
     # think of an scheduler as a set of jobs
     def update(self, jobs):
@@ -642,21 +644,38 @@ class PureScheduler:                                    # pylint: disable=r0902
         :meth:`~asynciojobs.job.AbstractJob.co_shutdown()`
         method to all the jobs, possibly nested.
 
-        Typically for example, several jobs sharing the same ssh connection
-        will arrange for that connection to be kept alive across an entire
-        scheduler lifespan, but there is a need to tear these connections
-        down eventually.
+        Within nested schedulers, a job receives the `shutdown` event when its
+        **enclosing** scheduler terminates, and **not** at the end of the
+        **outermost** scheduler.
+
+        Also note that all job instances receive the 'co_shutdown()' method,
+        even the ones that have not yet started; it is up to the `co_shutdown()`
+        method to triage the jobs according to their life cycle status - see
+        :meth:`~asynciojobs.job.AbstractJob.is_running()` and similar.
+
+        This mechanism should be used only for minimal housekeeping only, it is
+        recommended that intrusive cleanup be made part of separate, explicit
+        methods.
+
+        :Note: typically in apssh for example, several jobs sharing the same ssh
+        connection need to arrange for that connection to *be kept alive  across
+        an entire scheduler lifespan, and closed later on. Historically there
+        had been an attempt to deal with this automagically, through the present
+        shutdown mechanism. However, this turned out to be the wrong choice, as
+        the choice of closing connections needs to be left to the user.
+        Additionally, with nested schedulers, this can become pretty awkward.
+        Closing ssh connections is now to be achieved explicitly through a call
+        to a specific apssh function.
 
         Returns:
           bool: True if all the
-          :meth:`~asynciojobs.job.AbstractJob.co_shutdown()`
-          methods attached to the jobs in the scheduler complete
-          within ``shutdown_timeout``, which is an attribute of the scheduler.
-          If the ``shutdown_timeout`` attribute on this object is ``None``,
-          no timeout is implemented.
+           :meth:`~asynciojobs.job.AbstractJob.co_shutdown()`
+           methods attached to the jobs in the scheduler complete
+           within ``shutdown_timeout``, which is an attribute of the scheduler.
+           If the ``shutdown_timeout`` attribute on this object is ``None``,
+           no timeout is implemented.
 
         Notes:
-
           There is probably space for a lot of improvement here xxx:
 
           - behaviour is unspecified if any of the co_shutdown()
@@ -668,8 +687,25 @@ class PureScheduler:                                    # pylint: disable=r0902
             it does not support to shutdown a scheduler that is still running.
         """
 
+        # implementation note
+        # it could be tempting to have this code only send co_shutdown
+        # on pure jobs
+        # however this approach does not work in cases where a timeout occurs
+        # which causes a (sub-)nested scheduler to be kind of paused, without
+        # actually being aware of it (its co_run() code does not return at all)
+        # so it's much simpler to always scan all the whole scheduler tree,
+        # but to skip schedulers that have already shut down
+
+        if self._did_shutdown:
+            return
+
+        self._did_shutdown = True
+
         tasks = [asyncio.ensure_future(job.co_shutdown())
                  for job in self.jobs]
+
+        if not tasks:
+            return True
 
         # warning: xxx this use a unique attribute to remember expiration
         # so things might/probably will get messed up if one attempts
