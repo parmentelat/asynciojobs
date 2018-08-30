@@ -1,5 +1,11 @@
 # ChangeLog
 
+## 0.13.0 - 2018 August 30
+
+* re-enabled auto-shutdown() message broadcast system; this method is sent to all jobs within a scheduler when co_run() finishes;
+* a job in a nested scheduler receives this event when its most enclosing scheduler finishes, not when the highest-level scheduler finishes;
+* the feature is deemed complete and well tested including wrt shutdown_timeout.
+
 ## 0.12.11 - 2018 August 23
 
 * new method `iterate_jobs()` on schedulers to scan all jobs in   scheduler and nested sons.
