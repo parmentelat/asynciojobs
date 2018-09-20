@@ -415,7 +415,7 @@ class PureScheduler:                                    # pylint: disable=r0902
     def _middle_index(last):
         return (last-1) // 2
 
-    def middle_entry_job(self):
+    def _middle_entry_job(self):
         """
         Returns an entry job; needed when creating the dot format, because
         of the specifics of that format.
@@ -439,11 +439,11 @@ class PureScheduler:                                    # pylint: disable=r0902
         candidate = job                                 # pylint: disable=w0631
         if not isinstance(candidate, PureScheduler):
             return candidate
-        return candidate.middle_entry_job()
+        return candidate._middle_entry_job()
 
-    def middle_exit_job(self, **exit_kwds):
+    def _middle_exit_job(self, **exit_kwds):
         """
-        Same as ``middle_entry_job``, for exit nodes;
+        Same as ``_middle_entry_job``, for exit nodes;
         accepts same parameters as ``self.exit_jobs()``
         """
         number_exits = sum(1 for _ in self.exit_jobs(**exit_kwds))
@@ -463,7 +463,7 @@ class PureScheduler:                                    # pylint: disable=r0902
         candidate = job                                 # pylint: disable=w0631
         if not isinstance(candidate, PureScheduler):
             return candidate
-        return candidate.middle_exit_job()
+        return candidate._middle_exit_job()
 
     def repr_entries(self):                             # pylint: disable=c0111
         return "entries={}".format(self._entry_csv())
@@ -1176,7 +1176,7 @@ DOT_%28graph_description_language%29
 
                     # upstream is a scheduler
                     else:
-                        from_node = req.middle_exit_job()
+                        from_node = req._middle_exit_job()
                         cluster_name = req.dot_cluster_name()
                         result += ("{} -> {} [ltail={}];\n"
                                    .format(from_node.repr_id(),
@@ -1198,15 +1198,15 @@ DOT_%28graph_description_language%29
                     if not isinstance(req, PureScheduler):
                         result += ("{} -> {} [lhead={}];\n"
                                    .format(req.repr_id(),
-                                           job.middle_entry_job().repr_id(),
+                                           job._middle_entry_job().repr_id(),
                                            cluster_name))
 
                     # upstream is a scheduler as well
                     else:
                         src_cluster_name = req.dot_cluster_name()
                         result += ("{} -> {} [lhead={} ltail={}];\n"
-                                   .format(req.middle_exit_job().repr_id(),
-                                           job.middle_entry_job().repr_id(),
+                                   .format(req._middle_exit_job().repr_id(),
+                                           job._middle_entry_job().repr_id(),
                                            cluster_name,
                                            src_cluster_name))
 
