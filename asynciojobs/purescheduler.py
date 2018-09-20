@@ -220,7 +220,7 @@ class PureScheduler:                                    # pylint: disable=r0902
         return "FINE"
 
     ####################
-    def sanitize(self):
+    def sanitize(self, verbose=None):
         """
         This method ensures that the requirements relationship is closed within
         the scheduler. In other words, it removes any requirement attached to a
@@ -232,10 +232,24 @@ class PureScheduler:                                    # pylint: disable=r0902
         In any case it is crucial that this property holds
         for :meth:`co_run()` to perform properly.
 
+        Parameters:
+          verbose: if not None, defines verbosity for this operation.
+            Otherwise, the object's ``verbose`` attribute is used.
+            In verbose mode, jobs that are changed, i.e. that have
+            requirement(s) dropped because they are not part of
+            the same scheduler, are listed, together with their
+            container scheduler.
+
         Returns:
           bool: returns True if scheduler object was fine,
-          and False if at least one removal was needed.
+            and False if at least one removal was needed.
         """
+
+        if verbose is None:
+            verbose = self.verbose
+        if verbose:
+            container_label = self if not hasattr(self, 'label') \
+                else self.label                         # pylint: disable=e1101
 
         changes = False
         for job in self.jobs:
@@ -245,13 +259,13 @@ class PureScheduler:                                    # pylint: disable=r0902
             after = len(job.required)
             if before != after:
                 changes = True
-                if self.verbose:
-                    print(20 * '*',
-                          "WARNING: job {} has had {} requirements removed"
-                          .format(job, before - after))
+                if verbose:
+                    print(10 * '*',
+                          "WARNING: job {} in {} had {} requirements removed"
+                          .format(job, container_label, before - after))
             # recursively scan nested schedulers
             if isinstance(job, PureScheduler):
-                changes = job.sanitize() or changes
+                changes = job.sanitize(verbose) or changes
         return not changes
 
     ####################
