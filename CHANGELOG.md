@@ -1,24 +1,24 @@
 # ChangeLog
 
-## 0.13.1 - 2018 September 20
+## 0.13.1 - 2018 Sep 20
 
 * bugfix: in dot output, the source and destination of arrows need to be atomic jobs, not subgraphs; we had that wrong in case where nesting depth was more than 2.
 
-## 0.13.0 - 2018 August 30
+## 0.13.0 - 2018 Aug 30
 
 * re-enabled auto-shutdown() message broadcast system; this method is sent to all jobs within a scheduler when co_run() finishes;
 * a job in a nested scheduler receives this event when its most enclosing scheduler finishes, not when the highest-level scheduler finishes;
 * the feature is deemed complete and well tested including wrt shutdown_timeout.
 
-## 0.12.11 - 2018 August 23
+## 0.12.11 - 2018 Aug 23
 
 * new method `iterate_jobs()` on schedulers to scan all jobs in   scheduler and nested sons.
 
-## 0.12.10 - 2018 July 5
+## 0.12.10 - 2018 Jul 5
 
 * iron unicode support detection, primarily for testing apssh within a ubuntu virtualbox
 
-## 0.12.9 - 2018 July 5
+## 0.12.9 - 2018 Jul 5
 
 * make OrderedSet optional again; too cumbersome on some distros like fedora
 * OrderedSet will be used if present, otherwise use plain sets
@@ -26,23 +26,23 @@
 * or equivalently with `pip3 install orderedset`
 * release 0.12.8 is broken
 
-## 0.12.7 - 2018 July 4
+## 0.12.7 - 2018 Jul 4
 
 * fix packaging, so that `orderedset` can properly be installed as a dependency
 * intermediate releases were still broken in this respect
 
-## 0.12.2 - 2018 June 14
+## 0.12.2 - 2018 Jun 14
 
 * use OrderedSet's to preserve creation order
 * more balanced graphical layout in case of nested schedulers
 * 0.12.1 was broken, it used a couple of f-strings
 
-## 0.11.4 - 2018 June 12
+## 0.11.4 - 2018 Jun 12
 
 * schedulers are graphically rendered with right corners instead of rounded
 * darker color for critical jobs - plain red was too much
 
-## 0.11.3 - 2018 June 12
+## 0.11.3 - 2018 Jun 12
 
 * new convenience method `export_as_pngfile()`
 
