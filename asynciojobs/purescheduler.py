@@ -436,7 +436,10 @@ class PureScheduler:                                    # pylint: disable=r0902
         # pylint detects that job is possibly undefined,
         # which could only occur if range(index+1) is empty
         # but index is >= 0 so we're in the clear
-        return job                                      # pylint: disable=w0631
+        candidate = job                                 # pylint: disable=w0631
+        if not isinstance(candidate, PureScheduler):
+            return candidate
+        return candidate.middle_entry_job()
 
     def middle_exit_job(self, **exit_kwds):
         """
@@ -447,13 +450,20 @@ class PureScheduler:                                    # pylint: disable=r0902
         # no need to do this in any case from now on
         exit_kwds['compute_backlinks'] = False
         if not number_exits:
+            # second chance : allow for forever jobs
+            exit_kwds['discard_forever'] = False
+            number_exits = sum(1 for _ in self.exit_jobs(**exit_kwds))
+        if not number_exits:
             raise ValueError("no exit found")
         exits = self.exit_jobs(**exit_kwds)
         index = self._middle_index(number_exits)
         for _, job in zip(range(index+1), exits):
             pass
         # ditto
-        return job                                      # pylint: disable=w0631
+        candidate = job                                 # pylint: disable=w0631
+        if not isinstance(candidate, PureScheduler):
+            return candidate
+        return candidate.middle_exit_job()
 
     def repr_entries(self):                             # pylint: disable=c0111
         return "entries={}".format(self._entry_csv())
