@@ -27,7 +27,7 @@ DEBUG = False                                           # pylint: disable=C0103
 # R0914 Too many local variables
 # R0904 Too many public methods (xxx this one should be reachable)
 # C0302 Too many lines in module (would be nice to not count docstrings)
-# pylint: disable=R0914, R0904, C0302
+# pylint: disable=w0212, r0914, r0904, c0302
 
 # Historical note: we used to formally define the Schedulable type hint
 # but that ended up clobbering the documentation, and was more harmful
@@ -113,8 +113,7 @@ class PureScheduler:                                    # pylint: disable=r0902
                  shutdown_timeout=1,
                  watch=None, verbose=False):
 
-        self.jobs = BestSet(
-            Sequence._flatten(jobs_or_sequences))       # pylint: disable=W0212
+        self.jobs = BestSet(Sequence._flatten(jobs_or_sequences))
         self.jobs_window = jobs_window
         # timeout is in seconds
         self.timeout = timeout
@@ -143,7 +142,7 @@ class PureScheduler:                                    # pylint: disable=r0902
         Returns:
           self: the scheduler object, for cascading insertions if needed.
         """
-        jobs = BestSet(Sequence._flatten(jobs))      # pylint: disable=W0212
+        jobs = BestSet(Sequence._flatten(jobs))
         self.jobs.update(jobs)
         return self
 
@@ -492,7 +491,7 @@ class PureScheduler:                                    # pylint: disable=r0902
         as the reverse of Job.required
         """
         for job in self.jobs:
-            job._s_successors = BestSet()            # pylint: disable=W0212
+            job._s_successors = BestSet()               # pylint: disable=W0212
         for job in self.jobs:
             for req in job.required:
                 req._s_successors.add(job)              # pylint: disable=W0212
@@ -554,8 +553,7 @@ class PureScheduler:                                    # pylint: disable=r0902
         Similar but in order to clear the exceptions,
         we need to run gather() instead
         """
-        exception_tasks = [task for task in tasks
-                           if task._exception]          # pylint: disable=W0212
+        exception_tasks = [task for task in tasks if task._exception]
         for task in exception_tasks:
             task.cancel()
             # if DEBUG is turned on, provide details on the exceptions
@@ -834,8 +832,7 @@ class PureScheduler:                                    # pylint: disable=r0902
                                      timeout=self._remaining_timeout(),
                                      return_when=asyncio.FIRST_COMPLETED)
 
-            done_ok = {t for t in done
-                       if not t._exception}             # pylint: disable=W0212
+            done_ok = {t for t in done if not t._exception}
             await self._feedback(done_ok, "DONE")
             done_ko = done - done_ok
             await self._feedback(done_ko, "RAISED EXC.")
@@ -884,9 +881,7 @@ class PureScheduler:                                    # pylint: disable=r0902
             # are we done ?
             # only account for not forever jobs (that may still finish, one
             # never knows)
-            done_jobs_not_forever = {
-                j for j in done
-                if not j._job.forever}                  # pylint: disable=W0212
+            done_jobs_not_forever = {j for j in done if not j._job.forever}
             nb_jobs_done += len(done_jobs_not_forever)
 
             if nb_jobs_done == nb_jobs_finite:
@@ -908,8 +903,7 @@ class PureScheduler:                                    # pylint: disable=r0902
             # no need to use and BestSet here
             possible_next_jobs = set()
             for done_task in done:
-                possible_next_jobs.update(
-                    done_task._job._s_successors)       # pylint: disable=W0212
+                possible_next_jobs.update(done_task._job._s_successors)
 
             # find out which ones really can be added
             added = 0
@@ -942,8 +936,7 @@ class PureScheduler:                                    # pylint: disable=r0902
           int: total number of nodes in subject and nested schedulers
 
         """
-        return sum(job._job_count()                     # pylint: disable=w0212
-                   for job in self.jobs)
+        return sum(job._job_count() for job in self.jobs)
 
     def _set_sched_ids(self, start=1, id_format=None):
         """
@@ -1080,8 +1073,7 @@ class PureScheduler:                                    # pylint: disable=r0902
                     continue
                 if not self.verbose:
                     print("non-critical: {}: exception {}"
-                          .format(j._get_text_label(),  # pylint: disable=W0212
-                                  j.raised_exception()))
+                          .format(j._get_text_label(), j.raised_exception()))
                     if self.verbose:
                         self._show_task_stack(
                             j, "non-critical job exception stack")
@@ -1099,8 +1091,7 @@ class PureScheduler:                                    # pylint: disable=r0902
         if scan_schedulers:
             yield self
         for job in self.jobs:
-            yield from job._iterate_jobs(               # pylint: disable=W0212
-                scan_schedulers=scan_schedulers)
+            yield from job._iterate_jobs(scan_schedulers=scan_schedulers)
 
     # ----
     # graphical outputs
@@ -1189,8 +1180,7 @@ DOT_%28graph_description_language%29
 
                 cluster_name = job.dot_cluster_name()
                 result += "subgraph {}".format(cluster_name)
-                result += job._dot_body(                # pylint: disable=w0212
-                    job.dot_style())
+                result += job._dot_body(job.dot_style())
 
                 for req in job.required:
 
