@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.13.1 - 2018 September 20
+
+* bugfix: in dot output, the source and destination of arrows need to be atomic jobs, not subgraphs; we had that wrong in case where nesting depth was more than 2.
+
 ## 0.13.0 - 2018 August 30
 
 * re-enabled auto-shutdown() message broadcast system; this method is sent to all jobs within a scheduler when co_run() finishes;
