@@ -411,25 +411,18 @@ class PureScheduler:                                    # pylint: disable=r0902
             result = "{" + result + "}"
         return result
 
-    def some_entry_job(self):
-        """
-        Returns one randomly picked entry job
-        Needed when creating the dot format, because
-        of the specifics of that format; although it may be
-        that returning any job would do the job as well
-        """
-        for job in self.entry_jobs():
-            return job
-        raise ValueError("no entry found")
-
     @staticmethod
     def _middle_index(last):
         return (last-1) // 2
 
     def middle_entry_job(self):
         """
-        Like some_entry_job, but as an attempt to improve graphical layout
-        we return the job that has its index in the middle of the entry jobs
+        Returns an entry job; needed when creating the dot format, because
+        of the specifics of that format.
+
+        As an attempt to improve graphical layout,
+        we return the job that has its index in the middle of the entry jobs.
+        Also, we need to return an atomic job, not a scheduler/container.
         """
         # scan once
         number_entries = sum(1 for _ in self.entry_jobs())
@@ -440,23 +433,15 @@ class PureScheduler:                                    # pylint: disable=r0902
         index = self._middle_index(number_entries)
         for _, job in zip(range(index+1), entries):
             pass
-        # pylint detects that job is possibley undefined,
+        # pylint detects that job is possibly undefined,
         # which could only occur if range(index+1) is empty
         # but index is >= 0 so we're in the clear
         return job                                      # pylint: disable=w0631
 
-    def some_exit_job(self, **exit_kwds):
-        """
-        Same for exit nodes;
-        accepts same parameters as self.exit_jobs()
-        """
-        for job in self.exit_jobs(**exit_kwds):
-            return job
-        raise ValueError("No exit found")
-
     def middle_exit_job(self, **exit_kwds):
         """
-        ditto for exit nodes
+        Same as ``middle_entry_job``, for exit nodes;
+        accepts same parameters as ``self.exit_jobs()``
         """
         number_exits = sum(1 for _ in self.exit_jobs(**exit_kwds))
         # no need to do this in any case from now on
