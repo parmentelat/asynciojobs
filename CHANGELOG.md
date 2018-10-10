@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.13.2 - 2018 Oct 10
+
+* minor tweaks in the way things are displayed
+
 ## 0.13.1 - 2018 Sep 20
 
 * bugfix: in dot output, the source and destination of arrows need to be atomic jobs, not subgraphs; we had that wrong in case where nesting depth was more than 2.
