@@ -224,7 +224,7 @@ class AbstractJob:                                      # pylint: disable=R0902
         attempt = self.graph_label()                    # pylint: disable=e1111
         if attempt is not None:
             return attempt
-        return self._get_text_label()
+        return "{}: {}".format(self.repr_id(), self._get_text_label())
 
     def text_label(self):
         """

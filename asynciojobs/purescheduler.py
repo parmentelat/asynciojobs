@@ -499,7 +499,7 @@ class PureScheduler:                                    # pylint: disable=r0902
     def _ensure_future(self, job, window, loop):        # pylint: disable=R0201
         """
         this is the hook that lets us make sure the created Task objects
-        have a backlink pointer to their corresponding job
+        have a backlink reference to their corresponding job
         """
         #
         # this is where we call co_run()
@@ -602,17 +602,12 @@ class PureScheduler:                                    # pylint: disable=r0902
                 self.watch.print_elapsed()
             else:
                 Watch.print_wall_clock()
-        name = ""
-        # with this line we allow a PureScheduler to have a label
-        # it's mostly applicable to Scheduler instances, but can come in
-        # handy for pure Scheduler's as well
-        if hasattr(self, 'label'):
-            name = "({})".format(self.label)            # pylint: disable=e1101
+        name = self.stats()
 
         # general feedback when no job is specified by caller
         if jobs is None:
             print_time()
-            print("SCHEDULER{}: {}".format(name, state))
+            print("SCHEDULER {}: {}".format(name, state))
             return
         if not isinstance(jobs, (list, BestSet, set, tuple)):
             jobs = (jobs,)
@@ -621,15 +616,14 @@ class PureScheduler:                                    # pylint: disable=r0902
                 # we expect a task here
                 job = job._job                          # pylint: disable=W0212
             print_time()
-            print("{} {}: {} {} {}"
+            print("{} {:8s}: {} {} {}"
                   .format(name, state,
                           job.repr_id(), job.repr_short(), job.repr_main()),
                   end="")
-            if self.verbose:
-                print(" {} {}"
-                      .format(job.repr_result(),
-                              job.repr_requires()),
-                      end="")
+            print(" {} {}"
+                  .format(job.repr_result(),
+                          job.repr_requires()),
+                  end="")
             print()
 
     ####################
@@ -1006,19 +1000,32 @@ class PureScheduler:                                    # pylint: disable=r0902
 
 
     # ----
-    def __repr__(self):
-        # linter says unused variable but it is indeed used in f-string
-        nb_total = len(self.jobs)                       # pylint: disable=W0641
+    def _stats(self):
+        nb_total = len(self.jobs)
         done = {j for j in self.jobs if j.is_done()}
-        nb_done = len(done)                             # pylint: disable=W0641
+        nb_done = len(done)
         running = {j for j in self.jobs if j.is_running()}
         ongoing = running - done
-        nb_ongoing = len(ongoing)                       # pylint: disable=W0641
+        nb_ongoing = len(ongoing)
         idle = self.jobs - running
-        nb_idle = len(idle)                             # pylint: disable=W0641
-        return "{type} with {nb_done} done + {nb_ongoing} ongoing" \
-               " + {nb_idle} idle = {nb_total} job(s)" \
-            .format(type=type(self).__name__, **locals())
+        nb_idle = len(idle)
+        return (nb_done, nb_ongoing, nb_idle, nb_total)
+
+    def __repr__(self):
+        done, ongoing, idle, total = self._stats()
+        return ("{type} with {done} done + {ongoing} ongoing"
+                " + {idle} idle = {total} job(s)"
+                .format(type=type(self).__name__,
+                        done=done, ongoing=ongoing, idle=idle, total=total))
+
+    def stats(self):
+        """
+        Returns a string like e.g. ``2D + 3R + 4I = 9`` meaning that
+        the scheduler currently has 2 done, 3 running an 4 idle jobs
+        """
+        done, ongoing, idle, total = self._stats()
+        return ("{done}D + {ongoing}R + {idle}I = {total}"
+                .format(done=done, ongoing=ongoing, idle=idle, total=total))
 
     def debrief(self, details=False):
         """
@@ -1096,7 +1103,7 @@ class PureScheduler:                                    # pylint: disable=r0902
     # ----
     # graphical outputs
 
-    # in a first attempt we had one function to store a dot format into a file
+    # in a first attempt we had one function to store a _ format into a file
     # and another one to build the graph natively; hence duplication of code
     # there are simpler means to do that
     # in addition with nested schedulers things become a bit messy, so

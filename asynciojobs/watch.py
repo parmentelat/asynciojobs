@@ -90,5 +90,5 @@ class Watch:
         now = datetime.now()
         millisecond = now.microsecond // 1000
         timestamp = datetime.now().strftime("%H:%M:%S")
-        print("{}.{}{}".format(timestamp, millisecond, suffix),
+        print("{}.{:03d}{}".format(timestamp, millisecond, suffix),
               end="")
