@@ -93,5 +93,5 @@ def pipes(watch, duration, msg, *,
         bottom = Job(co_print_sleep(watch, duration/2, f"bot{i} {msg}"),
                      label=f"bot{i} {msg}",
                      required=top)
-        sched.add(top).add(bottom)
+        sched.update({top, bottom})
     return sched

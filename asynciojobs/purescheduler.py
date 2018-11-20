@@ -155,10 +155,11 @@ class PureScheduler:                                    # pylint: disable=r0902
           job: a single ``Schedulable`` object.
 
         Returns:
-          self: the scheduler object, for cascading insertions if needed.
+          job: the job object, for convenience, as it can be needed to build
+            requirements later on in the script.
         """
         self.update([job])
-        return self
+        return job
 
     def remove(self, job):
         """
