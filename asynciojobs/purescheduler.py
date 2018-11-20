@@ -660,7 +660,7 @@ class PureScheduler:                                    # pylint: disable=r0902
         methods.
 
         :Note: typically in apssh for example, several jobs sharing the same ssh
-        connection need to arrange for that connection to *be kept alive  across
+        connection need to arrange for that connection to be kept alive across
         an entire scheduler lifespan, and closed later on. Historically there
         had been an attempt to deal with this automagically, through the present
         shutdown mechanism. However, this turned out to be the wrong choice, as
