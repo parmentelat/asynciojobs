@@ -298,7 +298,7 @@ class AbstractJob:                                      # pylint: disable=R0902
             style['style'].append('dashed')
         # critical elements have a thicker red border
         if self.is_critical():
-            style['color'] = 'lightpink4'
+            style['color'] = 'red'
             style['penwidth'] = 2
         else:
             style['penwidth'] = 0.5
