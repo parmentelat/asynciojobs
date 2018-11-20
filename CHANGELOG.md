@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.14.0 - 2018 Nov 20
+
+* `PureScheduler.add()` returns the job, and no longer the scheduler.
+  Use `update()` when cascading is needed.
+
 ## 0.13.2 - 2018 Oct 10
 
 * minor tweaks in the way things are displayed
