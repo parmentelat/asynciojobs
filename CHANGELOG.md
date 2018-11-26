@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.14.1 - 2018 Nov 20
+
+* for Python-3.5 and below: remove use of ModuleNotFoundError, use ImportError instead
+
 ## 0.14.0 - 2018 Nov 20
 
 * `PureScheduler.add()` returns the job, and no longer the scheduler.
