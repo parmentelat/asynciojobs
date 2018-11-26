@@ -25,5 +25,5 @@ or alternatively with::
 
 try:
     from orderedset import OrderedSet as BestSet
-except ModuleNotFoundError:
+except ImportError:
     BestSet = set
