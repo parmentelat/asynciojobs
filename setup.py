@@ -19,14 +19,9 @@ with VERSION_FILE.open() as f:
     exec(f.read(), ENV)                                 # pylint: disable=w0122
 __version__ = ENV['__version__']
 
-LONG_DESCRIPTION = (
-    "See notebook at https://github.com/parmentelat/"
-    "asynciojobs/blob/master/sphinx/README.ipynb"
-)
 
-REQUIRED_MODULES = [
-    # orderedset is now optional - see extras_require below
-]
+with open("sphinx/README.md") as feed:
+    LONG_DESCRIPTION = feed.read()
 
 setuptools.setup(
     name="asynciojobs",
@@ -34,6 +29,7 @@ setuptools.setup(
     author_email="thierry.parmentelat@inria.fr",
     description="A simplistic orchestration engine for asyncio-based jobs",
     long_description=LONG_DESCRIPTION,
+    long_description_content_type = "text/markdown",
     license="CC BY-SA 4.0",
     keywords=['asyncio', 'dependency', 'dependencies',
               'jobs', 'scheduling', 'orchestration'],
@@ -42,7 +38,7 @@ setuptools.setup(
     version=__version__,
     python_requires='>=3.5',
 
-    install_requires=REQUIRED_MODULES,
+    #install_requires=[],
     extras_require={
         'graph': ['graphviz'],
         'ordered': ['orderedset'],
