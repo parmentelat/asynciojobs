@@ -1,5 +1,11 @@
 # ChangeLog
 
+## 0.14.2 - 2020 May 13
+
+* no change in code
+* reviewed recipe for uploading to PyPI
+* long_description now based on proper README in markdown
+
 ## 0.14.1 - 2018 Nov 20
 
 * for Python-3.5 and below: remove use of ModuleNotFoundError, use ImportError instead
