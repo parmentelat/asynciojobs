@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.14.3 - 2020 May 13
+
+* again based on sharable Makefile.pypi
+
 ## 0.14.2 - 2020 May 13
 
 * no change in code
