@@ -497,7 +497,7 @@ class PureScheduler:                                    # pylint: disable=r0902
             for req in job.required:
                 req._s_successors.add(job)              # pylint: disable=W0212
 
-    def _ensure_future(self, job, window, loop):        # pylint: disable=R0201
+    def _ensure_future(self, job, window):        # pylint: disable=R0201
         """
         this is the hook that lets us make sure the created Task objects
         have a backlink reference to their corresponding job
@@ -507,7 +507,7 @@ class PureScheduler:                                    # pylint: disable=r0902
         #
         # the decorated object is a coroutine that needs to be CALLED:
         #                                               vv
-        task = asyncio.ensure_future(window.run_job(job)(), loop=loop)
+        task = asyncio.ensure_future(window.run_job(job)())
         # create references back and forth between Job and asyncio.Task
         task._job = job                                 # pylint: disable=W0212
         job._task = task                                # pylint: disable=W0212
@@ -637,8 +637,7 @@ class PureScheduler:                                    # pylint: disable=r0902
           see :meth:`co_shutdown()` for details.
 
         """
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(self.co_shutdown())
+        return asyncio.run(self.co_shutdown())
 
     async def co_shutdown(self):
         """
@@ -748,8 +747,7 @@ class PureScheduler:                                    # pylint: disable=r0902
         Also, the canonical name for this is ``run()`` but for historical
         reasons you can also use ``orchestrate()`` as an alias for ``run()``.
         """
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(self.co_run(*args, **kwds))
+        return asyncio.run(self.co_run(*args, **kwds))
 
     # define the alias for legacy
     orchestrate = run
@@ -776,10 +774,9 @@ class PureScheduler:                                    # pylint: disable=r0902
         No automatic shutdown is performed, user needs to explicitly call
         :meth:`co_shutdown()` or :meth:`shutdown()`.
         """
-        loop = asyncio.get_event_loop()
         # create a Window no matter what; it will know what to do
         # also if jobs_window is None
-        window = Window(self.jobs_window, loop)
+        window = Window(self.jobs_window)
 
         # initialize; this one is not crucial but is helpful
         # for debugging purposes
@@ -818,7 +815,7 @@ class PureScheduler:                                    # pylint: disable=r0902
 
         await self._feedback(entry_jobs, "STARTING")
 
-        pending = [self._ensure_future(job, window, loop=loop)
+        pending = [self._ensure_future(job, window)
                    for job in entry_jobs]
 
         while True:
@@ -915,8 +912,7 @@ class PureScheduler:                                    # pylint: disable=r0902
                         requirements_ok = False
                 if requirements_ok:
                     await self._feedback(candidate_next, "STARTING")
-                    pending.add(self._ensure_future(
-                        candidate_next, window, loop=loop))
+                    pending.add(self._ensure_future(candidate_next, window))
                     added += 1
 
     def _total_length(self):

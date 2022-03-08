@@ -16,13 +16,15 @@ class Window:
     the scheduler takes care of that when needed
     """
 
-    def __init__(self, jobs_window, loop):
+    def __init__(self, jobs_window, loop=None):
         # jobs_window needs to be an integer
         if jobs_window is None:
             jobs_window = 0
         self.jobs_window = jobs_window
-        self.loop = loop
-        self.queue = asyncio.Queue(maxsize=jobs_window, loop=loop)
+        # loop is deprecated in 3.10
+        if loop is not None:
+            print("WARNING: Window(loop=) is deprecated!")
+        self.queue = asyncio.Queue(maxsize=jobs_window)
 
     def run_job(self, job):
         """
