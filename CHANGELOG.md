@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.15.0 - 2022 Mar 8
+
+* for python-3.10: remove the `loop` parameter when creating a `Queue`
+
 ## 0.14.3 - 2020 May 13
 
 * again based on sharable Makefile.pypi
