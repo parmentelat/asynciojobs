@@ -497,7 +497,7 @@ class PureScheduler:                                    # pylint: disable=r0902
             for req in job.required:
                 req._s_successors.add(job)              # pylint: disable=W0212
 
-    def _ensure_future(self, job, window):        # pylint: disable=R0201
+    def _create_task(self, job, window):        # pylint: disable=R0201
         """
         this is the hook that lets us make sure the created Task objects
         have a backlink reference to their corresponding job
@@ -507,7 +507,7 @@ class PureScheduler:                                    # pylint: disable=r0902
         #
         # the decorated object is a coroutine that needs to be CALLED:
         #                                               vv
-        task = asyncio.ensure_future(window.run_job(job)())
+        task = asyncio.create_task(window.run_job(job)())
         # create references back and forth between Job and asyncio.Task
         task._job = job                                 # pylint: disable=W0212
         job._task = task                                # pylint: disable=W0212
@@ -703,7 +703,7 @@ class PureScheduler:                                    # pylint: disable=r0902
 
         self._did_shutdown = True
 
-        tasks = [asyncio.ensure_future(job.co_shutdown())
+        tasks = [asyncio.create_task(job.co_shutdown())
                  for job in self.jobs]
 
         if not tasks:
@@ -817,7 +817,7 @@ class PureScheduler:                                    # pylint: disable=r0902
 
         await self._feedback(entry_jobs, "STARTING")
 
-        pending = [self._ensure_future(job, window)
+        pending = [self._create_task(job, window)
                    for job in entry_jobs]
 
         while True:
@@ -914,7 +914,7 @@ class PureScheduler:                                    # pylint: disable=r0902
                         requirements_ok = False
                 if requirements_ok:
                     await self._feedback(candidate_next, "STARTING")
-                    pending.add(self._ensure_future(candidate_next, window))
+                    pending.add(self._create_task(candidate_next, window))
                     added += 1
 
     def _total_length(self):
