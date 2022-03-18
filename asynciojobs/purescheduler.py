@@ -637,7 +637,8 @@ class PureScheduler:                                    # pylint: disable=r0902
           see :meth:`co_shutdown()` for details.
 
         """
-        return asyncio.run(self.co_shutdown())
+        return asyncio.get_event_loop().run_until_complete(
+            self.co_shutdown())
 
     async def co_shutdown(self):
         """
@@ -747,7 +748,8 @@ class PureScheduler:                                    # pylint: disable=r0902
         Also, the canonical name for this is ``run()`` but for historical
         reasons you can also use ``orchestrate()`` as an alias for ``run()``.
         """
-        return asyncio.run(self.co_run(*args, **kwds))
+        return asyncio.get_event_loop().run_until_complete(
+            self.co_run(*args, **kwds))
 
     # define the alias for legacy
     orchestrate = run
