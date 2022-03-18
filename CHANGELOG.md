@@ -1,5 +1,12 @@
 # ChangeLog
 
+## 0.15.1 - 2022 Mar 18
+
+* fix release 0.15.0 that is broken, DO NOT USE
+* was using `asyncio.run()` to implement the synchronous
+  wrappers `run()` and `shutdown()` on a `Scheduler` object
+  but `asyncio.run()` is way to intrusive for that
+
 ## 0.15.0 - 2022 Mar 8
 
 * for python-3.10: remove the `loop` parameter when creating a `Queue`
