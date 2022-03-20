@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.15.2 -- 2022 Mar 20
+
+* in anticipation for 3.11, `scheduler.run()` now creates an event loop when needed,
+  i.e. when `get_running_loop()` triggers the `RuntimeError` exception
+
 ## 0.15.1 - 2022 Mar 18
 
 * fix release 0.15.0 that is broken, DO NOT USE
