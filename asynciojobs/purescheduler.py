@@ -748,8 +748,12 @@ class PureScheduler:                                    # pylint: disable=r0902
         Also, the canonical name for this is ``run()`` but for historical
         reasons you can also use ``orchestrate()`` as an alias for ``run()``.
         """
-        return asyncio.get_event_loop().run_until_complete(
-            self.co_run(*args, **kwds))
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        return loop.run_until_complete(self.co_run(*args, **kwds))
 
     # define the alias for legacy
     orchestrate = run
