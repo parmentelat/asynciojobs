@@ -6,12 +6,12 @@ from asynciojobs import Scheduler, Job, Sequence
 
 from asynciojobs import Watch
 
-from .util import co_print_sleep, produce_png, diamond_scheduler, pipes
+from .util import co_print_sleep, produce_svg, diamond_scheduler, pipes
 
 
 class Tests(unittest.TestCase):
 
-    def test_png_easy(self):
+    def test_png_easy1(self):
         """
         start with an easy one, a sequence that has a diamond inside
         """
@@ -25,7 +25,7 @@ class Tests(unittest.TestCase):
             ),
             watch=watch
         )
-        produce_png(sched, "test_png_easy")
+        produce_svg(sched, "graphic-png-easy1")
 
     def test_png_easy2(self):
         """
@@ -41,7 +41,7 @@ class Tests(unittest.TestCase):
             ),
             watch=watch
         )
-        produce_png(sched, "test_png_easy2")
+        produce_svg(sched, "graphic-png-easy2")
 
     def test_png_simple(self):
         """
@@ -59,7 +59,7 @@ class Tests(unittest.TestCase):
             ),
             watch=watch
         )
-        produce_png(sched, "test_png_simple")
+        produce_svg(sched, "graphic-png-simple")
 
     def test_png_styles1(self):
         """
@@ -84,7 +84,7 @@ class Tests(unittest.TestCase):
             watch=watch,
         )
 
-        produce_png(sched, "test_png_styles1")
+        produce_svg(sched, "graphic-png-styles1")
 
     def test_png_styles2(self):
         """
@@ -117,7 +117,7 @@ class Tests(unittest.TestCase):
             watch=watch,
         )
 
-        produce_png(sched, "test_png_styles2")
+        produce_svg(sched, "graphic-png-styles2")
 
 
     def test_order1(self):
@@ -147,4 +147,4 @@ class Tests(unittest.TestCase):
 
         sub4.add(job(13))
 
-        produce_png(sched, "test_png_order1")
+        produce_svg(sched, "graphic-png-order1")

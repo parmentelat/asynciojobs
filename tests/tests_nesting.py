@@ -8,7 +8,7 @@ from asynciojobs import Scheduler
 
 from asynciojobs import Watch
 
-from .util import co_print_sleep, produce_png, diamond_scheduler
+from .util import co_print_sleep, produce_svg, diamond_scheduler
 
 
 class BoomError(Exception):
@@ -136,7 +136,7 @@ class Tests(unittest.TestCase):
 
         print("===== test_nesting3", "LIST without details")
         main_sched.list(details=False)
-        produce_png(main_sched, "test_nesting3")
+        produce_svg(main_sched, "graphic-nesting3")
 
         watch.reset()
         print("---run")
@@ -181,7 +181,7 @@ class Tests(unittest.TestCase):
         self.assertTrue(main.run())
         self.assertAlmostEqual(watch.seconds(), expected_duration, delta=.05)
 
-        produce_png(main, "test_nesting_sequence")
+        produce_svg(main, "graphic-nesting-sequence")
 
     def test_critical_exc(self):
 

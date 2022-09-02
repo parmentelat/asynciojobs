@@ -4,7 +4,7 @@ import unittest
 
 from asynciojobs import PureScheduler, Job, Sequence, Watch
 
-from .util import co_print_sleep, produce_png
+from .util import co_print_sleep, produce_svg
 
 
 class Tests(unittest.TestCase):
@@ -27,7 +27,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(len(s), 3)
         s.run()
         self.assertAlmostEqual(watch.seconds(), 1.5, delta=0.05)
-        produce_png(s, "test_graph1")
+        produce_svg(s, "graphic-graph1")
 
     def test_graph2(self):
 
@@ -75,4 +75,4 @@ class Tests(unittest.TestCase):
         s.list(details=True)
         print("GRAPH")
         self.assertEqual(len(s), 4)
-        produce_png(s, "test_graph2")
+        produce_svg(s, "graphic-graph2")
