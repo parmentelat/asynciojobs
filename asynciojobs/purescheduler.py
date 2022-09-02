@@ -1302,13 +1302,19 @@ DOT_%28graph_description_language%29
         from graphviz import Source
         return Source(source=self.dot_format())
 
-    def export_as_pngfile(self, filename):
+
+    def export_as_graphic(self, filename, suffix):
         """
-        Convenience wrapper that creates a png file. Like :meth:`graph()`,
+        Convenience wrapper that creates a graphic output file.
+        Like :meth:`graph()`,
         it requires the ``graphviz`` package to be installed.
+        See also :meth:`export_as_pngfile()`, which is a shortcut to
+        using this method with `suffix="png"`
 
         Parameters:
-          filename: output filename, without the ``.png`` extension
+          filename: output filename, without the extension
+          suffix: one of the suffixes supported by `dot -T`, e.g. `png` or `svg`
+
         Returns:
           created file name
 
@@ -1322,9 +1328,20 @@ DOT_%28graph_description_language%29
         # of the .dot file; that is dangerous when using e.g.
         #    scheduler.export_as_pngfile(__file__)
         import os
-        dotfile = "{}.dot".format(filename)
-        pngfile = "{}.png".format(filename)
+        dotfile = f"{filename}.dot"
         self.export_as_dotfile(dotfile)
-        os.system("dot -Tpng {} -o {}"
-                  .format(dotfile, pngfile))
+        pngfile = f"{filename}.{suffix}"
+        os.system(f"dot -T{suffix} {dotfile} -o {pngfile}")
         return pngfile
+
+
+    def export_as_pngfile(self, filename):
+        """
+        Shortcut to :meth:`export_as_graphic()` with `suffix="png"`
+
+        Parameters:
+          filename: output filename, without the ``.png`` extension
+        Returns:
+          created file name
+        """
+        return self.export_as_graphic(filename, "png")
