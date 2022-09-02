@@ -396,6 +396,39 @@ class PureScheduler:                                    # pylint: disable=r0902
             if not job._s_successors:                   # pylint: disable=w0212
                 yield job
 
+
+    def bypass_and_remove(self, job: AbstractJob):
+        """
+        job is assumed to be part of the scheduler (and `ValueError` is raised otherwise)
+
+        this method will remove `job` from the scheduler, while preserving the logic;
+        for achieving this, all the requirement links will be redirected to bypass that job
+
+        more formally, for each job `upstream` that `job` requires, the algorithm will create
+        requirement links from all `downstream` jobs that require `job`
+
+        for now, nesting is not supported, that is to say, the job needs to be an actual
+        member of this scheduler, and not of a nested scheduler within;
+        jobs in a `Sequence` work fine though
+
+        """
+        if job not in self.jobs:
+            raise ValueError(f"job {job} is not in {self}")
+
+        upstreams = job.required
+        downstreams = {down for down in self.jobs if job in down.required}
+
+        # add new requires between downstreams and upstreams
+        for up in upstreams:
+            for down in downstreams:
+                down.requires(up)
+        # remove job from the downstreams requirements
+        for down in downstreams:
+            down.required.remove(job)
+        # remove the job altogether
+        self.jobs.remove(job)
+
+
     def _entry_csv(self):
         result = ", ".join(job.repr_id()
                            for job in self.entry_jobs())
@@ -1213,6 +1246,7 @@ DOT_%28graph_description_language%29
         result += "}\n"
         return result
 
+
     def export_as_dotfile(self, filename):
         """
         This method does not require ``graphviz`` to be installed, it
@@ -1238,6 +1272,7 @@ DOT_%28graph_description_language%29
         with open(filename, 'w') as output:
             output.write(self.dot_format())
         return "(Over)wrote {}".format(filename)
+
 
     def graph(self):
         """
