@@ -456,7 +456,7 @@ class AbstractJob:                                      # pylint: disable=R0902
                     self.repr_result(),
                     self.repr_requires()))
 
-    def requires(self, *requirements, remove=False):
+    def requires(self, *requirements, remove=False) -> 'AbstractJob':
         """
         Arguments:
           requirements: an iterable of `AbstractJob`
@@ -465,6 +465,9 @@ class AbstractJob:                                      # pylint: disable=R0902
 
         Raises:
           KeyError: when trying to remove dependencies that were not present.
+
+        Returns:
+          self: for chaining
 
         For convenience, any nested structure made of job instances
         can be provided, and if None objects are found, they are silently
@@ -498,13 +501,15 @@ class AbstractJob:                                      # pylint: disable=R0902
             elif isinstance(requirement, Sequence):
                 if requirement.jobs:
                     self.required.add(requirement.jobs[-1])
-            elif isinstance(requirement, (tuple, list)):
+            elif isinstance(requirement, (tuple, list, set)):
                 for req in requirement:
                     self.requires(req, remove=remove)
             # not quite sure about what do to here in fact
             else:
                 print("WARNING: fishy requirement in AbstractJob.requires")
                 self.requires(list(requirement), remove=remove)
+
+        return self
 
     def is_idle(self):
         """
