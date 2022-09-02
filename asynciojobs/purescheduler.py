@@ -130,6 +130,7 @@ class PureScheduler:                                    # pylint: disable=r0902
         # avoid multiple shutdowns
         self._did_shutdown = False
 
+
     # think of an scheduler as a set of jobs
     def update(self, jobs):
         """
@@ -185,6 +186,13 @@ class PureScheduler:                                    # pylint: disable=r0902
           int: number of jobs in the scheduler.
         """
         return len(self.jobs)
+
+    def __iter__(self):
+        """
+        iterating on a scheduler amounts to iterating on its jobs
+        """
+        return iter(self.jobs)
+
 
     def failed_time_out(self):
         """
@@ -395,6 +403,14 @@ class PureScheduler:                                    # pylint: disable=r0902
                 continue
             if not job._s_successors:                   # pylint: disable=w0212
                 yield job
+
+
+    def downstream_jobs(self, job):
+        """
+        return an iterator on the jobs in s that require on job
+        in no particular order
+        """
+        return (downstream for downstream in self if job in downstream.required)
 
 
     def bypass_and_remove(self, job: AbstractJob):
@@ -1345,3 +1361,14 @@ DOT_%28graph_description_language%29
           created file name
         """
         return self.export_as_graphic(filename, "png")
+
+    def export_as_svgfile(self, filename):
+        """
+        Shortcut to :meth:`export_as_graphic()` with `suffix="svg"`
+
+        Parameters:
+          filename: output filename, without the ``.svg`` extension
+        Returns:
+          created file name
+        """
+        return self.export_as_graphic(filename, "svg")
