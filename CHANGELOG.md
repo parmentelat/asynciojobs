@@ -1,5 +1,16 @@
 # ChangeLog
 
+## 0.16.0 -- 2022 Sep 3
+
+* new methods in `PureScheduler`:
+  * `bypass_and_remove(job)`
+    allows to prune jobs from a scheduler while preserving the logic
+  * `export_as_graphic(filename)` and `export_as_svg(filename, format)`
+     complement `export_as_png`
+  * `downstream_jobs(job)` to iterate over a job's successors
+  * also, `PureScheduler` becomes iterable, and iterates over its jobs
+
+
 ## 0.15.2 -- 2022 Mar 20
 
 * in anticipation for 3.11, `scheduler.run()` now creates an event loop when needed,
