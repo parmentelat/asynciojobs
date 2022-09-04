@@ -8,6 +8,7 @@ The PureScheduler class is a set of AbstractJobs, that together with their
 import time
 import io
 import asyncio
+from typing import Iterable, Iterator
 
 from .bestset import BestSet
 
@@ -16,6 +17,8 @@ from .sequence import Sequence
 from .window import Window
 from .watch import Watch
 from .dotstyle import DotStyle
+
+Schedulable = AbstractJob | Sequence
 
 #
 # will hopefully go away some day
@@ -405,24 +408,24 @@ class PureScheduler:                                    # pylint: disable=r0902
                 yield job
 
 
-    def predecessors(self, job):
+    def predecessors(self, job: AbstractJob) -> set[AbstractJob]:
         """
-        return a set of the jobs in this scheduler that `job` requires
+        returns a set of the jobs in this scheduler that `job` requires
         """
         # just in case, intersect with self.jobs to be sure to only consider jobs in this scheduler
         return (job.required & self.jobs)
 
-    def successors(self, job):
+    def successors(self, job: AbstractJob) -> Iterator[AbstractJob]:
         """
-        return an iterator on the jobs in s that require on job
+        returns an iterator on the jobs in s that require on `job`
         in no particular order
         """
         return (downstream for downstream in self if job in downstream.required)
 
 
-    def predecessors_upstream(self, job):
+    def predecessors_upstream(self, job: AbstractJob) -> set[AbstractJob]:
         """
-        return an iterator on all the jobs that `job` depends on,
+        returns a set of all the jobs that `job` depends on,
         either immediately or further up the execution path
         """
         result = set(self.predecessors(job))
@@ -438,9 +441,9 @@ class PureScheduler:                                    # pylint: disable=r0902
         return result
 
 
-    def successors_downstream(self, job):
+    def successors_downstream(self, job: AbstractJob) -> set[AbstractJob]:
         """
-        return an iterator on all the jobs that depend on `job`,
+        return a set of all the jobs that depend on `job`,
         either immediately or further down the execution path
         """
         result = set(self.successors(job))
@@ -456,7 +459,7 @@ class PureScheduler:                                    # pylint: disable=r0902
         return result
 
 
-    def bypass_and_remove(self, job: AbstractJob):
+    def bypass_and_remove(self, job: AbstractJob) -> None:
         """
         job is assumed to be part of the scheduler (and `ValueError` is raised otherwise)
 
@@ -486,6 +489,36 @@ class PureScheduler:                                    # pylint: disable=r0902
             down.required.remove(job)
         # remove the job altogether
         self.jobs.remove(job)
+
+
+    def keep_only_between(self, *,
+                          starts:Iterable[Schedulable]=None,
+                          ends:Iterable[Schedulable]=None,
+                          keep_starts=True,
+                          keep_ends=True) -> None:
+        """
+        allows to select a subset of the scheduler, which is modified in place
+        """
+        # optional parameters
+        starts = starts if starts is not None else set()
+        ends = ends if ends is not None else set()
+
+        # need to keep a copy in case we are passed iterators
+        starts = set(starts)
+        ends = set(ends)
+
+        to_remove = set()
+
+        for start in starts:
+            to_remove.update(self.predecessors_upstream(start))
+        if not keep_starts:
+            to_remove.update(starts)
+        for end in ends:
+            to_remove.update(self.successors_downstream(end))
+        if not keep_ends:
+            to_remove.update(ends)
+        for j in to_remove:
+            self.bypass_and_remove(j)
 
 
     def _entry_csv(self):
