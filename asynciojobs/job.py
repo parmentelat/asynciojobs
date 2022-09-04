@@ -456,6 +456,13 @@ class AbstractJob:                                      # pylint: disable=R0902
                     self.repr_result(),
                     self.repr_requires()))
 
+    def _add_one_requirement(self, job):
+        # refuse to add oneself as a requirement
+        # typically useful when adding a pre-requirement
+        # in a scenario, like e.g. check_lease
+        if job is not self:
+            self.required.add(job)
+
     def requires(self, *requirements, remove=False) -> 'AbstractJob':
         """
         Arguments:
@@ -495,12 +502,12 @@ class AbstractJob:                                      # pylint: disable=R0902
                 continue
             if isinstance(requirement, AbstractJob):
                 if not remove:
-                    self.required.add(requirement)
+                    self._add_one_requirement(requirement)
                 else:
                     self.required.remove(requirement)
             elif isinstance(requirement, Sequence):
                 if requirement.jobs:
-                    self.required.add(requirement.jobs[-1])
+                    self._add_one_requirement(requirement.jobs[-1])
             elif isinstance(requirement, (tuple, list, set)):
                 for req in requirement:
                     self.requires(req, remove=remove)
