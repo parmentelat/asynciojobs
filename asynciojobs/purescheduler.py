@@ -405,12 +405,55 @@ class PureScheduler:                                    # pylint: disable=r0902
                 yield job
 
 
+    def predecessors(self, job):
+        """
+        return a set of the jobs in this scheduler that `job` requires
+        """
+        # just in case, intersect with self.jobs to be sure to only consider jobs in this scheduler
+        return (job.required & self.jobs)
+
     def successors(self, job):
         """
         return an iterator on the jobs in s that require on job
         in no particular order
         """
         return (downstream for downstream in self if job in downstream.required)
+
+
+    def predecessors_upstream(self, job):
+        """
+        return an iterator on all the jobs that `job` depends on,
+        either immediately or further up the execution path
+        """
+        result = set(self.predecessors(job))
+        while True:
+            changes = 0
+            for u1 in result.copy():
+                for u2 in self.predecessors(u1):
+                    if u2 not in result:
+                        changes += 1
+                        result.add(u2)
+            if not changes:
+                break
+        return result
+
+
+    def successors_downstream(self, job):
+        """
+        return an iterator on all the jobs that depend on `job`,
+        either immediately or further down the execution path
+        """
+        result = set(self.successors(job))
+        while True:
+            changes = 0
+            for d1 in result.copy():
+                for d2 in self.successors(d1):
+                    if d2 not in result:
+                        changes += 1
+                        result.add(d2)
+            if not changes:
+                break
+        return result
 
 
     def bypass_and_remove(self, job: AbstractJob):
