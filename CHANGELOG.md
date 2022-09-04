@@ -1,5 +1,12 @@
 # ChangeLog
 
+## 0.16.1 -- 2022 Sep 4
+
+* in `PureScheduler`:
+  * rename downstream_jobs() into successors()
+  * new methods predecessors_upstream() and successors_downstream() to compute
+    the closure of the requirement relationship in both directions
+
 ## 0.16.0 -- 2022 Sep 3
 
 * new methods in `PureScheduler`:
