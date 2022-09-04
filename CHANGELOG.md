@@ -1,5 +1,11 @@
 # ChangeLog
 
+## 0.16.2 -- 2022 Sep 4
+
+* job.requires(job) does nothing
+  this is to ease the a posteriori addition of a global first step
+  like typically check_lease
+
 ## 0.16.1 -- 2022 Sep 4
 
 * in `PureScheduler`:
