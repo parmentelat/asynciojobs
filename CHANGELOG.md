@@ -1,28 +1,22 @@
 # ChangeLog
 
-## 0.16.2 -- 2022 Sep 4
-
-* job.requires(job) does nothing
-  this is to ease the a posteriori addition of a global first step
-  like typically check_lease
-
-## 0.16.1 -- 2022 Sep 4
-
-* in `PureScheduler`:
-  * rename downstream_jobs() into successors()
-  * new methods predecessors_upstream() and successors_downstream() to compute
-    the closure of the requirement relationship in both directions
-
-## 0.16.0 -- 2022 Sep 3
+## 0.16.3 -- 2022 Sep 4
 
 * new methods in `PureScheduler`:
+  * `successors(job)` to iterate over a job's successors
+    * as well as `predecessors(job)`
+  * `predecessors_upstream()` and `successors_downstream()` to compute
+    the closure of the requirement relationship in both directions
   * `bypass_and_remove(job)`
     allows to prune jobs from a scheduler while preserving the logic
+  * `keep_only_between()` to cut parts of a scheduler
+  * also, `PureScheduler` becomes iterable, and iterates over its jobs
   * `export_as_graphic(filename)` and `export_as_svg(filename, format)`
      complement `export_as_png`
-  * `downstream_jobs(job)` to iterate over a job's successors
-  * also, `PureScheduler` becomes iterable, and iterates over its jobs
 
+* `job.requires(job)` does nothing
+  this is to ease the a posteriori addition of a global first step
+  like typically check_lease
 
 ## 0.15.2 -- 2022 Mar 20
 
