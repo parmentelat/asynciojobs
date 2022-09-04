@@ -95,8 +95,8 @@ class Tests(unittest.TestCase):
 
         s.bypass_and_remove(j7)
         self.assertTrue(s.sanitize())
-        self.assertFalse(set(s.downstream_jobs(j5)))
-        self.assertFalse(set(s.downstream_jobs(j6)))
+        self.assertFalse(set(s.successors(j5)))
+        self.assertFalse(set(s.successors(j6)))
         produce_svg(s, "graphic-bypass3-step3")
 
     def test_bypass_seq(self):

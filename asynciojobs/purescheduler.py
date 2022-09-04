@@ -405,7 +405,7 @@ class PureScheduler:                                    # pylint: disable=r0902
                 yield job
 
 
-    def downstream_jobs(self, job):
+    def successors(self, job):
         """
         return an iterator on the jobs in s that require on job
         in no particular order
