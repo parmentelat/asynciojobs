@@ -8,7 +8,8 @@ tags:
 
 ##########
 tests test:
-	python3 -m unittest
+	pytest
+
 .PHONY: tests test
 
 ########## sphinx
