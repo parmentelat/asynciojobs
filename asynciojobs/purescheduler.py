@@ -18,7 +18,11 @@ from .window import Window
 from .watch import Watch
 from .dotstyle import DotStyle
 
-Schedulable = AbstractJob | Sequence
+# starting with Python-3.10, we could write this
+# Schedulable = AbstractJob | Sequence
+# however we'll wait a little so as to not break compat
+from typing import Union
+Schedulable = Union[AbstractJob, Sequence]
 
 #
 # will hopefully go away some day
