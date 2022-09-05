@@ -5,3 +5,9 @@ build:
   os: ubuntu-22.04
   tools:
     python: "3.9"
+
+python:
+  install:
+    - method: pip
+      path: .
+    - requirements: sphinx/requirements.txt
