@@ -53,6 +53,6 @@ setuptools.setup(
         "Development Status :: 4 - Beta",
         "Environment :: Console",
         "Intended Audience :: Information Technology",
-        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.9",
     ],
 )
