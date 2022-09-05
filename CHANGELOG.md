@@ -11,7 +11,7 @@
     allows to prune jobs from a scheduler while preserving the logic
   * `keep_only_between()` to cut parts of a scheduler
   * also, `PureScheduler` becomes iterable, and iterates over its jobs
-  * `export_as_graphic(filename)` and `export_as_svg(filename, format)`
+  * `export_as_graphic(filename, format)` and `export_as_svg(filename)`
      complement `export_as_png`
 
 * `job.requires(job)` does nothing
