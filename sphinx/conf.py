@@ -23,7 +23,7 @@ sys.path.insert(0, os.path.abspath('../..'))
 for path in sys.path:
     print("in path", path)
 
-from sys import version_info as python_version
+#from sys import version_info as python_version
 #print("python version", python_version)
 
 from asynciojobs import __version__
