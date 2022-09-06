@@ -1,5 +1,11 @@
 # ChangeLog
 
+## 0.17.0 -- 2022 Sep 6
+
+* no change since 0.16.4 except for a minor tweak in the sphinx config
+* however since we now rely on python-3.9 this deserves a clearer
+  bump in the version number
+
 ## 0.16.4 -- 2022 Sep 6
 
 * previous version was not working with Python3.9
