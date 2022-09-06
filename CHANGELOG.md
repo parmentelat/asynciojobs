@@ -1,5 +1,15 @@
 # ChangeLog
 
+## 0.16.4 -- 2022 Sep 6
+
+* previous version was not working with Python3.9
+  due to using a | to refer to a union type
+* this version now does use types hints like `set[AbstractJob]`
+  so this means 3.9 is required
+* renamed tests/tests_stuff.py into tests/test_stuff.py
+  and move to using pytest as a test driver
+* dusted off doc building
+
 ## 0.16.3 -- 2022 Sep 4
 
 * new methods in `PureScheduler`:
