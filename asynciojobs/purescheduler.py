@@ -154,6 +154,7 @@ class PureScheduler:                                    # pylint: disable=r0902
         self.jobs.update(jobs)
         return self
 
+
     def add(self, job):
         """
         Adds a single ``Schedulable`` object;

@@ -21,12 +21,6 @@ from .dotstyle import DotStyle
 # pylint: disable=W0212
 
 
-# my first inclination had been to specialize asyncio.Task
-# it does not work well though, because you want to model
-# dependencies **before** anything starts, of course
-# but in asyncio, creating a Task object implies scheduling that for execution
-
-# so, let's have it the other way around
 # what we need is a way to attach our own Job instance to the corresp.
 # Task instance (and back) right after Task creation, so that
 # (*) once asyncio.wait is done, we can easily find out
@@ -512,6 +506,7 @@ class AbstractJob:                                      # pylint: disable=R0902
                 for req in requirement:
                     self.requires(req, remove=remove)
             # not quite sure about what do to here in fact
+            # assuming it's some other sort of iterable, e.g. a generator
             else:
                 print("WARNING: fishy requirement in AbstractJob.requires")
                 self.requires(list(requirement), remove=remove)
