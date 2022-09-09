@@ -18,23 +18,22 @@ async def co_print_sleep(watch, duration, message):
     return f"duration={duration}"
 
 
-def produce_png(scheduler, name):
-    produce_graphic(scheduler, name, format="png")
+# def produce_png(scheduler, name):
+#     produce_graphic(scheduler, name, format="png")
 
 def produce_svg(scheduler, name):
     produce_graphic(scheduler, name, format="svg")
 
 def produce_graphic(scheduler, name, format):
-    dot = scheduler.graph()
-    dot.format = format
 
     tests_dir = Path('tests')
     if tests_dir.exists():
-        actual_name = str(tests_dir / name)
+        actual_name = tests_dir / name
     else:
-        actual_name = name
-    dot.render(actual_name)
-    print(f"graphic files produced in {actual_name}.{{,{format}}}")
+        actual_name = Path(name)
+
+    scheduler.export_as_graphic(actual_name, format)
+    print(f"graphic files produced in {actual_name}.{{dot,{format}}}")
 
 
 def diamond_from_jobs(watch, j1, j2, j3, j4, scheduler_class=Scheduler):

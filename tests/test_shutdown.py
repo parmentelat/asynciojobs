@@ -6,7 +6,7 @@ from unittest import TestCase
 
 from asynciojobs import Scheduler, Job, Sequence
 
-from .util import produce_png
+from .util import produce_svg
 
 
 VERBOSE = False
@@ -173,7 +173,7 @@ class Tests(TestCase):
             expected = actual
         else:
             expected = 0
-        produce_png(sched, "debug")
+        produce_svg(sched, "debug")
 
 
         self.assertEqual(sched.counter, expected)
