@@ -413,55 +413,67 @@ class PureScheduler:                                    # pylint: disable=r0902
                 yield job
 
 
-    def predecessors(self, job: AbstractJob) -> set[AbstractJob]:
+    def _neighbours(self, attname: str, *starts: AbstractJob) -> set[AbstractJob]:
         """
-        returns a set of the jobs in this scheduler that `job` requires
+        returns a set of all the immediate neighbours of the starting points,
+        using either the 'required' or '_s_successors' attribute
         """
-        # just in case, intersect with self.jobs to be sure to only consider jobs in this scheduler
-        return (job.required & self.jobs)
+        neighbours = set()
+        for start in starts:
+            for next in getattr(start, attname):
+                # just in case
+                if next not in self.jobs:
+                    continue
+                if next not in neighbours:
+                    neighbours.add(next)
+        return neighbours
 
-    def successors(self, job: AbstractJob) -> Iterator[AbstractJob]:
+    def predecessors(self, *starts: AbstractJob) -> set[AbstractJob]:
         """
-        returns an iterator on the jobs in s that require on `job`
-        in no particular order
+        returns a set of all the jobs in this scheduler that any of the `starts` job requires
         """
-        return (downstream for downstream in self if job in downstream.required)
+        return self._neighbours("required", *starts)
+
+    def successors(self, *starts: AbstractJob, compute_backlinks=True) -> Iterator[AbstractJob]:
+        """
+        returns a set of all the jobs in this scheduler that require any of the `starts` job
+        """
+        if compute_backlinks:
+            self._backlinks()
+        yield from self._neighbours("_s_successors", *starts)
 
 
-    def predecessors_upstream(self, job: AbstractJob) -> set[AbstractJob]:
+    def _neighbours_closure(self, attname: str, *starts: AbstractJob) -> Iterator[AbstractJob]:
+        """
+        same as _neighbours, but the closure of that relationship
+        """
+        closure = set(self._neighbours(attname, *starts))
+        while True:
+            changes = 0
+            for start in closure.copy():
+                for next in self._neighbours(attname, start):
+                    if next not in closure:
+                        closure.add(next)
+                        changes += 1
+            if not changes:
+                break
+        return closure
+
+    def predecessors_upstream(self, *starts: AbstractJob) -> set[AbstractJob]:
         """
         returns a set of all the jobs that `job` depends on,
         either immediately or further up the execution path
         """
-        result = set(self.predecessors(job))
-        while True:
-            changes = 0
-            for u1 in result.copy():
-                for u2 in self.predecessors(u1):
-                    if u2 not in result:
-                        changes += 1
-                        result.add(u2)
-            if not changes:
-                break
-        return result
+        return self._neighbours_closure("required", *starts)
 
-
-    def successors_downstream(self, job: AbstractJob) -> set[AbstractJob]:
+    def successors_downstream(self, *starts: AbstractJob, compute_backlinks=True) -> set[AbstractJob]:
         """
         return a set of all the jobs that depend on `job`,
         either immediately or further down the execution path
         """
-        result = set(self.successors(job))
-        while True:
-            changes = 0
-            for d1 in result.copy():
-                for d2 in self.successors(d1):
-                    if d2 not in result:
-                        changes += 1
-                        result.add(d2)
-            if not changes:
-                break
-        return result
+        if compute_backlinks:
+            self._backlinks()
+        return self._neighbours_closure("_s_successors", *starts)
 
 
     def bypass_and_remove(self, job: AbstractJob) -> None:
