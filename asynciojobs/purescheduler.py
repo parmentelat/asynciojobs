@@ -515,6 +515,13 @@ class PureScheduler:                                    # pylint: disable=r0902
                           keep_ends=True) -> None:
         """
         allows to select a subset of the scheduler, which is modified in place
+
+        the algorithm works as follows:
+        we preserve the jobs that are reachable (successors) of (any of) the starts vertices
+        AND that can reach (predecessors) (any of) the ends vertices
+
+        of course if starts is empty, then only the ends criteria is used
+        (since otherwise we would retain nothing); and same if ends is empty
         """
         # optional parameters
         starts = starts if starts is not None else set()
@@ -524,18 +531,22 @@ class PureScheduler:                                    # pylint: disable=r0902
         starts = set(starts)
         ends = set(ends)
 
-        to_remove = set()
+        # if one of the milestones is empty (e.g. starts is empty)
+        # it means no additional constraint,
+        # so we take the full set of nodes in that case
+        downwards = self.successors_downstream(*starts) if starts else self.jobs
+        upwards = self.predecessors_upstream(*ends) if ends else self.jobs
 
-        for start in starts:
-            to_remove.update(self.predecessors_upstream(start))
-        if not keep_starts:
-            to_remove.update(starts)
-        for end in ends:
-            to_remove.update(self.successors_downstream(end))
-        if not keep_ends:
-            to_remove.update(ends)
-        for j in to_remove:
-            self.bypass_and_remove(j)
+        preserved = downwards & upwards
+        if keep_starts:
+            preserved.update(starts)
+        if keep_ends:
+            preserved.update(ends)
+
+        # no need to replug anything, let's do it the rough way,
+        # and sanitize to remove dangling references
+        self.jobs = preserved
+        self.sanitize()
 
 
     def _entry_csv(self):

@@ -6,20 +6,21 @@ import unittest
 from asynciojobs import *
 from .util import *
 
+def job_in_s_w(s, w, i):
+    return Job(
+        co_print_sleep(w, .2, f"job {i}"),
+        label=f"job{i}",
+        scheduler=s)
+
 
 class Tests(unittest.TestCase):
 
     def test_bypass1(self):
 
-        watch = Watch()
+        w = Watch()
         s = Scheduler()
 
-        def job_in_s(i):
-            return Job(co_print_sleep(watch, .2, f"job {i}"),
-                       label=f"job{i}",
-                       scheduler=s)
-
-        j1, j2, j3, j4, j5 = [job_in_s(i) for i in range(1, 6)]
+        j1, j2, j3, j4, j5 = [job_in_s_w(s, w, i) for i in range(1, 6)]
         j5.requires(
             j4.requires(
                 j3.requires(
@@ -37,15 +38,10 @@ class Tests(unittest.TestCase):
 
     def test_bypass2(self):
 
-        watch = Watch()
+        w = Watch()
         s = Scheduler()
 
-        def job_in_s(i):
-            return Job(co_print_sleep(watch, .2, f"job {i}"),
-                       label=f"job{i}",
-                       scheduler=s)
-
-        j1, j2, j3, j4, j5 = [job_in_s(i) for i in range(1, 6)]
+        j1, j2, j3, j4, j5 = [job_in_s_w(s, w, i) for i in range(1, 6)]
         j5.requires(
             j4.requires(
                 j3.requires(j1),
@@ -65,17 +61,22 @@ class Tests(unittest.TestCase):
         self.assertEqual(s.predecessors_upstream(j5), {j1, j2, j3})
         produce_svg(s, "graphic-bypass2-step1")
 
-    def double_diamond(self):
+    def diamonds(self, n):
+        r"""
+        n should be 2 or 3
 
-        watch = Watch()
+        with n=2 this returns a watch, a scheduler with 7 jobs
+        j1 - j2 - j4 - j5 - j7
+           \ j3 /    \ j6 /
+        with n=3 it returns a watch, a scheduler with 10 jobs
+        j1 - j2 - j4 - j5 - j7 - j8 - j10
+           \ j3 /    \ j6 /    \ j9 /
+        """
+
+        w = Watch()
         s = Scheduler()
 
-        def job_in_s(i):
-            return Job(co_print_sleep(watch, .2, f"job {i}"),
-                       label=f"job{i}",
-                       scheduler=s)
-
-        j1, j2, j3, j4, j5, j6, j7 = [job_in_s(i) for i in range(1, 8)]
+        j1, j2, j3, j4, j5, j6, j7 = [job_in_s_w(s, w, i) for i in range(1, 8)]
         j7.requires(
             j6.requires(j4),
             j5.requires(j4),
@@ -84,11 +85,20 @@ class Tests(unittest.TestCase):
             j3.requires(j1),
             j2.requires(j1),
         )
-        return s, j1, j2, j3, j4, j5, j6, j7
+        if n == 2:
+            return w, s, j1, j2, j3, j4, j5, j6, j7
+        j8, j9, j10 = [job_in_s_w(s, w, i) for i in range(8, 11)]
+        j10.requires(
+            j8.requires(j7),
+            j9.requires(j7),
+        )
+        if n == 3:
+            return w, s, j1, j2, j3, j4, j5, j6, j7, j8, j9, j10
+
 
     def test_bypass3(self):
 
-        s, j1, j2, j3, j4, j5, j6, j7 = self.double_diamond()
+        w, s, j1, j2, j3, j4, j5, j6, j7 = self.diamonds(2)
 
         self.assertEqual(s.successors_downstream(j1), {j2, j3, j4, j5, j6, j7})
         self.assertEqual(s.successors_downstream(j4), {j5, j6, j7})
@@ -131,14 +141,10 @@ class Tests(unittest.TestCase):
 
     def test_bypass_seq(self):
 
-        watch = Watch()
+        w = Watch()
         s = Scheduler()
 
-        def job_in_s(i):
-            return Job(co_print_sleep(watch, .2, f"job {i}"),
-                       label=f"job{i}")
-
-        jobs = [job_in_s(i) for i in range(1, 6)]
+        jobs = [job_in_s_w(s, w, i) for i in range(1, 6)]
         Sequence(*jobs, scheduler=s)
 
         produce_svg(s, "graphic-bypass-seq-step0")
@@ -161,7 +167,7 @@ class Tests(unittest.TestCase):
 
     def test_bypass_keep1(self):
 
-        s, j1, j2, j3, j4, j5, j6, j7 = self.double_diamond()
+        w, s, j1, j2, j3, j4, j5, j6, j7 = self.diamonds(2)
         produce_svg(s, "graphic-bypass-keep1-step0")
         s.keep_only_between(starts=[j2, j3], ends=[j5, j6])
         self.assertEqual(len(s), 5)
@@ -170,7 +176,7 @@ class Tests(unittest.TestCase):
 
     def test_bypass_keep2(self):
 
-        s, j1, j2, j3, j4, j5, j6, j7 = self.double_diamond()
+        w, s, j1, j2, j3, j4, j5, j6, j7 = self.diamonds(2)
         produce_svg(s, "graphic-bypass-keep2-step0")
         s.keep_only_between(starts=[j4])
         self.assertEqual(len(s), 4)
@@ -179,8 +185,30 @@ class Tests(unittest.TestCase):
 
     def test_bypass_keep3(self):
 
-        s, j1, j2, j3, j4, j5, j6, j7 = self.double_diamond()
+        w, s, j1, j2, j3, j4, j5, j6, j7 = self.diamonds(2)
         produce_svg(s, "graphic-bypass-keep3-step0")
         s.keep_only_between(starts=[j4], keep_starts=False)
         self.assertEqual(s.jobs, {j5, j6, j7})
         produce_svg(s, "graphic-bypass-keep3-step1")
+
+    def test_bypass_keep4(self):
+        w, s, j1, j2, j3, j4, j5, j6, j7, j8, j9, j10 = self.diamonds(3)
+        j_odd = job_in_s_w(s, w, 11)
+        j7.requires(j_odd.requires(j2))
+        produce_svg(s, "graphic-bypass-keep4-step0")
+
+        s.keep_only_between(starts=[j2, j3], ends=[j5, j6])
+        self.assertEqual(len(s), 5)
+        self.assertEqual(s.jobs, {j2, j3, j4, j5, j6})
+        produce_svg(s, "graphic-bypass-keep4-step1")
+
+    def test_bypass_keep5(self):
+        w, s, j1, j2, j3, j4, j5, j6, j7, j8, j9, j10 = self.diamonds(3)
+        j_odd = job_in_s_w(s, w, 11)
+        j7.requires(j_odd.requires(j2))
+        produce_svg(s, "graphic-bypass-keep5-step0")
+
+        s.keep_only_between(starts=[j2, j3], ends=[j8, j9], keep_ends=False)
+        self.assertEqual(len(s), 7)
+        self.assertEqual(s.jobs, {j2, j3, j4, j5, j6, j7, j_odd})
+        produce_svg(s, "graphic-bypass-keep5-step1")
