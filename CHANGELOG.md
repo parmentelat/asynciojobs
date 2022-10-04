@@ -1,5 +1,12 @@
 # ChangeLog
 
+## 0.18.0 - 2022 Oct 4
+
+* rewrote successors* and predecessors* to be usable with a collection
+  of jobs, and to always return a set
+* rewrote keep_only_between; previous implementation was flawed when there
+  were nodes not comparable with the threshholds
+
 ## 0.17.0 -- 2022 Sep 6
 
 * no change since 0.16.4 except for a minor tweak in the sphinx config
