@@ -1,5 +1,11 @@
 # ChangeLog
 
+## 0.18.1 - 2022 Oct 4
+
+* new method Scheduler.keep_only
+  useful in simpler cases where the caller knows which jobs to keep
+
+
 ## 0.18.0 - 2022 Oct 4
 
 * rewrote successors* and predecessors* to be usable with a collection
