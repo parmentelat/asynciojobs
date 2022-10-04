@@ -1,1 +1,7 @@
 *.pyc
+sphinx
+tests/__pycache__
+build
+asynciojobs.egg-info
+tests/graphic-*.dot
+tests/graphic-*.svg
