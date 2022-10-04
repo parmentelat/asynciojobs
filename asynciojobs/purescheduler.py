@@ -508,6 +508,16 @@ class PureScheduler:                                    # pylint: disable=r0902
         self.jobs.remove(job)
 
 
+    def keep_only(self, remains: Iterable[Schedulable]) -> None:
+        """
+        modifies the scheduler, and keep only the jobs mentioned in remains in the scheduler
+
+        any job not belonging in self are ignored
+        """
+        self.jobs &= set(remains)
+        self.sanitize()
+
+
     def keep_only_between(self, *,
                           starts:Iterable[Schedulable]=None,
                           ends:Iterable[Schedulable]=None,

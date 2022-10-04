@@ -212,3 +212,25 @@ class Tests(unittest.TestCase):
         self.assertEqual(len(s), 7)
         self.assertEqual(s.jobs, {j2, j3, j4, j5, j6, j7, j_odd})
         produce_svg(s, "graphic-bypass-keep5-step1")
+
+    def test_bypass_keep10(self):
+        w, s, j1, j2, j3, j4, j5, j6, j7, j8, j9, j10 = self.diamonds(3)
+        s.keep_only([j1, j2, j3, j4])
+        self.assertEqual(len(s), 4)
+        self.assertEqual(len(set(s.successors(j1))), 2)
+        self.assertEqual(len(set(s.predecessors(j1))), 0)
+        self.assertEqual(len(set(s.successors(j2))), 1)
+        self.assertEqual(len(set(s.predecessors(j2))), 1)
+        self.assertEqual(len(set(s.successors(j4))), 0)
+        self.assertEqual(len(set(s.predecessors(j4))), 2)
+
+    def test_bypass_keep11(self):
+        w, s, j1, j2, j3, j4, j5, j6, j7, j8, j9, j10 = self.diamonds(3)
+        s.keep_only([j1, j4, j7])
+        self.assertEqual(len(s), 3)
+        self.assertEqual(len(set(s.successors(j1))), 0)
+        self.assertEqual(len(set(s.predecessors(j1))), 0)
+        self.assertEqual(len(set(s.successors(j4))), 0)
+        self.assertEqual(len(set(s.predecessors(j4))), 0)
+        self.assertEqual(len(set(s.successors(j7))), 0)
+        self.assertEqual(len(set(s.predecessors(j7))), 0)
