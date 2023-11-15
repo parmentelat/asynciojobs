@@ -39,7 +39,8 @@ from asynciojobs import __version__
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.viewcode',
-    'sphinxcontrib.asyncio',
+    # deprecated
+    # 'sphinxcontrib.asyncio',
     'sphinxcontrib.napoleon',
     'sphinx_autodoc_typehints',
     'myst_parser',
