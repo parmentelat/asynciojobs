@@ -41,7 +41,8 @@ extensions = [
     'sphinx.ext.viewcode',
     # deprecated
     # 'sphinxcontrib.asyncio',
-    'sphinxcontrib.napoleon',
+    # and not sphinxcontrib.napoleon
+    'sphinx.ext.napoleon',
     'sphinx_autodoc_typehints',
     'myst_parser',
 ]
