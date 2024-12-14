@@ -5,3 +5,9 @@ build
 asynciojobs.egg-info
 tests/graphic-*.dot
 tests/graphic-*.svg
+.pytest_cache
+debug*
+tests/graphic-*
+.ipynb_checkpoints
+.macnb
+dist/
