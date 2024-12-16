@@ -1,3 +1,3 @@
 ```
-pip3 install asynciojobs
+pip install asynciojobs
 ```

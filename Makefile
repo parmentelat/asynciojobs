@@ -1,26 +1,21 @@
-include Makefile.pypi
+all: doc
 
-##############################
-tags:
-	git ls-files | xargs etags
-
-.PHONY: tags
-
-##########
-tests test:
-	pytest
-
-.PHONY: tests test
-
-########## sphinx
+########## sphinx-generated doc
 # Extensions (see sphinx/source/conf.py)
 # * for type hints - this is rather crucial
 # https://github.com/agronholm/sphinx-autodoc-typehints
-# pip3 install sphinx-autodoc-typehints
-readme-strip readme html doc:
+doc:
+	pip install ".[doc]" ".[graph]"
 	$(MAKE) -C sphinx $@
 
-.PHONY: readme-strip readme html doc
+.PHONY: doc
+
+########## tests
+tests:
+	pip install ".[tests]"
+	pytest
+
+.PHONY: tests
 
 ##########
 pyfiles:
@@ -32,12 +27,11 @@ pep8:
 pylint:
 	$(MAKE) pyfiles | xargs pylint
 
-
-.PHONY: pep8 pylint pyfiles
+.PHONY: pyfiles pep8 pylint
 
 ########## actually install
 infra:
-	apssh -t r2lab.infra pip3 install --upgrade asynciojobs
+	apssh -t r2lab.infra pip install --upgrade asynciojobs
 check:
-	apssh -t r2lab.infra python3 -c '"import asynciojobs.version as version; print(version.version)"'
+	apssh -t r2lab.infra python -c '"import asynciojobs.version as version; print(version.version)"'
 .PHONY: infra check

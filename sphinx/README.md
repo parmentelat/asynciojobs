@@ -1,4 +1,3 @@
-
 # README
 
 ## A simple orchestration engine for `asyncio`
@@ -34,31 +33,21 @@ This document, along with `asynciojobs`'s API reference documentation, and chang
 
 **Licence**: CC BY-NC-ND
 
-## Prerequisites
-
-`asynciojobs` requires `asyncio` and python-3.5 or more recent.
-
-
-```python
-import sys
-major, minor = sys.version_info[:2]
-if (major, minor) < (3, 5):
-    print("asynciojobs won't work in this environment")
-```
-
 ## Installing
 
-`asynciojobs` requires python-3.5, and can be installed from the pypi repository:
+`asynciojobs` can be installed from the pypi repository:
 
 ```
-pip3 install asynciojobs
+pip install asynciojobs
 ```
 
-### Extra dependency to `graphviz`
+### Extra dependencies 
 
-This installation method will not try to install the `graphviz` python package, that can be cumbersome to install, and that is not strictly necessary at run-time for orchestrating a scheduler.
-
-We recommend to install it for developping scenarios though since, as we will see shortly, `asynciojobs` provides a graphical representation of schedulers, that is very convenient for debugging.
+- `pip install "asynciojobs[graph]"`
+  if you intend on using graphviz for visualizing graphs in notebooks
+- `pip install "asynciojobs[ordered]"
+  if you want asynciojobs to create ordered sets instead of regular sets
+- see also `pyproject.toml` for other more dev-oriented extra deps
 
 ## Examples
 
@@ -80,7 +69,9 @@ watch.print_elapsed('some')
 ```
 
     000.000  
-    000.505 some
+
+
+    000.500 some
 
 We can now write a simple coroutine for illustrating schedulers through small examples:
 
@@ -140,15 +131,17 @@ sa
 
 
 ```python
-sa.run()
+await sa.co_run()
 ```
 
-    000.016 -> in_out(0.1)
-    000.016 -> in_out(0.2)
-    000.016 -> in_out(0.25)
-    000.119 <- in_out(0.1)
-    000.219 <- in_out(0.2)
-    000.269 <- in_out(0.25)
+    000.021 -> in_out(0.25)
+    000.021 -> in_out(0.1)
+    000.021 -> in_out(0.2)
+    000.121 <- in_out(0.1)
+
+
+    000.222 <- in_out(0.2)
+    000.271 <- in_out(0.25)
 
 
 
@@ -158,7 +151,7 @@ sa.run()
 
 
 
-**Note**: the `run()` method is a regular python function, which is easier to illustrate in this README, but in practical terms it is only a wrapper around the `co_run()` coroutine method.
+**Note**: here we take advantage of IPython's ability to perform `await`s right at the toplevel; there's also a `run()` method on schedulers, that is a regular - blocking - Python function. As of release 0.19, `asynciojobs` no longer explicitly calls `get_event_loop()` because its use is way too ambiguous nowadays.
 
 ### Several programming styles
 
@@ -181,22 +174,24 @@ sa2.add(a3)
 
 
 
-    Scheduler with 0 done + 0 ongoing + 3 idle = 3 job(s)
+    ⚠   ⚐   <Job `Job[in_out (...)]`> [not done] 
 
 
 
 
 ```python
 watch.reset()
-sa2.run()
+await sa2.co_run()
 ```
 
     000.000 -> in_out(0.1)
     000.000 -> in_out(0.2)
     000.000 -> in_out(0.25)
-    000.105 <- in_out(0.1)
-    000.205 <- in_out(0.2)
-    000.254 <- in_out(0.25)
+    000.101 <- in_out(0.1)
+
+
+    000.201 <- in_out(0.2)
+    000.251 <- in_out(0.25)
 
 
 
@@ -240,6 +235,13 @@ b1, b2, b3 = (Job(in_out(0.1), label="b1"),
 b2.requires(b1)
 ```
 
+
+
+
+    ⚠   ⚐   <Job `b2`> [not done] requires={??}
+
+
+
 Now `b2` needs `b1` to be finished before it can start. And so only the 2 first coroutines get started at the beginning, and only once b1 has finished does b2 start.
 
 
@@ -248,15 +250,21 @@ watch.reset()
 
 # with this setup we are certain that b3 ends in the middle of b2
 sb = Scheduler(b1, b2, b3)
-sb.run()
+await sb.co_run()
 ```
 
-    000.000 -> in_out(0.1)
     000.000 -> in_out(0.25)
-    000.103 <- in_out(0.1)
-    000.104 -> in_out(0.2)
-    000.255 <- in_out(0.25)
-    000.309 <- in_out(0.2)
+    000.000 -> in_out(0.1)
+
+
+    000.101 <- in_out(0.1)
+    000.102 -> in_out(0.2)
+
+
+    000.252 <- in_out(0.25)
+
+
+    000.302 <- in_out(0.2)
 
 
 
@@ -284,15 +292,17 @@ sb2 = Scheduler(
 ```python
 watch.reset()
 
-sb2.run()
+await sb2.co_run()
 ```
 
-    000.000 -> in_out(0.1)
     000.000 -> in_out(0.25)
-    000.104 <- in_out(0.1)
-    000.104 -> in_out(0.2)
-    000.255 <- in_out(0.25)
-    000.309 <- in_out(0.2)
+    000.000 -> in_out(0.1)
+    000.101 <- in_out(0.1)
+    000.102 -> in_out(0.2)
+
+
+    000.251 <- in_out(0.25)
+    000.302 <- in_out(0.2)
 
 
 
@@ -353,9 +363,9 @@ To see an overview of a scheduler, just use the `list()` method that will summar
 sb.list()
 ```
 
-    1 ⚠ ☉ ☓   <Job `b1`> [[ -> 100.0]] 
-    2 ⚠ ☉ ☓   <Job `b2`> [[ -> 200.0]] requires={1}
-    3 ⚠ ☉ ☓   <Job `Job[in_out (...)]`> [[ -> 250.0]] 
+    1 ⚠ ☉ ☓   <Job `Job[in_out (...)]`> [[ -> 250.0]] 
+    2 ⚠ ☉ ☓   <Job `b1`> [[ -> 100.0]] 
+    3 ⚠ ☉ ☓   <Job `b2`> [[ -> 200.0]] requires={2}
 
 
 The textual representation displayed by `list()` shows all the jobs, with:
@@ -492,19 +502,30 @@ c3.requires(c1)
 ```
 
 
+
+
+    ⚠   ⚐   <Job `c3`> [not done] requires={??}
+
+
+
+
 ```python
 watch.reset()
 
 sc = Scheduler(c1, c2, c3, c4)
-sc.run()
+await sc.co_run()
 ```
 
     BUS: 000.000 -> in_out(0.2)
     BUS: 000.000 -> in_out(0.4)
-    BUS: 000.205 <- in_out(0.2)
-    BUS: 000.206 -> in_out(0.3)
-    BUS: 000.406 <- in_out(0.4)
-    BUS: 000.509 <- in_out(0.3)
+
+
+    BUS: 000.202 <- in_out(0.2)
+    BUS: 000.202 -> in_out(0.3)
+    BUS: 000.401 <- in_out(0.4)
+
+
+    BUS: 000.503 <- in_out(0.3)
 
 
 
@@ -521,10 +542,10 @@ Note that `run()` always terminates as soon as all the non-`forever` jobs are co
 sc.list()
 ```
 
-    1 ⚠ ☉ ☓   <Job `c1`> [[ -> 2.0]] 
-    2 ⚠ ☉ ☓   <Job `c2`> [[ -> 4.0]] 
-    3 ⚠ ☉ ☓   <Job `c3`> [[ -> 3.0]] requires={1}
-    4 ⚠ ☉ ↺ ∞ <Job `monitor`> [not done] 
+    1 ⚠ ☉ ↺ ∞ <Job `monitor`> [not done] 
+    2 ⚠ ☉ ☓   <Job `c1`> [[ -> 2.0]] 
+    3 ⚠ ☉ ☓   <Job `c2`> [[ -> 4.0]] 
+    4 ⚠ ☉ ☓   <Job `c3`> [[ -> 3.0]] requires={2}
 
 
 Forever jobs appear with a dotted border on a graphical representation:
@@ -573,13 +594,16 @@ j = Job(forever(), forever=True)
 ```python
 watch.reset()
 sd = Scheduler(j, timeout=0.25, critical=False)
-sd.run()
+
+await sd.co_run()
 ```
 
     000.000: forever 0
-    000.104: forever 1
-    000.209: forever 2
-    11:34:57.169 SCHEDULER(None): PureScheduler.co_run: TIMEOUT occurred
+    000.101: forever 1
+
+
+    000.201: forever 2
+    11:21:04.917 SCHEDULER 0D + 1R + 0I = 1: PureScheduler.co_run: TIMEOUT occurred
 
 
 
@@ -636,13 +660,19 @@ se = Scheduler(Sequence(e1, e2, e3), critical=False)
 # with these settings, jobs 'end' is not hindered 
 # by the middle job raising an exception
 watch.reset()
-se.run()
+await se.co_run()
 ```
 
     000.000 -> in_out(0.2)
-    000.205 <- in_out(0.2)
-    000.409 -> in_out(0.3)
-    000.710 <- in_out(0.3)
+
+
+    000.201 <- in_out(0.2)
+
+
+    000.403 -> in_out(0.3)
+
+
+    000.704 <- in_out(0.3)
 
 
 
@@ -695,12 +725,17 @@ sf = Scheduler(Sequence(f1, f2, f3), critical=False)
 # when the exception triggers in boom()
 # and the last job does not run at all
 watch.reset()
-sf.run()
+
+await sf.co_run()
 ```
 
     000.000 -> in_out(0.2)
-    000.202 <- in_out(0.2)
-    11:34:58.383 SCHEDULER(None): Emergency exit upon exception in critical job
+
+
+    000.200 <- in_out(0.2)
+
+
+    11:21:06.381 SCHEDULER 2D + 0R + 1I = 3: Emergency exit upon exception in critical job
 
 
 
@@ -760,20 +795,26 @@ for i in range(1, 9):
 ```python
 # so running them with a window of 4 means approx. 1 second
 watch.reset()
-s.run()
+
+await s.co_run()
+
 # expect around 1 second
 print("total duration = {}s".format(watch.elapsed()))
 ```
 
-    000.469 1-th job
-    000.469 2-th job
-    000.469 3-th job
-    000.469 4-th job
-    000.469 5-th job
-    000.469 6-th job
-    000.469 7-th job
-    000.469 8-th job
-    total duration = 001.004s
+    000.708 2-th job
+    000.708 1-th job
+    000.708 4-th job
+    000.708 5-th job
+
+
+    000.708 6-th job
+    000.708 3-th job
+    000.708 7-th job
+    000.708 8-th job
+
+
+    total duration = 001.003s
 
 
 ## Nesting schedulers
@@ -858,14 +899,22 @@ Which when executed produces this output:
 
 
 ```python
-main_sched.run()
+await main_sched.co_run()
 ```
 
     main-start
+
+
     subj1
+
+
     subj2
     subj3
+
+
     subj4
+
+
     main-end
 
 
@@ -929,10 +978,11 @@ In some cases like esp. test scenarios, it can be helpful to add requirements to
 
 `run()` is a regular `def` function (i.e. not an `async def`), but in fact just a wrapper around the native coroutine called `co_run()`.
 
-    def run(self, *args, **kwds):
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(self.co_run(*args, **kwds))
-
+```python
+def run(self, *args, **kwds):
+    with asyncio.Runner() as runner:
+        return runner.run(self.co_run(*args, **kwds))
+```
 
 ### Cleaning up - the `shutdown()` method.
 
@@ -953,6 +1003,7 @@ Here's a simple example:
 
 ```python
 # and a simple scheduler with an initialization and 2 concurrent tasks
+
 s = Scheduler()
 j1 = Job(aprint("j1"), label="init", critical=False, scheduler=s)
 j2 = Job(aprint("j2"), label="critical job", critical=True, scheduler=s, required=j1)
@@ -963,7 +1014,9 @@ s.graph()
 
 
 
-![svg](README-eval_files/README-eval_131_0.svg)
+    
+![svg](README-eval_files/README-eval_127_0.svg)
+    
 
 
 

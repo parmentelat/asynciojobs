@@ -605,8 +605,8 @@ class AbstractJob:                                      # pylint: disable=R0902
         Mostly useful for debugging the internals of that job,
         e.g. for checking for gross mistakes and other exceptions.
         """
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(self.co_run())
+        with asyncio.Runner() as runner:
+            return runner.run(self.co_run())
 
     def details(self):
         """

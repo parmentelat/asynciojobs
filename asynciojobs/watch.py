@@ -21,7 +21,7 @@ class Watch:
       is a static because it is mostly useful, precisely, when you
       do not have a ``Watch`` object at hand::
 
-        $ python3
+        $ python
         Python 3.6.4 (default, Mar  9 2018, 23:15:12)
         <snip>
         >>> from asynciojobs import Watch

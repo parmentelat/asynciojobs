@@ -20,6 +20,14 @@ dependencies = [
 graph = ["graphviz"]
 ordered = ["ordered-set"]
 tests = ["pytest"]
+# this is to update the doc locally (i.e. the .md from the .ipynb)
+doc = ["nbstripout", "jupyter", "nbconvert"]
+# this is to produce the doc on readthedocs
+readthedocs = [
+    "sphinx-autodoc-typehints",
+    "myst-parser",
+    "recommonmark"
+]
 
 
 [project.urls]

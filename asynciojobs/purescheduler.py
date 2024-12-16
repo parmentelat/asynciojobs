@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 """
 The PureScheduler class is a set of AbstractJobs, that together with their
@@ -800,8 +800,8 @@ class PureScheduler:                                    # pylint: disable=r0902
           see :meth:`co_shutdown()` for details.
 
         """
-        return asyncio.get_event_loop().run_until_complete(
-            self.co_shutdown())
+        with asyncio.Runner() as runner:
+            return runner.run(self.co_shutdown())
 
     async def co_shutdown(self):
         """
@@ -911,12 +911,9 @@ class PureScheduler:                                    # pylint: disable=r0902
         Also, the canonical name for this is ``run()`` but for historical
         reasons you can also use ``orchestrate()`` as an alias for ``run()``.
         """
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        return loop.run_until_complete(self.co_run(*args, **kwds))
+        with asyncio.Runner() as runner:
+            return runner.run(self.co_run(*args, **kwds))
+
 
     # define the alias for legacy
     orchestrate = run
