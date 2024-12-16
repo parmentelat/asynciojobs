@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.19.1 - 2024 Dec 16
+
+- the description used in pypi is just the toplevel README, which points at rtd
+- this because the images were not getting properly inserted on pypi
+
 ## 0.19.0 - 2024 Dec 16
 
 - the synchroneous `run()` methods no longer call `get_event_loop()`

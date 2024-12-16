@@ -1,6 +1,6 @@
 [project]
 name = "asynciojobs"
-version = "0.19.0"
+version = "0.19.1"
 description="A simplistic orchestration engine for asyncio-based jobs"
 license = {text = "CC-BY-NC-4.0"}
 readme = "README.md"
