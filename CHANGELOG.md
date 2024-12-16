@@ -1,5 +1,18 @@
 # ChangeLog
 
+## 0.19.0 - 2024 Dec 16
+
+- the synchroneous `run()` methods no longer call `get_event_loop()`
+  and use a `asyncio.Runner` instance instead
+- the doc no longer calls these `run()` methods, but use `await
+  scheduler.co_run()` instead, since this is the simplest way in the context of
+  a notebook - where there already is an event loop running
+- use pyproject.toml for build instead of setup.py
+- consequently remove Makefile.pypi
+- refer to `python` and `pip` instead of `python3` and `pip3` in the docs
+- remove `sphinx/requirements-rtd.txt`, these requirements are now in
+  `pyproject.toml` as well as the `readthedocs` extra dependency
+
 ## 0.18.1 - 2022 Oct 4
 
 * new method Scheduler.keep_only
