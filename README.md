@@ -9,6 +9,6 @@ asyncio-friendly programs, whose dependencies are directed acyclic graphs
 Schedulers can be nested, i.e. a scheduler can be used as a job;
 this features allows functions to be written, that return pieces of scenarios.
 
-# Read more at readthedocs
+## Read more at readthedocs
 
-See complete documentation at http://asynciojobs.readthedocs.io/
+See complete documentation at <https://asynciojobs.readthedocs.io/>

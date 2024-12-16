@@ -2,12 +2,12 @@
 name = "asynciojobs"
 version = "0.19.0"
 description="A simplistic orchestration engine for asyncio-based jobs"
-license = "CC-BY-NC-4.0"
-readme = "sphinx/README.md"
+license = {text = "CC-BY-NC-4.0"}
+readme = "README.md"
 authors = [
     {name = "Thierry Parmentelat", email = "thierry.parmentelat@inria.fr"},
 ]
-keywords=[
+keywords = [
     'asyncio', 'dependency', 'dependencies',
     'jobs', 'scheduling', 'orchestration',
 ]
