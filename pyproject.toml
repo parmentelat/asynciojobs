@@ -1,0 +1,32 @@
+[project]
+name = "asynciojobs"
+version = "0.19.0"
+description="A simplistic orchestration engine for asyncio-based jobs"
+license = "CC-BY-NC-4.0"
+readme = "sphinx/README.md"
+authors = [
+    {name = "Thierry Parmentelat", email = "thierry.parmentelat@inria.fr"},
+]
+keywords=[
+    'asyncio', 'dependency', 'dependencies',
+    'jobs', 'scheduling', 'orchestration',
+]
+requires-python = ">=3.9"
+dependencies = [
+    # none for now
+]
+
+[project.optional-dependencies]
+graph = ["graphviz"]
+ordered = ["ordered-set"]
+tests = ["pytest"]
+
+
+[project.urls]
+Homepage = "http://github.com/parmentelat/asynciojobs"
+Documentation = "http://asynciojobs.readthedocs.io/"
+
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
