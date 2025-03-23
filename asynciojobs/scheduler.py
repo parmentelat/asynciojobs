@@ -157,7 +157,7 @@ class Scheduler(PureScheduler, AbstractJob):
         """
         return 1 + self._total_length()
 
-    def _list(self, details, depth, recursive):
+    def _list(self, details, depth, recursive, silence_done_jobs):
         """
         Complicit to PureScheduler.list()
         """
@@ -172,7 +172,7 @@ class Scheduler(PureScheduler, AbstractJob):
                       self.repr_entries()))
         if recursive:
             for job in self.topological_order():
-                job._list(details, depth+1, recursive)
+                job._list(details, depth+1, recursive, silence_done_jobs)
             print(self.repr_id(),
                   # this should be 7-spaces like repr_short()
                   '--end--',
@@ -180,7 +180,7 @@ class Scheduler(PureScheduler, AbstractJob):
                   self.repr_main(),
                   self.repr_exits())
 
-    def _list_safe(self, recursive):
+    def _list_safe(self, recursive, silence_done_jobs):
         """
         Complicit to PureScheduler.list_safe()
         """
@@ -191,7 +191,7 @@ class Scheduler(PureScheduler, AbstractJob):
                       self.repr_requires()))
         if recursive:
             for job in self.jobs:
-                job._list_safe(recursive)
+                job._list_safe(recursive, silence_done_jobs=silence_done_jobs)
             print('--end--', self.repr_id())
 
     def _iterate_jobs(self, scan_schedulers):

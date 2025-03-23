@@ -1136,7 +1136,7 @@ class PureScheduler:                                    # pylint: disable=r0902
                 job._set_sched_ids_safe(stack+[i])      # pylint: disable=W0212
 
     # ----
-    def list(self, details=False):
+    def list(self, details=False, silence_done_jobs=False):
         """
         Prints a complete list of jobs in topological order, with their status
         summarized with a few signs. See the README for examples and a legend.
@@ -1148,9 +1148,9 @@ class PureScheduler:                                    # pylint: disable=r0902
         # requirements
         self._set_sched_ids()
         for job in self.topological_order():
-            job._list(details, 0, True)                 # pylint: disable=W0212
+            job._list(details, 0, True, silence_done_jobs=silence_done_jobs)  # pylint: disable=W0212
 
-    def list_safe(self):
+    def list_safe(self, silence_done_jobs=False):
         """
         Print jobs in no specific order, the advantage being that it
         works even if scheduler is broken wrt :meth:`check_cycles()`.
@@ -1159,7 +1159,7 @@ class PureScheduler:                                    # pylint: disable=r0902
         self._set_sched_ids_safe([])
         for job in self.jobs:
             # pass as stack a list of indexes
-            job._list_safe(True)                        # pylint: disable=W0212
+            job._list_safe(True, silence_done_jobs=silence_done_jobs)         # pylint: disable=W0212
 
 
     # ----
@@ -1190,12 +1190,15 @@ class PureScheduler:                                    # pylint: disable=r0902
         return ("{done}D + {ongoing}R + {idle}I = {total}"
                 .format(done=done, ongoing=ongoing, idle=idle, total=total))
 
-    def debrief(self, details=False):
+    def debrief(self, details=False, silence_done_jobs=False):
         """
         Designed for schedulers that have failed to orchestrate.
 
         Print a complete report, that includes `list()` but also gives
         more stats and data.
+
+        By default all jobs in the scheduler are listed, including the ones
+        that have finished; this can be turned off with `silence_done_jobs=True`.
         """
         nb_total = len(self.jobs)
         done = {j for j in self.jobs if j.is_done()}
@@ -1223,7 +1226,7 @@ class PureScheduler:                                    # pylint: disable=r0902
             legible_message(nb_idle, "idle (or scheduled but not running)")
 
         print(5 * '-', self.why())
-        self.list(details)
+        self.list(details, silence_done_jobs=silence_done_jobs)
         #####
         if exceptions:
             nb_exceptions = len(exceptions)

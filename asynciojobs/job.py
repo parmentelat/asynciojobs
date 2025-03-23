@@ -154,11 +154,13 @@ class AbstractJob:                                      # pylint: disable=R0902
         """
         return 1
 
-    # don't use parameter recursive
-    def _list(self, details, depth, _):
+    # don't use parameter _recursive it is useful on schedulers only
+    def _list(self, details, depth, _recursive, silence_done_jobs):
         """
         Complicit to PureScheduler.list()
         """
+        if self.is_done() and silence_done_jobs:
+            return
         indent = ('>'*depth + ' ') if depth else ''
         print("{} {} {}{} {} {}"
               .format(self.repr_id(),
@@ -172,11 +174,13 @@ class AbstractJob:                                      # pylint: disable=R0902
             if details is not None:
                 print(details)
 
-    # don't use parameter recursive
-    def _list_safe(self, _):
+    # don't use parameter _recursive it is useful on schedulers only
+    def _list_safe(self, _recursive, silence_done_jobs):
         """
         Complicit to PureScheduler.list_safe()
         """
+        if self.is_done() and silence_done_jobs:
+            return
         print("{} {} {} {}"
               .format(self.repr_short(),
                       self.repr_id(),

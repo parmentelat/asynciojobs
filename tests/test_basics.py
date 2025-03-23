@@ -191,6 +191,8 @@ class Tests(unittest.TestCase):
         list_sep(sched, common_sep + "LIST AFTER")
         print(common_sep + "DEBRIEF")
         sched.debrief()
+        print(common_sep + "DEBRIEF and silence jobs that are done")
+        sched.debrief(silence_done_jobs=True)
 
     ####################
     def test_forever1(self):
