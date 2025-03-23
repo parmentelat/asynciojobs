@@ -678,3 +678,8 @@ class Job(AbstractJob):
         if self.coshutdown:
             result = await self.coshutdown
             return result
+
+    def close(self):
+        self.corun.close()
+        if self.coshutdown:
+            self.coshutdown.close()

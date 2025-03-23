@@ -94,3 +94,11 @@ class Sequence:
             # warning ?
             return
         self.jobs[0].requires(*requirements)
+
+    def close_idle_jobs(self):
+        """
+        close all idle jobs in the sequence
+        """
+        for job in self.jobs:
+            if job.is_idle():
+                job.close()

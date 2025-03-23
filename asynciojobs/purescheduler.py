@@ -1486,3 +1486,15 @@ DOT_%28graph_description_language%29
           created file name
         """
         return self.export_as_graphic(filename, "svg")
+
+
+    def close_idle_jobs(self):
+        """
+        sometimes - particularly in our tests - we create schedulers
+        only to display or print them
+        in that case in order to avoid warnings due to coroutines"
+        having been created but not awited, we close them
+        """
+        for job in self.iterate_jobs(scan_schedulers=False):
+            if job.is_idle():
+                job.close()
