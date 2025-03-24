@@ -28,7 +28,7 @@ class CounterScheduler(Scheduler):
 
 
 class CounterJob(Job):
-    def __init__(self, scheduler, delay, shutdown_delay, *a, **k):
+    def __init__(self, scheduler, delay, shutdown_delay, *args, **kwds):
         """
         scheduler is **NOT** the scheduler where the job belongs directly
           but instead the global toplevel scheduler. This way all the jobs
@@ -40,7 +40,7 @@ class CounterJob(Job):
         self.scheduler = scheduler
         self.delay = delay
         self.shutdown_delay = shutdown_delay
-        super().__init__(*a, **k)
+        super().__init__(*args, **kwds)
 
     async def co_run(self):
         verbose(f">>> CounterJob.run {self.label}")
@@ -81,6 +81,7 @@ class Tests(TestCase):
 #        self.assertEqual(sched.counter, cardinal)
 #        self.assertTrue(sched.shutdown())
         self.assertEqual(sched.counter, 0)
+        sched.close_all_jobs()
 
     def test_simple(self):
         self._test_simple(sched_timeout=None)
@@ -115,6 +116,8 @@ class Tests(TestCase):
 #        self.assertEqual(top.counter, cardinal*cardinal)
 #        self.assertTrue(top.shutdown())
         self.assertEqual(top.counter, 0)
+
+        top.close_all_jobs()
 
     def test_nested(self):
         self._test_nested(sched_timeout=None)
@@ -175,8 +178,9 @@ class Tests(TestCase):
             expected = 0
         produce_svg(sched, "debug")
 
-
         self.assertEqual(sched.counter, expected)
+
+        sched.close_all_jobs()
 
     def test_shsd_none_short(self):
         return self._test_shutdown_timeout(None, 0.05)

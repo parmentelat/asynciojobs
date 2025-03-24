@@ -26,6 +26,8 @@ class Tests(unittest.TestCase):
             watch=watch
         )
         produce_svg(sched, "graphic-png-easy1")
+        # avoid warning about non-awaited coroutines
+        sched.close_idle_jobs()
 
     def test_png_easy2(self):
         """
@@ -42,6 +44,8 @@ class Tests(unittest.TestCase):
             watch=watch
         )
         produce_svg(sched, "graphic-png-easy2")
+        # avoid warning about non-awaited coroutines
+        sched.close_idle_jobs()
 
     def test_png_simple(self):
         """
@@ -60,6 +64,8 @@ class Tests(unittest.TestCase):
             watch=watch
         )
         produce_svg(sched, "graphic-png-simple")
+        # avoid warning about non-awaited coroutines
+        sched.close_idle_jobs()
 
     def test_png_styles1(self):
         """
@@ -85,6 +91,8 @@ class Tests(unittest.TestCase):
         )
 
         produce_svg(sched, "graphic-png-styles1")
+        # avoid warning about non-awaited coroutines
+        sched.close_idle_jobs()
 
     def test_png_styles2(self):
         """
@@ -118,6 +126,8 @@ class Tests(unittest.TestCase):
         )
 
         produce_svg(sched, "graphic-png-styles2")
+        # avoid warning about non-awaited coroutines
+        sched.close_idle_jobs()
 
 
     def test_order1(self):
@@ -148,3 +158,5 @@ class Tests(unittest.TestCase):
         sub4.add(job(13))
 
         produce_svg(sched, "graphic-png-order1")
+        # avoid warning about non-awaited coroutines
+        sched.close_idle_jobs()

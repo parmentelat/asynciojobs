@@ -147,10 +147,13 @@ def list_sep(scheduler, sep):
 class Tests(unittest.TestCase):
 
     def test_empty(self):                               # pylint: disable=r0201
-        s = PureScheduler()
-        s.list()
-        s.list(details=True)
-        self.assertTrue(s.run())
+        sched = PureScheduler()
+        sched.list()
+        sched.list(details=True)
+        self.assertTrue(sched.run())
+        # avoid warning about non-awaited coroutines
+        sched.close_idle_jobs()
+
 
     ####################
     def test_cycle(self):
@@ -165,6 +168,8 @@ class Tests(unittest.TestCase):
         # these lines seem to trigger a nasty message about a coro not being
         # waited
         self.assertFalse(sched.check_cycles())
+        # avoid warning about non-awaited coroutines
+        sched.close_idle_jobs()
 
     ####################
     # Job(asyncio.sleep(0.4))
@@ -343,6 +348,8 @@ class Tests(unittest.TestCase):
 
     ##########
     def test_requires_job(self):
+        # the calls to close() are here to avoid
+        # the warning about non-awaited coroutines
 
         a1 = J(sl(0.1), label="a1")
         a2 = J(sl(0.1), label="a2")
@@ -353,22 +360,34 @@ class Tests(unittest.TestCase):
         # several forms to create
         b = J(sl(0.2), required=None)
         self.assertEqual(len(b.required), 0)
+        b.close()
         b = J(sl(0.2), required=(None,))
         self.assertEqual(len(b.required), 0)
+        b.close()
         b = J(sl(0.2), required=[None])
         self.assertEqual(len(b.required), 0)
+        b.close()
         b = J(sl(0.2), required=a1)
         self.assertEqual(len(b.required), 1)
+        b.close()
         b = J(sl(0.2), required=(a1,))
         self.assertEqual(len(b.required), 1)
+        b.close()
         b = J(sl(0.2), required=[a1])
         self.assertEqual(len(b.required), 1)
+        b.close()
         b = J(sl(0.2), label='BROKEN', required=(a1, a2))
         self.assertEqual(len(b.required), 2)
+        b.close()
         b = J(sl(0.2), required=[a1, a2])
         self.assertEqual(len(b.required), 2)
+        b.close()
         b = J(sl(0.2), required=[a1, (a2,), set([a3, a4]), [[[[[[a5]]]]]]])
         self.assertEqual(len(b.required), 5)
+        b.close()
+
+        for a in a1, a2, a3, a4, a5:
+            a.close()
 
     ##########
     def test_requires_sequence(self):
@@ -391,12 +410,18 @@ class Tests(unittest.TestCase):
         s1 = Seq(b1, b2, b3, required=[a1, a2])
         self.assertEqual(len(b1.required), 2)
         self.assertEqual(len(b2.required), 1)
+        s1.close_idle_jobs()
 
         b1, b2, b3, *_ = bs()
         s1 = Seq(b1, b2, b3)
         s1.requires([a1, a2])
         self.assertEqual(len(b1.required), 2)
         self.assertEqual(len(b2.required), 1)
+        s1.close_idle_jobs()
+        
+        for a in a1, a2:
+            a.close()
+
 
     ##########
     def test_timeout2(self):
@@ -540,7 +565,7 @@ class Tests(unittest.TestCase):
 
     def test_iterate(self):
         watch = Watch()
-        s = diamond_from_jobs(
+        sched = diamond_from_jobs(
             watch,
             J(co_print_sleep(watch, .1, "1")),
             diamond_from_jobs(
@@ -559,14 +584,16 @@ class Tests(unittest.TestCase):
                 ),
             J(co_print_sleep(watch, .1, "4")))
 
-        c1 = sum(1 for job in s.iterate_jobs(scan_schedulers=False))
-        c2 = sum(1 for job in s.iterate_jobs(scan_schedulers=True))
+        c1 = sum(1 for job in sched.iterate_jobs(scan_schedulers=False))
+        c2 = sum(1 for job in sched.iterate_jobs(scan_schedulers=True))
 
         # without schedulers we expect 10 jobs
         self.assertEqual(c1, 10)
         # with schedulers we expect 13 jobs since top scheduler
         # gets taken into account too
         self.assertEqual(c2, 13)
+        # avoid warning about non-awaited coroutines
+        sched.close_idle_jobs()
 
 
 if __name__ == '__main__':

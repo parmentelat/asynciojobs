@@ -192,21 +192,25 @@ class Tests(unittest.TestCase):
 
         # regular non-critical schedulers should not raise anything
         # returns True as Job is not critical
-        s = sched_boom(False, False)
-        self.assertTrue(s.run())
+        sched = sched_boom(False, False)
+        self.assertTrue(sched.run())
+        sched.close_idle_jobs()
         # returns False as Job is critical
-        s = sched_boom(False, True)
-        self.assertFalse(s.run())
+        sched = sched_boom(False, True)
+        self.assertFalse(sched.run())
+        sched.close_idle_jobs()
 
         # it's a different business for critical schedulers
         # Job is not critical, so returns True
-        s = sched_boom(True, False)
-        self.assertTrue(s.run())
+        sched = sched_boom(True, False)
+        self.assertTrue(sched.run())
+        sched.close_idle_jobs()
 
         # Job is not critical, so raise BoomError
         with self.assertRaises(BoomError):
-            s = sched_boom(True, True)
-            s.run()
+            sched = sched_boom(True, True)
+            sched.run()
+        sched.close_all_jobs()
 
     def test_critical_exc2(self):
 
@@ -253,28 +257,31 @@ class Tests(unittest.TestCase):
                        label=i)
 
         def simple():
-            j1, j2, j3, j4, j5 = [job(i) for i in range(1, 6)]
-            s1 = Scheduler(j1, j2, j3, label='top simple')
+            all = j1, j2, j3, j4, j5 = [job(i) for i in range(1, 6)]
+            sched1 = Scheduler(j1, j2, j3, label='top simple')
             j2.requires(j4)
             j3.requires(j5)
             self.assertEqual(len(j2.required), 1)
             self.assertEqual(len(j3.required), 1)
-            s1.sanitize()
+            sched1.sanitize()
             self.assertEqual(len(j2.required), 0)
             self.assertEqual(len(j3.required), 0)
 
+            for j in all:
+                j.close()
+
         def nested():
-            j11, j12, j13, j14, j15 = [job(i) for i in range(11, 16)]
-            s2 = Scheduler(Sequence(j11, j12, j13), label="nested internal")
+            all1 = j11, j12, j13, j14, j15 = [job(i) for i in range(11, 16)]
+            sched2 = Scheduler(Sequence(j11, j12, j13), label="nested internal")
             j12.requires(j14)
             j13.requires(j15)
 
-            j1, j2, j3, j4, j5 = [job(i) for i in range(1, 6)]
-            s1 = Scheduler(Sequence(j1, s2, j3), label="nested top")
+            all = j1, j2, j3, j4, j5 = [job(i) for i in range(1, 6)]
+            s1 = Scheduler(Sequence(j1, sched2, j3), label="nested top")
             j1.requires(j4)
             j1.requires(j11)
 
-            s2.requires(j13)
+            sched2.requires(j13)
 
             # j2 not included in sched, untouched
             j2.requires(j1)
@@ -282,14 +289,17 @@ class Tests(unittest.TestCase):
             self.assertEqual(len(j12.required), 2)
             self.assertEqual(len(j13.required), 2)
             self.assertEqual(len(j1.required), 2)
-            self.assertEqual(len(s2.required), 2)
+            self.assertEqual(len(sched2.required), 2)
             self.assertEqual(len(j3.required), 1)
             s1.sanitize()
             self.assertEqual(len(j12.required), 1)
             self.assertEqual(len(j13.required), 1)
             self.assertEqual(len(j1.required), 0)
-            self.assertEqual(len(s2.required), 1)
+            self.assertEqual(len(sched2.required), 1)
             self.assertEqual(len(j3.required), 1)
+
+            for j in (*all, *all1):
+                j.close()
 
         simple()
         nested()

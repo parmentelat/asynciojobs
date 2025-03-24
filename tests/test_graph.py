@@ -56,8 +56,8 @@ class Tests(unittest.TestCase):
                        f"that initial graph message\nwas {self.graph}"
 
         watch = Watch()
-        s = PureScheduler()
-        s.add(Sequence(
+        sched = PureScheduler()
+        sched.add(Sequence(
             TextJob('textjob-with',
                     co_print_sleep(watch, 0.1, 'textjob, no label ')),
             TextJob('textjob-without',
@@ -70,9 +70,11 @@ class Tests(unittest.TestCase):
                      label='GraphLabel'),
         ))
         print("test_graph2 NO DETAILS")
-        s.list()
+        sched.list()
         print("test_graph2 WITH DETAILS")
-        s.list(details=True)
+        sched.list(details=True)
         print("GRAPH")
-        self.assertEqual(len(s), 4)
-        produce_svg(s, "graphic-graph2")
+        self.assertEqual(len(sched), 4)
+        produce_svg(sched, "graphic-graph2")
+
+        sched.close_idle_jobs()

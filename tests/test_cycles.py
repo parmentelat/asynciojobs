@@ -19,17 +19,18 @@ class Tests(unittest.TestCase):
                        scheduler=s)
 
         def check_class(klass):
-            s = klass()
-            j1, j2, j3 = [job_in_s(i, s) for i in range(1, 4)]
+            sched = klass()
+            j1, j2, j3 = [job_in_s(i, sched) for i in range(1, 4)]
             j3.requires(j2)
             j2.requires(j1)
 
             # no cycle yet
-            self.assertTrue(s.check_cycles())
+            self.assertTrue(sched.check_cycles())
 
             # create cycle
             j1.requires(j3)
-            self.assertFalse(s.check_cycles())
+            self.assertFalse(sched.check_cycles())
+            sched.close_idle_jobs()
 
         check_class(PureScheduler)
         check_class(Scheduler)
@@ -80,3 +81,8 @@ class Tests(unittest.TestCase):
         # add cycle in s3
         js1.requires(js3)
         self.assertFalse(s1.check_cycles())
+
+        for s in (s1, s2, s3):
+            s.close_idle_jobs()
+        # this one has been removed manually
+        js2.close()
