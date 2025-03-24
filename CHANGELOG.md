@@ -1,5 +1,16 @@
 # ChangeLog
 
+## 0.20.0 - 2025 Mar 23
+
+- the debrief() method accepts a new optional argument `silence_done_jobs`
+  to avoid listing jobs that are done; for backward compatibility
+  the default is to show all jobs in the scheduler
+- schedule objects have 2 methods, mostly used in tests primarily
+  but can come in handy to avoid annoying messages from the asyncio runtime
+  that tracks non-awaited coroutines
+  - `close_all_jobs()`
+  - `close_done_jobs()`
+
 ## 0.19.1 - 2024 Dec 16
 
 - the description used in pypi is just the toplevel README, which points at rtd
