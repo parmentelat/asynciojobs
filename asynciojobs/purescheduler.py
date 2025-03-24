@@ -1498,3 +1498,13 @@ DOT_%28graph_description_language%29
         for job in self.iterate_jobs(scan_schedulers=False):
             if job.is_idle():
                 job.close()
+
+    def close_all_jobs(self):
+        """
+        this method will send the close() method on all jobs in the scheduler
+        useful when e.g. you know for a fact that not all jobs in the scheduler
+        are supposed to be done in the end
+        and you still want to avoid annoying messages from the asyncio runtime
+        """
+        for job in self.iterate_jobs(scan_schedulers=False):
+            job.close()
