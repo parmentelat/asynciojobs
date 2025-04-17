@@ -35,3 +35,10 @@ infra:
 check:
 	apssh -t r2lab.infra python -c '"import asynciojobs.version as version; print(version.version)"'
 .PHONY: infra check
+
+########## push on faraday for live testing
+r2lab:
+	rsync -ai --exclude .git --exclude asynciojobs/__pycache__ ./ faraday:/tmp/r2lab-dev-asynciojobs
+	@echo "on faraday"
+	@echo "conda activate r2lab-dev-313"
+	@echo "pip install -e /tmp/r2lab-dev-asynciojobs"
