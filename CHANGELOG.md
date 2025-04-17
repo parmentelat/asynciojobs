@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.21.0 - 2025 Apr 17
+
+- protect against tidying tasks that would hang forever
+
 ## 0.20.0 - 2025 Mar 23
 
 - the debrief() method accepts a new optional argument `silence_done_jobs`
