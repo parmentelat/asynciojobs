@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 The PureScheduler class is a set of AbstractJobs, that together with their
 *required* relationship, form an execution graph.
@@ -987,11 +985,16 @@ class PureScheduler:                                    # pylint: disable=r0902
                    for job in entry_jobs]
 
         while True:
+            begin = time.time()
+            remains = self._remaining_timeout()
+            if DEBUG:
+                print(f"Scheduler.co_run in loop: we have {len(pending)} tasks running - waiting for {remains}s")
             done, pending \
                 = await asyncio.wait(pending,
-                                     timeout=self._remaining_timeout(),
+                                     timeout=remains,
                                      return_when=asyncio.FIRST_COMPLETED)
-
+            if DEBUG:
+                print(f"wait is done - ellapsed = {time.time() - begin}")
             done_ok = {t for t in done if not t._exception}
             await self._feedback(done_ok, "DONE")
             done_ko = done - done_ok
