@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.21.1 - 2025 Apr 17
+
+- flynt'ed and use f-strings wherever possible
+
 ## 0.21.0 - 2025 Apr 17
 
 - protect against tidying tasks that would hang forever
