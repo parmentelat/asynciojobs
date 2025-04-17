@@ -708,9 +708,11 @@ class PureScheduler:                                    # pylint: disable=r0902
             for task in pending:
                 task.cancel()
             # wait for the forever tasks for a clean exit
-            # don't bother to set a timeout, as this is expected
+            # at some point we didn't bother to set a timeout, as this is expected
             # to be immediate since all tasks are canceled
-            await asyncio.wait(pending)
+            # however in one use case at least that involved ssh connections
+            # this was found to loop forever; so if only for safety...
+            await asyncio.wait(pending, timeout=3)
 
     async def _tidy_tasks_exception(self, tasks):
         """
