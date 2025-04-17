@@ -162,14 +162,8 @@ class Scheduler(PureScheduler, AbstractJob):
         Complicit to PureScheduler.list()
         """
         indent = ('>'*depth + ' ') if depth else ''
-        print("{} {} {}{} {} {} -> {}"
-              .format(self.repr_id(),
-                      self.repr_short(),
-                      indent,
-                      self.repr_main(),
-                      self.repr_result(),
-                      self.repr_requires(),
-                      self.repr_entries()))
+        print(f"{self.repr_id()} {self.repr_short()} {indent}{self.repr_main()} "
+              f"{self.repr_result()} {self.repr_requires()} -> {self.repr_entries()}")
         if recursive:
             for job in self.topological_order():
                 job._list(details, depth+1, recursive, silence_done_jobs)
@@ -184,11 +178,7 @@ class Scheduler(PureScheduler, AbstractJob):
         """
         Complicit to PureScheduler.list_safe()
         """
-        print("{} {} {} {}"
-              .format(self.repr_short(),
-                      self.repr_id(),
-                      self.repr_main(),
-                      self.repr_requires()))
+        print(f"{self.repr_short()} {self.repr_id()} {self.repr_main()} {self.repr_requires()}")
         if recursive:
             for job in self.jobs:
                 job._list_safe(recursive, silence_done_jobs=silence_done_jobs)

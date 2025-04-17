@@ -275,8 +275,8 @@ class PureScheduler:                                    # pylint: disable=r0902
                 changes = True
                 if verbose:
                     print(10 * '*',
-                          "WARNING: job {} in {} had {} requirements removed"
-                          .format(job, container_label, before - after))
+                          f"WARNING: job {job} in {container_label} "
+                          f"had {before - after} requirements removed")
             # recursively scan nested schedulers
             if isinstance(job, PureScheduler):
                 changes = job.sanitize(verbose) or changes
@@ -363,9 +363,9 @@ class PureScheduler:                                    # pylint: disable=r0902
         # if we still have jobs here it's not good either,
         # although it should not happen on a sanitized scheduler
         if nb_marked != target_marked:
-            raise Exception("scheduler could not be scanned,"
-                            " {} jobs are not reachable from free jobs"
-                            .format(target_marked - nb_marked))
+            raise Exception(
+                f"scheduler could not be scanned,"
+                f" {target_marked - nb_marked} jobs are not reachable from free jobs")
 
     # entry and exit jobs
     def entry_jobs(self):
@@ -779,9 +779,8 @@ class PureScheduler:                                    # pylint: disable=r0902
                 # we expect a task here
                 job = job._job                          # pylint: disable=W0212
             print_time()
-            print("{} {:8s}: {} {} {}"
-                  .format(name, state,
-                          job.repr_id(), job.repr_short(), job.repr_main()),
+            print(f"{name} {state:8s}: {job.repr_id()} "
+                  f"{job.repr_short()} {job.repr_main()}",
                   end="")
             print(f" {job.repr_result()} {job.repr_requires()}",
                   end="")
@@ -891,9 +890,8 @@ class PureScheduler:                                    # pylint: disable=r0902
         # this is why this it's a verbose/feedback thing
         await self._feedback(
             None,
-            "WARNING: {}/{} co_shutdown() methods"
-            " have not returned within timeout"
-            .format(len(pending), len(self.jobs)))
+            f"WARNING: {len(pending)}/{len(self.jobs)} co_shutdown() methods"
+            f" have not returned within timeout")
         await self._tidy_tasks(pending)
         # we might need to consume any exception as well ?
         # self._tidy_tasks_exception(done)
@@ -1022,9 +1020,10 @@ class PureScheduler:                                    # pylint: disable=r0902
                 if done_job.raised_exception():
                     critical_failure = critical_failure \
                         or done_job.is_critical()
+                    extra = "non-" if not done_job.is_critical() else ""
                     await self._feedback(
-                        done_job, "EXCEPTION occurred - on {}critical job"
-                        .format("non-" if not done_job.is_critical() else ""))
+                        done_job,
+                        f"EXCEPTION occurred - on {extra}critical job")
                     # make sure these ones show up even if not in debug mode
                     if DEBUG:
                         self._show_task_stack(done_task, "DEBUG")
@@ -1045,12 +1044,11 @@ class PureScheduler:                                    # pylint: disable=r0902
 
             if nb_jobs_done == nb_jobs_finite:
                 if DEBUG:
-                    print("PureScheduler.co_run: {} CLEANING UP at iter. {}/{}"
-                          .format(4 * '-', nb_jobs_done, nb_jobs_finite))
+                    print(f"PureScheduler.co_run: {4 * '-'} "
+                          f"CLEANING UP at iter. {nb_jobs_done}/{nb_jobs_finite}")
                 if self.verbose and nb_jobs_forever != len(pending):
-                    print("WARNING - apparent mismatch"
-                          " - {} forever jobs, {} are pending"
-                          .format(nb_jobs_forever, len(pending)))
+                    print(f"WARNING - apparent mismatch"
+                          f" - {nb_jobs_forever} forever jobs, {len(pending)} are pending")
                 await self._feedback(pending, "TIDYING forever")
                 await self._tidy_tasks(pending)
                 await self.co_shutdown()
@@ -1177,10 +1175,8 @@ class PureScheduler:                                    # pylint: disable=r0902
 
     def __repr__(self):
         done, ongoing, idle, total = self._stats()
-        return ("{type} with {done} done + {ongoing} ongoing"
-                " + {idle} idle = {total} job(s)"
-                .format(type=type(self).__name__,
-                        done=done, ongoing=ongoing, idle=idle, total=total))
+        return (f"{type(self).__name__} with {done} done + {ongoing} ongoing"
+                f" + {idle} idle = {total} job(s)")
 
     def stats(self):
         """
@@ -1231,22 +1227,23 @@ class PureScheduler:                                    # pylint: disable=r0902
         if exceptions:
             nb_exceptions = len(exceptions)
             nb_criticals = len(criticals)
-            print("===== {} job(s) with an exception, including {} critical"
-                  .format(nb_exceptions, nb_criticals))
+            print(f"===== {nb_exceptions} job(s) with an exception, "
+                  f"including {nb_criticals} critical")
             # show critical exceptions first
             for j in self.topological_order():
                 if j in criticals:
                     self._show_task_stack(
-                        j, "stack for CRITICAL JOB {} {} {}"
-                        .format(j.repr_id(), j.repr_short(), j.repr_main()))
+                        j,
+                        f"stack for CRITICAL JOB {j.repr_id()} "
+                        f"{j.repr_short()} {j.repr_main()}")
             # then exceptions that were not critical
             non_critical_exceptions = exceptions - criticals
             for j in self.topological_order():
                 if j not in non_critical_exceptions:
                     continue
                 if not self.verbose:
-                    print("non-critical: {}: exception {}"
-                          .format(j._get_text_label(), j.raised_exception()))
+                    print(f"non-critical: {j._get_text_label()}: "
+                          f"exception {j.raised_exception()}")
                     if self.verbose:
                         self._show_task_stack(
                             j, "non-critical job exception stack")
@@ -1341,10 +1338,8 @@ DOT_%28graph_description_language%29
                     else:
                         from_node = req._middle_exit_job()
                         cluster_name = req.dot_cluster_name()
-                        result += ("{} -> {} [ltail={}];\n"
-                                   .format(from_node.repr_id(),
-                                           job.repr_id(),
-                                           cluster_name))
+                        result += (f"{from_node.repr_id()} -> {job.repr_id()} "
+                                   f"[ltail={cluster_name}];\n")
 
             # nested scheduler
             else:
@@ -1358,19 +1353,17 @@ DOT_%28graph_description_language%29
 
                     # upstream is a regular job
                     if not isinstance(req, PureScheduler):
-                        result += ("{} -> {} [lhead={}];\n"
-                                   .format(req.repr_id(),
-                                           job._middle_entry_job().repr_id(),
-                                           cluster_name))
+                        result += (f"{req.repr_id()} -> "
+                                   f"{job._middle_entry_job().repr_id()} "
+                                   f"[lhead={cluster_name}];\n")
 
                     # upstream is a scheduler as well
                     else:
                         src_cluster_name = req.dot_cluster_name()
-                        result += ("{} -> {} [lhead={} ltail={}];\n"
-                                   .format(req._middle_exit_job().repr_id(),
-                                           job._middle_entry_job().repr_id(),
-                                           cluster_name,
-                                           src_cluster_name))
+                        result += (f"{req._middle_exit_job().repr_id()} -> "
+                                   f"{job._middle_entry_job().repr_id()} "
+                                   f"[lhead={cluster_name} "
+                                   f"ltail={src_cluster_name}];\n")
 
         result += "}\n"
         return result

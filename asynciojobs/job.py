@@ -162,13 +162,9 @@ class AbstractJob:                                      # pylint: disable=R0902
         if self.is_done() and silence_done_jobs:
             return
         indent = ('>'*depth + ' ') if depth else ''
-        print("{} {} {}{} {} {}"
-              .format(self.repr_id(),
-                      self.repr_short(),
-                      indent,
-                      self.repr_main(),
-                      self.repr_result(),
-                      self.repr_requires()))
+        print(f"{self.repr_id()} {self.repr_short()} {indent}"
+              f"{self.repr_main()} {self.repr_result()} {self.repr_requires()}")
+
         if details and hasattr(self, 'details'):
             details = self.details()                    # pylint: disable=e1111
             if details is not None:
@@ -181,11 +177,7 @@ class AbstractJob:                                      # pylint: disable=R0902
         """
         if self.is_done() and silence_done_jobs:
             return
-        print("{} {} {} {}"
-              .format(self.repr_short(),
-                      self.repr_id(),
-                      self.repr_main(),
-                      self.repr_requires()))
+        print(f"{self.repr_short()} {self.repr_id()} {self.repr_main()} {self.repr_requires()}")
 
     def _iterate_jobs(self, scan_schedulers):           # pylint: disable=w0613
         yield self
@@ -444,11 +436,8 @@ class AbstractJob:                                      # pylint: disable=R0902
 
     def __repr__(self):
         return (
-            "{} {} {} {}"
-            .format(self.repr_short(),
-                    self.repr_main(),
-                    self.repr_result(),
-                    self.repr_requires()))
+            f"{self.repr_short()} {self.repr_main()} "
+            f"{self.repr_result()} {self.repr_requires()}")
 
     def _add_one_requirement(self, job):
         # refuse to add oneself as a requirement
@@ -588,15 +577,15 @@ class AbstractJob:                                      # pylint: disable=R0902
         """
         Abstract virtual - needs to be implemented
         """
-        print("AbstractJob.co_run() needs to be implemented on class {}"
-              .format(self.__class__.__name__))
+        print(f"AbstractJob.co_run() needs to be implemented on class "
+              f" {self.__class__.__name__}")
 
     async def co_shutdown(self):
         """
         Abstract virtual - needs to be implemented.
         """
-        print("AbstractJob.co_shutdown() needs to be implemented on class {}"
-              .format(self.__class__.__name__))
+        print(f"AbstractJob.co_shutdown() needs to be implemented on class "
+              f"{self.__class__.__name__}")
 
     def standalone_run(self):
         """
