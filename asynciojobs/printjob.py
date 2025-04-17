@@ -43,7 +43,7 @@ class PrintJob(AbstractJob):
                 print(self.banner + " ", end="")
             print(*self.messages)
             if self.sleep:
-                print("Sleeping for {}s".format(self.sleep))
+                print(f"Sleeping for {self.sleep}s")
                 await asyncio.sleep(self.sleep)
         except Exception:                               # pylint: disable=W0703
             # should not happen, but if it does we need to know why
@@ -63,7 +63,7 @@ class PrintJob(AbstractJob):
         """
         result = ""
         if self.sleep:
-            result += "[+ sleep {}s] ".format(self.sleep)
+            result += f"[+ sleep {self.sleep}s] "
         result += "msg= "
         result += self.messages[0]
         result += "..." if len(self.messages) > 1 else ""

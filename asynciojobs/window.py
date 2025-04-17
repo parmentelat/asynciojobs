@@ -49,6 +49,5 @@ class Window:
         """
         await asyncio.sleep(period)
         while not self.queue.empty():
-            print("queue has {}/{} elements busy"
-                  .format(self.queue.qsize(), self.jobs_window))
+            print(f"queue has {self.queue.qsize()}/{self.jobs_window} elements busy")
             await asyncio.sleep(period)

@@ -207,8 +207,7 @@ class Scheduler(PureScheduler, AbstractJob):
         a nested scheduler; dot format imposes this name to start
         with ``cluster_``
         """
-        return "cluster_{}"\
-               .format(self._sched_id)
+        return f"cluster_{self._sched_id}"
 
     def check_cycles(self):
         """

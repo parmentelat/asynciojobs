@@ -41,9 +41,9 @@ class Watch:
         self.reset()
         message = message if message is not None else ""
         if show_elapsed:
-            self.print_elapsed(" {}\n".format(message))
+            self.print_elapsed(f" {message}\n")
         if show_wall_clock:
-            self.print_wall_clock(" {}\n".format(message))
+            self.print_wall_clock(f" {message}\n")
 
     def reset(self):
         """
@@ -64,7 +64,7 @@ class Watch:
           str: number of seconds elapsed since start, formatted
           on 7 characters: 3 for seconds, a dot, 3 for milliseconds
         """
-        return "{:07.3f}".format(self.seconds())
+        return f"{self.seconds():07.3f}"
 
     def print_elapsed(self, suffix=" "):
         """
@@ -75,7 +75,7 @@ class Watch:
           suffix(str): is appended to the output; to be explicit,
             by default no newline is added.
         """
-        print("{} {}".format(self.elapsed(), suffix),
+        print(f"{self.elapsed()} {suffix}",
               end="")
 
     @staticmethod
@@ -90,5 +90,5 @@ class Watch:
         now = datetime.now()
         millisecond = now.microsecond // 1000
         timestamp = datetime.now().strftime("%H:%M:%S")
-        print("{}.{:03d}{}".format(timestamp, millisecond, suffix),
+        print(f"{timestamp}.{millisecond:03d}{suffix}",
               end="")

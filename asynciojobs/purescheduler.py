@@ -228,7 +228,7 @@ class PureScheduler:                                    # pylint: disable=r0902
           actually been called.
         """
         if self._failed_timeout:
-            return "TIMED OUT after {}s".format(self._failed_timeout)
+            return f"TIMED OUT after {self._failed_timeout}s"
         if self._failed_critical:
             return "a CRITICAL job has raised an exception"
         return "FINE"
@@ -627,10 +627,10 @@ class PureScheduler:                                    # pylint: disable=r0902
         return candidate._middle_exit_job()
 
     def repr_entries(self):                             # pylint: disable=c0111
-        return "entries={}".format(self._entry_csv())
+        return f"entries={self._entry_csv()}"
 
     def repr_exits(self):                               # pylint: disable=c0111
-        return "exits={}".format(self._exit_csv(compute_backlinks=True))
+        return f"exits={self._exit_csv(compute_backlinks=True)}"
 
     ####################
     def _reset_marks(self):
@@ -725,8 +725,7 @@ class PureScheduler:                                    # pylint: disable=r0902
                 job = task._job                         # pylint: disable=W0212
                 self._show_task_stack(
                     task,
-                    "TIDYING {} {} {}"
-                    .format(job.repr_id(), job.repr_short(), job.repr_main()))
+                    f"TIDYING {job.repr_id()} {job.repr_short()} {job.repr_main()}")
         # don't bother to set a timeout,
         # this is expected to be immediate
         # since all tasks are canceled
@@ -771,7 +770,7 @@ class PureScheduler:                                    # pylint: disable=r0902
         # general feedback when no job is specified by caller
         if jobs is None:
             print_time()
-            print("SCHEDULER {}: {}".format(name, state))
+            print(f"SCHEDULER {name}: {state}")
             return
         if not isinstance(jobs, (list, BestSet, set, tuple)):
             jobs = (jobs,)
@@ -784,9 +783,7 @@ class PureScheduler:                                    # pylint: disable=r0902
                   .format(name, state,
                           job.repr_id(), job.repr_short(), job.repr_main()),
                   end="")
-            print(" {} {}"
-                  .format(job.repr_result(),
-                          job.repr_requires()),
+            print(f" {job.repr_result()} {job.repr_requires()}",
                   end="")
             print()
 
@@ -976,8 +973,7 @@ class PureScheduler:                                    # pylint: disable=r0902
             raise ValueError("No entry points found - cannot orchestrate")
 
         if self.verbose:
-            await self._feedback(None, "entering co_run() with {} jobs"
-                                 .format(len(self.jobs)))
+            await self._feedback(None, f"entering co_run() with {len(self.jobs)} jobs")
 
         await self._feedback(entry_jobs, "STARTING")
 
@@ -1118,7 +1114,7 @@ class PureScheduler:                                    # pylint: disable=r0902
             width = 1 if total <= 9 \
                 else int(math.log(total-1, 10)) + 1
             # id_format is intended to be e.g. {:02d}
-            id_format = "{{:0{w}d}}".format(w=width)    # pylint: disable=w1303
+            id_format = f"{{:0{width}d}}"    # pylint: disable=w1303
         i = start
         for job in self.topological_order():
             i = job._set_sched_id(i, id_format)         # pylint: disable=w0212
@@ -1136,7 +1132,7 @@ class PureScheduler:                                    # pylint: disable=r0902
         """
         root = ".".join(str(index) for index in stack)
         for i, job in enumerate(self.jobs, 1):
-            job._sched_id = "{}.{}".format(root, i)     # pylint: disable=W0212
+            job._sched_id = f"{root}.{i}"     # pylint: disable=W0212
             if isinstance(job, PureScheduler):
                 job._set_sched_ids_safe(stack+[i])      # pylint: disable=W0212
 
@@ -1192,8 +1188,7 @@ class PureScheduler:                                    # pylint: disable=r0902
         the scheduler currently has 2 done, 3 running an 4 idle jobs
         """
         done, ongoing, idle, total = self._stats()
-        return ("{done}D + {ongoing}R + {idle}I = {total}"
-                .format(done=done, ongoing=ongoing, idle=idle, total=total))
+        return (f"{done}D + {ongoing}R + {idle}I = {total}")
 
     def debrief(self, details=False, silence_done_jobs=False):
         """
@@ -1217,14 +1212,14 @@ class PureScheduler:                                    # pylint: disable=r0902
         exceptions = {j for j in self.jobs if j.raised_exception()}
         criticals = {j for j in exceptions if j.is_critical()}
 
-        message = "scheduler has a total of {} jobs".format(nb_total)
+        message = f"scheduler has a total of {nb_total} jobs"
 
         def legible_message(number, adj):               # pylint: disable=C0111
             if number == 0:
-                return " none is {}".format(adj)
+                return f" none is {adj}"
             if number == 1:
-                return " 1 is {}".format(adj)
-            return " {} are {}".format(number, adj)
+                return f" 1 is {adj}"
+            return f" {number} are {adj}"
         message += ", " + legible_message(nb_done, "done")
         message += ", " + legible_message(nb_ongoing, "ongoing")
         message += ", " + \
@@ -1326,22 +1321,21 @@ DOT_%28graph_description_language%29
         result = ""
         result += "{\n"
         result += "compound=true;\n"
-        result += "graph [{}];\n".format(dot_style)
+        result += f"graph [{dot_style}];\n"
         for job in self.topological_order():
 
             # regular jobs
             if not isinstance(job, PureScheduler):
                 # declare node, attach label, and set visual attributes
                 result += job.repr_id()
-                result += ' [{}]\n'.format(job.dot_style())
+                result += f' [{job.dot_style()}]\n'
 
                 # add edges
                 for req in job.required:
 
                     # upstream is a regular job
                     if not isinstance(req, PureScheduler):
-                        result += ("{} -> {};\n"
-                                   .format(req.repr_id(), job.repr_id()))
+                        result += f"{req.repr_id()} -> {job.repr_id()};\n"
 
                     # upstream is a scheduler
                     else:
@@ -1357,7 +1351,7 @@ DOT_%28graph_description_language%29
                 # insert a subgraph instead
 
                 cluster_name = job.dot_cluster_name()
-                result += "subgraph {}".format(cluster_name)
+                result += f"subgraph {cluster_name}"
                 result += job._dot_body(job.dot_style())
 
                 for req in job.required:
@@ -1406,7 +1400,7 @@ DOT_%28graph_description_language%29
         """
         with open(filename, 'w') as output:
             output.write(self.dot_format())
-        return "(Over)wrote {}".format(filename)
+        return f"(Over)wrote {filename}"
 
 
     def graph(self):

@@ -222,7 +222,7 @@ class AbstractJob:                                      # pylint: disable=R0902
         attempt = self.graph_label()                    # pylint: disable=e1111
         if attempt is not None:
             return attempt
-        return "{}: {}".format(self.repr_id(), self._get_text_label())
+        return f"{self.repr_id()}: {self._get_text_label()}"
 
     def text_label(self):
         """
@@ -350,7 +350,7 @@ class AbstractJob:                                      # pylint: disable=R0902
 
         # add extra white space as unicode chars in terminal tend to be wider
         # than others
-        return "{} {} {} {}".format(c_crit, c_boom, c_running, c_forever)
+        return f"{c_crit} {c_boom} {c_running} {c_forever}"
 
     def _short_ascii(self):
         """
@@ -373,7 +373,7 @@ class AbstractJob:                                      # pylint: disable=R0902
 
         # add extra white space as unicode chars in terminal tend to be wider
         # than others
-        return "{} {} {} {}".format(c_crit, c_boom, c_running, c_forever)
+        return f"{c_crit} {c_boom} {c_running} {c_forever}"
 
     def repr_id(self):
         """
@@ -416,9 +416,7 @@ class AbstractJob:                                      # pylint: disable=R0902
           str: standardized body of the object's repr,
             like e.g. ``<SshJob `my command`>``.
         """
-        return ("<{} `{}`>"
-                .format(type(self).__name__,
-                        self._get_text_label()))
+        return (f"<{type(self).__name__} `{self._get_text_label()}`>")
 
     def repr_result(self):
         """
@@ -430,11 +428,9 @@ class AbstractJob:                                      # pylint: disable=R0902
         if exception:
             critical_msg = "CRIT. EXC." if self.is_critical() \
                            else "exception"
-            return ("!! {} => {}:{}!!"
-                    .format(critical_msg,
-                            type(exception).__name__, exception))
+            return (f"!! {critical_msg} => {type(exception).__name__}:{exception}!!")
         if self.is_done():
-            return "[[ -> {}]]".format(self.result())
+            return f"[[ -> {self.result()}]]"
         return "[not done]"
 
     def repr_requires(self):
@@ -443,7 +439,7 @@ class AbstractJob:                                      # pylint: disable=R0902
           str: text part that describes requirements
         """
         if self.required:
-            return "requires={}".format(self._req_csv())
+            return f"requires={self._req_csv()}"
         return ""
 
     def __repr__(self):
@@ -659,7 +655,7 @@ class Job(AbstractJob):
         Implementation of the method expected by :class:`AbstractJob`
         """
         try:
-            return "Job[{name} (...)]".format(name=self.corun.__name__)
+            return f"Job[{self.corun.__name__} (...)]"
         except Exception:                                # pylint:disable=w0703
             return "Job instance"
 

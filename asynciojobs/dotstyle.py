@@ -21,7 +21,7 @@ class DotStyle(dict):
         """
 
         return ",".join(
-            "{}={}".format(key, DotStyle.value(value_s))
+            f"{key}={DotStyle.value(value_s)}"
             for key, value_s in self.items())
 
 # we found a trick that removed the need for this
@@ -42,7 +42,7 @@ class DotStyle(dict):
         # escape any double quote
         result = string.replace('"', r'\"')
         # and put double quotes around all this
-        return '"{}"'.format(result)
+        return f'"{result}"'
 
     # output a list (typically for keys like 'shape'
     # or atomic (typically for 'label') value
