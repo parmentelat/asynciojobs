@@ -703,14 +703,18 @@ class PureScheduler:                                    # pylint: disable=r0902
         or because a timeout has occured.
         """
         if pending:
+            await self._feedback(None, f"TIDYING {len(pending)} pending TASKS: canceling")
             for task in pending:
+                await self._feedback(None, f"TIDYING task {task}")
                 task.cancel()
             # wait for the forever tasks for a clean exit
             # at some point we didn't bother to set a timeout, as this is expected
             # to be immediate since all tasks are canceled
             # however in one use case at least that involved ssh connections
             # this was found to loop forever; so if only for safety...
-            await asyncio.wait(pending, timeout=3)
+            await self._feedback(None, "waiting another 3 seconds...")
+            done2, pending2 = await asyncio.wait(pending, timeout=3)
+            await self._feedback(None, f"waited another 3 seconds: we have {len(done2)=} done AND {len(pending2)=} PENDING")
 
     async def _tidy_tasks_exception(self, tasks):
         """
@@ -725,7 +729,7 @@ class PureScheduler:                                    # pylint: disable=r0902
                 job = task._job                         # pylint: disable=W0212
                 self._show_task_stack(
                     task,
-                    f"TIDYING {job.repr_id()} {job.repr_short()} {job.repr_main()}")
+                    f"TIDYING exception task {job.repr_id()} {job.repr_short()} {job.repr_main()}")
         # don't bother to set a timeout,
         # this is expected to be immediate
         # since all tasks are canceled
