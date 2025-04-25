@@ -145,8 +145,7 @@ class Scheduler(PureScheduler, AbstractJob):
         i = AbstractJob._set_sched_id(self,
                                       start, id_format)
         # go on with the jobs in sub scheduler
-        return PureScheduler._set_sched_ids(self,
-                                            i, id_format)
+        return PureScheduler._set_sched_ids(self, i, id_format)
 
     def _job_count(self):
         """

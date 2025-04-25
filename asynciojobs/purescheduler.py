@@ -761,7 +761,7 @@ class PureScheduler:                                    # pylint: disable=r0902
         if jobs is None, then state is a message to be shown as-is
         jobs may be a collection or an individual Job or Task object
         """
-        if not force and not self.verbose:
+        if not force and not self.verbose and not DEBUG:
             return
 
         def print_time():                               # pylint: disable=c0111
@@ -1004,9 +1004,8 @@ class PureScheduler:                                    # pylint: disable=r0902
             # there are also cases where done has more than one entry
             # typically when 2 jobs have very similar durations
             if not done:
-                await self._feedback(None,
-                                     "PureScheduler.co_run: TIMEOUT occurred",
-                                     force=True)
+                await self._feedback(
+                    None, "PureScheduler.co_run: TIMEOUT occurred", force=True)
                 # clean up
                 await self._feedback(pending, "ABORTING")
                 await self._tidy_tasks(pending)
