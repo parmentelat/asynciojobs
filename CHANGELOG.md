@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.21.2 - 2025 Apr 25
+
+- changes only in the debugging messages
+
 ## 0.21.1 - 2025 Apr 17
 
 - flynt'ed and use f-strings wherever possible
