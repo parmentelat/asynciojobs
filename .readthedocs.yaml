@@ -1,11 +1,12 @@
 # Required
 version: 2
-
+sphinx:
+  configuration: sphinx/conf.py
 
 build:
   os: ubuntu-24.04
   tools:
-    python: "3.12"
+    python: "3.13"
 
 
 # install local package before executing anything
