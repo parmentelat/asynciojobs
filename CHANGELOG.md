@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.21.3 - 2025 Jun 26
+
+- expose set_debug() in the public API
+
 ## 0.21.2 - 2025 Apr 25
 
 - changes only in the debugging messages
