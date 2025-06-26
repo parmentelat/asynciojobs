@@ -22,6 +22,15 @@ from .dotstyle import DotStyle
 from typing import Union
 Schedulable = Union[AbstractJob, Sequence]
 
+
+def set_debug(debug: bool):
+    """
+    sets the DEBUG flag, which is used to control the verbosity of the
+    output of the scheduler, and in particular the exceptions raised by jobs
+    """
+    global DEBUG
+    DEBUG = debug
+
 #
 # will hopefully go away some day
 DEBUG = False                                           # pylint: disable=C0103
